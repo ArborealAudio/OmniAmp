@@ -1,0 +1,111 @@
+/*
+  ==============================================================================
+
+    This file contains the basic framework code for a JUCE plugin processor.
+
+  ==============================================================================
+*/
+
+#pragma once
+
+#include <JuceHeader.h>
+#include "Processors/Tube.h"
+#include "Processors/PreFilters.h"
+#include "Processors/PostFilters.h"
+#include "WDFtest.h"
+#include "Processors/Comp.h"
+
+//==============================================================================
+/**
+*/
+class GammaAudioProcessor  : public juce::AudioProcessor,
+    public AudioProcessorValueTreeState::Listener
+{
+public:
+    //==============================================================================
+    GammaAudioProcessor();
+    ~GammaAudioProcessor() override;
+
+    //==============================================================================
+    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+    void releaseResources() override;
+
+   #ifndef JucePlugin_PreferredChannelConfigurations
+    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+   #endif
+
+    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
+    //==============================================================================
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override;
+
+    //==============================================================================
+    const juce::String getName() const override;
+
+    bool acceptsMidi() const override;
+    bool producesMidi() const override;
+    bool isMidiEffect() const override;
+    double getTailLengthSeconds() const override;
+
+    //==============================================================================
+    int getNumPrograms() override;
+    int getCurrentProgram() override;
+    void setCurrentProgram (int index) override;
+    const juce::String getProgramName (int index) override;
+    void changeProgramName (int index, const juce::String& newName) override;
+
+    //==============================================================================
+    void getStateInformation (juce::MemoryBlock& destData) override;
+    void setStateInformation (const void* data, int sizeInBytes) override;
+
+    void parameterChanged(const String& parameterID, float newValue) override;
+
+    AudioProcessorValueTreeState apvts;
+
+private:
+
+    AudioProcessorValueTreeState::ParameterLayout createParams();
+
+    double lastSampleRate = 0.0;
+
+    std::atomic<float>* gain, *outGain, *autoGain, *cutoff, *hiGain, *bass, *mid, *treb, *mix, *p_comp;
+
+    OptoComp comp;
+    //OptoModel comp;
+
+    std::array<Tube, 4> triodes
+    { {
+        {Tube()},
+        {Tube()},
+        {Tube()},
+        {Tube()}
+    } };
+
+    std::array<AVTriode, 4> avTriode;
+
+    std::array<KorenTriode, 4> kT
+    { {
+        {KorenTriode(100.f, 1060.f, 150.f, 600.f, 300.f, 1.4f)},
+        {KorenTriode(100.f, 1060.f, 150.f, 600.f, 300.f, 1.4f)},
+        {KorenTriode(100.f, 1060.f, 150.f, 600.f, 300.f, 1.4f)},
+        {KorenTriode(100.f, 1060.f, 150.f, 600.f, 300.f, 1.4f)}
+    } };
+    KorenPentode kP;
+
+    Tube pentodes;
+
+    std::array<ToneStackNodal, 3> toneStack
+    { {
+            {0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.25e6f, 20e3f, 65e3f},
+            {0.25e-9f, 22e-9f, 22e-9f, 300e3f, 0.5e6f, 30e3f, 56e3f},
+            {0.5e-9f, 22e-9f, 20e-9f, 270e3f, 1e6f, 125e3f, 33e3f}
+    } };
+
+    GuitarPreFilter gtrPre;
+
+    int currentMode = 0;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessor)
+};
