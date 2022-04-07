@@ -17,35 +17,26 @@ struct OptoComp
     void prepare(const dsp::ProcessSpec& spec)
     {
         lastSR = spec.sampleRate;
-        numSamples = (float)spec.maximumBlockSize;
     }
 
     void reset()
     {
-        x1 = 0.f, lastEnv = 0.f;
+        xm0 = 0.f, xm1 = 0.f, lastEnv = 0.f;
     }
 
     inline float detectEnv (float x)
     {
         auto t_abs = std::abs(x);
-        //auto t_abs = std::tanh(abs);
-
-        /*const auto c = 1.f / std::tanh(t_abs);
-        const auto s = std::sqrt(t_abs);*/
 
         float env;
-        float a_c = jlimit(0.005, 0.03, (1.f / t_abs) * 0.01);
-        att = std::exp(-0.9996723 / (a_c * lastSR));
-        rel = std::exp(-0.9996723 / (1.25 * lastSR));
-        auto rel2 = std::exp(-0.9996723 / (0.150 * lastSR));
 
         if (t_abs >= lastEnv)
         {
-            env = att * (lastEnv - t_abs) + t_abs;
+            //env = att * (lastEnv - t_abs) + t_abs;
         }
         else
         {
-            env = rel * rel2 * (lastEnv - t_abs) + t_abs;
+            //env = rel * (lastEnv - t_abs) + t_abs;
         }
 
         if (env < 1.175494351e-38f)
@@ -56,51 +47,75 @@ struct OptoComp
         return 20.f * std::log10(env);
     }
 
-    inline float compress(float x, float comp)
+    /*returns gain reduction multiplier*/
+    inline float compress(float x)
     {
-        auto env = detectEnv(x1); //resistance envelope
+        //auto env = detectEnv(x); //resistance envelope
         
-        float yn;
+        //auto det = jmax(0.f, x);
+        if (x < 1.175494351e-38f)
+            x = 1.175494351e-38f;
 
-        if (env >= threshold)
-            yn = threshold + ((env - threshold) / 10.f);
-        else if (env < threshold)
-            yn = env;
+        auto env = jmax(0.f, 8.685889638f * std::log10(x / threshold));
 
-        auto gr_db = yn - env;
-        auto gr = std::pow(10.f, (gr_db) / 20.f);
+        float att = std::exp(-1.f / ((1.f/x) * 0.015f * lastSR));
+        float rel = std::exp(-1.f / (0.15f * lastSR));
+        float rel2 = std::exp(-1.f / (1.5f * lastSR));
+        /*dual release currently isn't exactly program-dependent, it just concatenates
+        the two constants. Still need a way to turn the rel coef into something signal-dependent*/
 
-        comp = jmap(comp, 1.f, 4.f);
+        if (env > lastEnv)
+        {
+            env = env + att * (lastEnv - env);
+        }
+        else
+        {
+            auto rat = env / lastEnv;
+            auto invrat = 1.f / rat;
+            env = env + rel * rel2 * (lastEnv - env);
+        }
 
-        x *= gr * comp;
+        lastEnv = env;
+        
+        auto gr_db = -env; /*the ratio was applied here as (ratio - 1)/ratio. An opto ratio should logarithmically
+                           taper back towards unity as GR increases*/
+        auto gr = std::pow(10.f, gr_db / 20.f);
 
-        x1 = x;
-
-        return x;
+        return gr;
     }
 
     void process(AudioBuffer<float>& buffer, float comp)
     {
-        auto in = buffer.getWritePointer(0);
+        auto inL = buffer.getWritePointer(0);
+        auto inR = buffer.getWritePointer(1);
+
+        comp = jmap(comp, 1.f, 4.f);
 
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            in[i] = compress(in[i], comp);
-        }
+            //const float smooth = 0.0001f;
+            //auto abs0 = std::sqrt(xm0 * xm0 + smooth) - std::sqrt(smooth);
+            //auto abs1 = std::sqrt(xm1 * xm1 + smooth) - std::sqrt(smooth);
+            float abs0 = std::abs(xm0);
+            float abs1 = std::abs(xm1);
 
-        buffer.copyFrom(1, 0, in, buffer.getNumSamples());
+            auto gr = compress(jmax(abs0, abs1));
+
+            inL[i] *= gr * comp;
+            inR[i] *= gr * comp;
+
+            xm0 = inL[i];
+            xm1 = inR[i];
+        }
     }
 
 private:
-    float lastSR = 44100.f, numSamples = 0;
+    float lastSR = 44100.f;
 
-    const float threshold = -18.f;
+    const float threshold = std::pow(10.f, -36.f / 20.f);
     const float e = MathConstants<float>::euler;
-    float att = std::exp(-0.9996723 / (0.01 * lastSR));
-    float rel = std::exp(-0.9996723 / (0.15 * lastSR));
-    float lastAtt = att, lastRel = rel;
     float lastEnv = 0.f;
-    float x1 = 0.f;
+    float xm0 = 0.f, xm1 = 0.f;
 };
 
 struct OptoModel
