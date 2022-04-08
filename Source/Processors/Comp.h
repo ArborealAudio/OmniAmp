@@ -57,11 +57,11 @@ struct OptoComp
             x = 1.175494351e-38f;
 
         auto env = jmax(0.f, 8.685889638f * std::log10(x / threshold));
-        auto t_env = std::tanh(lastEnv - env);
+        auto t_env = env - lastEnv;
 
         float att = std::exp(-1.f / ((1.f/x) * 0.015f * lastSR));
-        float rel = std::exp(-1.f / (0.15f * lastSR));
-        float rel2 = std::exp(-1.f / (1.5f * lastSR));
+        float rel = std::exp(-1.f / (0.05f * lastSR));
+        float rel2 = std::exp(-1.f / (2.f * lastSR));
 
         if (env > lastEnv)
         {
@@ -79,7 +79,7 @@ struct OptoComp
 
         lastEnv = env;
         
-        auto gr_db = 8.f * -env; /*the ratio was applied here as (ratio - 1)/ratio. An opto ratio should logarithmically
+        auto gr_db = 10.f * -env; /*the ratio was applied here as (ratio - 1)/ratio. An opto ratio should logarithmically
                            taper back towards unity as GR increases*/
         auto gr = std::pow(10.f, gr_db / 20.f);
         lastGR = gr;
@@ -109,6 +109,9 @@ struct OptoComp
 
             xm0 = inL[i];
             xm1 = inR[i];
+
+            inL[i] /= comp;
+            inR[i] /= comp;
         }
     }
 
