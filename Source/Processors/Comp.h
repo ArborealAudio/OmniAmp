@@ -60,7 +60,8 @@ struct OptoComp
         float att = std::exp(-1.f / ((1.f/x) * 0.015f * lastSR));
         /*float rel = std::exp(-1.f / (0.05f * lastSR));
         float rel2 = std::exp(-1.f / (2.f * lastSR));*/
-        float rel = std::exp(-1.f / (0.6f * lastGR * lastSR));
+        //float rel = std::exp(-1.f / (0.6f * lastGR * lastSR));
+        float rel = std::exp(lastGR);
 
         if (env > lastEnv)
         {
