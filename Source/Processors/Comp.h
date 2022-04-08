@@ -21,7 +21,7 @@ struct OptoComp
 
     void reset()
     {
-        xm0 = 0.f, xm1 = 0.f, lastEnv = 0.f;
+        xm0 = 0.f, xm1 = 0.f, lastEnv = 0.f, lastGR = 0.f;
     }
 
     inline float detectEnv (float x)
@@ -49,19 +49,18 @@ struct OptoComp
 
     /*returns gain reduction multiplier*/
     inline float compress(float x)
-    {
-        //auto env = detectEnv(x); //resistance envelope
-        
+    {     
         //auto det = jmax(0.f, x);
         if (x < 1.175494351e-38f)
             x = 1.175494351e-38f;
 
         auto env = jmax(0.f, 8.685889638f * std::log10(x / threshold));
-        auto t_env = env - lastEnv;
+        auto t_env = std::tanh(lastEnv);
 
         float att = std::exp(-1.f / ((1.f/x) * 0.015f * lastSR));
-        float rel = std::exp(-1.f / (0.05f * lastSR));
-        float rel2 = std::exp(-1.f / (2.f * lastSR));
+        /*float rel = std::exp(-1.f / (0.05f * lastSR));
+        float rel2 = std::exp(-1.f / (2.f * lastSR));*/
+        float rel = std::exp(-1.f / (0.6f * lastGR * lastSR));
 
         if (env > lastEnv)
         {
@@ -69,18 +68,19 @@ struct OptoComp
         }
         else
         {
-            auto rel_env1 = env + rel * (lastEnv - env);
+            env = env + rel * (lastEnv - env);
+            /*auto rel_env1 = env + rel * (lastEnv - env);
             auto rel_env2 = env + rel2 * (lastEnv - env);
 
-            env = (rel_env1 * (1.f-t_env)) + (rel_env2 * t_env);
-            /*this method is working well, but getting opposite of desired behavior.
-            perhaps using prev and current gr will get better results than using the env*/
+            env = (rel_env1 * t_env) + (rel_env2 * (1.f-t_env));*/
+            /*this method is working well, but it's difficult to get it to change w/
+            the full desired range of rel time. let's try using one envelope w/ a time const
+            determined by last GR*/
         }
 
         lastEnv = env;
         
-        auto gr_db = 10.f * -env; /*the ratio was applied here as (ratio - 1)/ratio. An opto ratio should logarithmically
-                           taper back towards unity as GR increases*/
+        auto gr_db = 10.f * (-env); /*using tanh here makes a nice log curve*/
         auto gr = std::pow(10.f, gr_db / 20.f);
         lastGR = gr;
 
@@ -109,16 +109,13 @@ struct OptoComp
 
             xm0 = inL[i];
             xm1 = inR[i];
-
-            inL[i] /= comp;
-            inR[i] /= comp;
         }
     }
 
 private:
     float lastSR = 44100.f;
 
-    const float threshold = std::pow(10.f, -18.f / 20.f);
+    const float threshold = std::pow(10.f, -12.f / 20.f);
     const float e = MathConstants<float>::euler;
     float lastEnv = 0.f, lastGR = 0.f;
     float xm0 = 0.f, xm1 = 0.f;
