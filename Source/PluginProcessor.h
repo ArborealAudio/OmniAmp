@@ -12,7 +12,7 @@
 #include "Processors/Tube.h"
 #include "Processors/PreFilters.h"
 #include "Processors/PostFilters.h"
-#include "WDFtest.h"
+#include "Processors/WDFtest.h"
 #include "Processors/Comp.h"
 
 //==============================================================================

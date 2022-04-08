@@ -57,12 +57,11 @@ struct OptoComp
             x = 1.175494351e-38f;
 
         auto env = jmax(0.f, 8.685889638f * std::log10(x / threshold));
+        auto t_env = std::tanh(lastEnv - env);
 
         float att = std::exp(-1.f / ((1.f/x) * 0.015f * lastSR));
         float rel = std::exp(-1.f / (0.15f * lastSR));
         float rel2 = std::exp(-1.f / (1.5f * lastSR));
-        /*dual release currently isn't exactly program-dependent, it just concatenates
-        the two constants. Still need a way to turn the rel coef into something signal-dependent*/
 
         if (env > lastEnv)
         {
@@ -70,16 +69,20 @@ struct OptoComp
         }
         else
         {
-            auto rat = env / lastEnv;
-            auto invrat = 1.f / rat;
-            env = env + rel * rel2 * (lastEnv - env);
+            auto rel_env1 = env + rel * (lastEnv - env);
+            auto rel_env2 = env + rel2 * (lastEnv - env);
+
+            env = (rel_env1 * (1.f-t_env)) + (rel_env2 * t_env);
+            /*this method is working well, but getting opposite of desired behavior.
+            perhaps using prev and current gr will get better results than using the env*/
         }
 
         lastEnv = env;
         
-        auto gr_db = -env; /*the ratio was applied here as (ratio - 1)/ratio. An opto ratio should logarithmically
+        auto gr_db = 8.f * -env; /*the ratio was applied here as (ratio - 1)/ratio. An opto ratio should logarithmically
                            taper back towards unity as GR increases*/
         auto gr = std::pow(10.f, gr_db / 20.f);
+        lastGR = gr;
 
         return gr;
     }
@@ -112,9 +115,9 @@ struct OptoComp
 private:
     float lastSR = 44100.f;
 
-    const float threshold = std::pow(10.f, -36.f / 20.f);
+    const float threshold = std::pow(10.f, -18.f / 20.f);
     const float e = MathConstants<float>::euler;
-    float lastEnv = 0.f;
+    float lastEnv = 0.f, lastGR = 0.f;
     float xm0 = 0.f, xm1 = 0.f;
 };
 

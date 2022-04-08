@@ -7,13 +7,12 @@
               pluginManufacturerCode="Arau" pluginCode="Gamm" cppLanguageStandard="latest">
   <MAINGROUP id="PIsWnH" name="Gamma">
     <GROUP id="{A4EFE4B2-E12C-A3B2-A62C-B4DE2163D277}" name="Source">
-      <FILE id="hyFEHy" name="WDFtest.h" compile="0" resource="0" file="Source/WDFtest.h"/>
       <GROUP id="{3ACFF283-5535-D9E9-4DCE-94E3E5B9C5F8}" name="Processors">
         <FILE id="zpA4Tm" name="Comp.h" compile="0" resource="0" file="Source/Processors/Comp.h"/>
         <FILE id="sVi5jl" name="PostFilters.h" compile="0" resource="0" file="Source/Processors/PostFilters.h"/>
         <FILE id="AvDpup" name="PreFilters.h" compile="0" resource="0" file="Source/Processors/PreFilters.h"/>
         <FILE id="EbHcPE" name="Tube.h" compile="0" resource="0" file="Source/Processors/Tube.h"/>
-        <FILE id="iHtgYk" name="Waveshapers.h" compile="0" resource="0" file="Source/Processors/Waveshapers.h"/>
+        <FILE id="BMYnak" name="WDFtest.h" compile="0" resource="0" file="Source/Processors/WDFtest.h"/>
       </GROUP>
       <FILE id="ekhTzn" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
@@ -45,7 +44,6 @@
         <MODULEPATH id="juce_graphics" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_gui_basics" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_gui_extra" path="../../../../../JUCE/modules"/>
-        <MODULEPATH id="chowdsp_dsp" path="../../../../../modules/chowdsp modules"/>
       </MODULEPATHS>
     </VS2019>
     <XCODE_MAC targetFolder="Builds/MacOSX">
@@ -67,12 +65,10 @@
         <MODULEPATH id="juce_graphics" path="C:\JUCE\modules"/>
         <MODULEPATH id="juce_gui_basics" path="C:\JUCE\modules"/>
         <MODULEPATH id="juce_gui_extra" path="C:\JUCE\modules"/>
-        <MODULEPATH id="chowdsp_dsp" path="../../../../../modules/chowdsp modules"/>
       </MODULEPATHS>
     </XCODE_MAC>
   </EXPORTFORMATS>
   <MODULES>
-    <MODULE id="chowdsp_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>

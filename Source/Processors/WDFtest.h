@@ -9,142 +9,141 @@
 */
 
 #pragma once
-#include "chowdsp modules/chowdsp_dsp/WDF/wdf_t.h"
 
-using namespace chowdsp::WDFT;
-
-struct HFEnhancer
-{
-    HFEnhancer() = default;
-
-    void prepare(dsp::ProcessSpec& spec)
-    {
-        C1.prepare(spec.sampleRate);
-        C2.prepare(spec.sampleRate);
-        
-        hp.prepare(spec);
-        *hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 1500.f);
-    }
-
-    void reset()
-    {
-        C1.reset();
-        C2.reset();
-        hp.reset();
-    }
-
-    void setCutoffFrequency(float cutoff)
-    {
-        const auto Cap = 5.0e-8f;
-        const auto Res = 1.0 / (MathConstants<float>::pi * cutoff * Cap);
-
-        R1.setResistanceValue(Res);
-        R2.setResistanceValue(Res);
-        C1.setCapacitanceValue(Cap);
-        C2.setCapacitanceValue(Cap);
-    }
-
-    inline float processSample(float x)
-    {
-        Vs.setVoltage(x);
-
-        dp.incident(P1.reflected());
-        auto y = voltage<float>(R1);
-        P1.incident(dp.reflected());
-
-        return y;
-    }
-
-    void process(AudioBuffer<float>& buffer, float mix)
-    {
-        auto in = buffer.getWritePointer(0);
-
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
-        {
-            in[i] += mix * processSample(in[i]);
-        }
-
-        buffer.copyFrom(1, 0, in, buffer.getNumSamples());
-    }
-
-private:
-    
-    ResistorT<float> R1{ 1000.f }, R2{ 1000.f };
-    CapacitorT<float> C1{ 5.0e-8f }, C2{ 5.0e-8f };
-
-    ResistiveVoltageSourceT<float> Vs;
-    WDFSeriesT<float, decltype(Vs), decltype(C1)> S1{ Vs, C1 };
-    WDFParallelT<float, decltype(S1), decltype(R1)> P1{ S1, R1 };
-    
-    DiodePairT<float, decltype(P1)> dp{ P1, 2.52e-9f};
-
-    dsp::IIR::Filter<float> hp;
-};
-
-struct ToneStack
-{
-    ToneStack() = default;
-
-    void prepare(double sampleRate)
-    {
-        C1.prepare(sampleRate);
-        C2.prepare(sampleRate);
-        C3.prepare(sampleRate);
-    }
-
-    void reset()
-    {
-        C1.reset();
-        C2.reset();
-        C3.reset();
-    }
-
-    void setCircuitParams(float low, float mid, float hi)
-    {
-        R1.setResistanceValue(250e3 * (hi + 0.5));
-        R2.setResistanceValue(1e6 * (low + 0.5));
-        R3.setResistanceValue(25e3 * (mid + 0.5));
-    }
-
-    inline float processSample(float x)
-    {
-        ResVs.setVoltage(x);
-
-        ResVs.incident(S1.reflected());
-        auto y = voltage<float>(R1);
-        S1.incident(ResVs.reflected());
-        
-        return y;
-    }
-
-    void process(AudioBuffer<float>& buffer)
-    {
-        auto in = buffer.getWritePointer(0);
-
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
-        {
-            in[i] = processSample(in[i]);
-        }
-
-        buffer.copyFrom(1, 0, in, buffer.getNumSamples());
-    }
-
-private:
-
-    ResistorT<float> R1{ 250e3f }, R2{ 1e6f }, R3{ 25e3f }, R4{ 56e3f };
-    CapacitorT<float> C1{ 0.25e-9f }, C2{ 20e-9f }, C3{ 20e-9f };
-
-    ResistiveVoltageSourceT<float> ResVs{56e3f};
-
-    WDFSeriesT<float, decltype(C3), decltype(ResVs)> S5{ C3, ResVs };
-    WDFSeriesT<float, decltype(R3), decltype(S5)> S4{ R3, S5 };
-    WDFSeriesT<float, decltype(R2), decltype(S4)> S3{ R2, S4 };
-    WDFParallelT<float, decltype(C2), decltype(S3)> P1{ C2, S3 };
-    WDFSeriesT<float, decltype(R1), decltype(P1)> S2{ R1, P1 };
-    WDFSeriesT<float, decltype(C1), decltype(S2)> S1{ C1, S2 };
-
-    //IdealVoltageSourceT<float, decltype(S1)> Vs{ S1 };
-};
+//using namespace chowdsp::WDFT;
+//
+//struct HFEnhancer
+//{
+//    HFEnhancer() = default;
+//
+//    void prepare(dsp::ProcessSpec& spec)
+//    {
+//        C1.prepare(spec.sampleRate);
+//        C2.prepare(spec.sampleRate);
+//        
+//        hp.prepare(spec);
+//        *hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 1500.f);
+//    }
+//
+//    void reset()
+//    {
+//        C1.reset();
+//        C2.reset();
+//        hp.reset();
+//    }
+//
+//    void setCutoffFrequency(float cutoff)
+//    {
+//        const auto Cap = 5.0e-8f;
+//        const auto Res = 1.0 / (MathConstants<float>::pi * cutoff * Cap);
+//
+//        R1.setResistanceValue(Res);
+//        R2.setResistanceValue(Res);
+//        C1.setCapacitanceValue(Cap);
+//        C2.setCapacitanceValue(Cap);
+//    }
+//
+//    inline float processSample(float x)
+//    {
+//        Vs.setVoltage(x);
+//
+//        dp.incident(P1.reflected());
+//        auto y = voltage<float>(R1);
+//        P1.incident(dp.reflected());
+//
+//        return y;
+//    }
+//
+//    void process(AudioBuffer<float>& buffer, float mix)
+//    {
+//        auto in = buffer.getWritePointer(0);
+//
+//        for (int i = 0; i < buffer.getNumSamples(); ++i)
+//        {
+//            in[i] += mix * processSample(in[i]);
+//        }
+//
+//        buffer.copyFrom(1, 0, in, buffer.getNumSamples());
+//    }
+//
+//private:
+//    
+//    ResistorT<float> R1{ 1000.f }, R2{ 1000.f };
+//    CapacitorT<float> C1{ 5.0e-8f }, C2{ 5.0e-8f };
+//
+//    ResistiveVoltageSourceT<float> Vs;
+//    WDFSeriesT<float, decltype(Vs), decltype(C1)> S1{ Vs, C1 };
+//    WDFParallelT<float, decltype(S1), decltype(R1)> P1{ S1, R1 };
+//    
+//    DiodePairT<float, decltype(P1)> dp{ P1, 2.52e-9f};
+//
+//    dsp::IIR::Filter<float> hp;
+//};
+//
+//struct ToneStack
+//{
+//    ToneStack() = default;
+//
+//    void prepare(double sampleRate)
+//    {
+//        C1.prepare(sampleRate);
+//        C2.prepare(sampleRate);
+//        C3.prepare(sampleRate);
+//    }
+//
+//    void reset()
+//    {
+//        C1.reset();
+//        C2.reset();
+//        C3.reset();
+//    }
+//
+//    void setCircuitParams(float low, float mid, float hi)
+//    {
+//        R1.setResistanceValue(250e3 * (hi + 0.5));
+//        R2.setResistanceValue(1e6 * (low + 0.5));
+//        R3.setResistanceValue(25e3 * (mid + 0.5));
+//    }
+//
+//    inline float processSample(float x)
+//    {
+//        ResVs.setVoltage(x);
+//
+//        ResVs.incident(S1.reflected());
+//        auto y = voltage<float>(R1);
+//        S1.incident(ResVs.reflected());
+//        
+//        return y;
+//    }
+//
+//    void process(AudioBuffer<float>& buffer)
+//    {
+//        auto in = buffer.getWritePointer(0);
+//
+//        for (int i = 0; i < buffer.getNumSamples(); ++i)
+//        {
+//            in[i] = processSample(in[i]);
+//        }
+//
+//        buffer.copyFrom(1, 0, in, buffer.getNumSamples());
+//    }
+//
+//private:
+//
+//    ResistorT<float> R1{ 250e3f }, R2{ 1e6f }, R3{ 25e3f }, R4{ 56e3f };
+//    CapacitorT<float> C1{ 0.25e-9f }, C2{ 20e-9f }, C3{ 20e-9f };
+//
+//    ResistiveVoltageSourceT<float> ResVs{56e3f};
+//
+//    WDFSeriesT<float, decltype(C3), decltype(ResVs)> S5{ C3, ResVs };
+//    WDFSeriesT<float, decltype(R3), decltype(S5)> S4{ R3, S5 };
+//    WDFSeriesT<float, decltype(R2), decltype(S4)> S3{ R2, S4 };
+//    WDFParallelT<float, decltype(C2), decltype(S3)> P1{ C2, S3 };
+//    WDFSeriesT<float, decltype(R1), decltype(P1)> S2{ R1, P1 };
+//    WDFSeriesT<float, decltype(C1), decltype(S2)> S1{ C1, S2 };
+//
+//    //IdealVoltageSourceT<float, decltype(S1)> Vs{ S1 };
+//};
 
 struct ToneStackNodal
 {
