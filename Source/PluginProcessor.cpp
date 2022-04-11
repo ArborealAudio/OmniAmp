@@ -20,22 +20,18 @@ GammaAudioProcessor::GammaAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        ), apvts(*this, nullptr, "Parameters", createParams()),
-    kP(8.7f, 1.35f, 1460.f, 4500.f, 48.f, 12.f, 375.f)
+                        guitar(apvts)
 #endif
 {
     gain = apvts.getRawParameterValue("inputGain");
     outGain = apvts.getRawParameterValue("outputGain");
-    p_comp = apvts.getRawParameterValue("comp");
+    comp = apvts.getRawParameterValue("comp");
     hiGain = apvts.getRawParameterValue("hiGain");
-    cutoff = apvts.getRawParameterValue("cutoff");
     autoGain = apvts.getRawParameterValue("autoGain");
-    mix = apvts.getRawParameterValue("mix");
     bass = apvts.getRawParameterValue("bass");
     mid = apvts.getRawParameterValue("mid");
     treb = apvts.getRawParameterValue("treble");
 
-    apvts.addParameterListener("hiGain", this);
-    apvts.addParameterListener("cutoff", this);
     apvts.addParameterListener("treble", this);
     apvts.addParameterListener("mid", this);
     apvts.addParameterListener("bass", this);
@@ -115,38 +111,12 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     dsp::ProcessSpec spec{ sampleRate, samplesPerBlock, getTotalNumInputChannels() };
 
-    comp.prepare(spec);
-
-    for (auto& t : avTriode)
-        t.prepare(spec);
-
-    for (auto& t : toneStack)
-        t.prepare(spec);
-
-    for (auto& t : triodes)
-        t.prepare(spec);
-
-    pentodes.prepare(spec);
-
-    gtrPre.prepare(spec);
+    guitar.prepare(spec);
 }
 
 void GammaAudioProcessor::releaseResources()
 {
-    comp.reset();
-
-    for (auto& t : avTriode)
-        t.reset();
-
-    for (auto& t : toneStack)
-        t.reset();
-
-    gtrPre.reset();
-
-    for (auto& t : triodes)
-        t.reset();
-
-    pentodes.reset();
+    guitar.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -177,23 +147,20 @@ bool GammaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 
 void GammaAudioProcessor::parameterChanged(const String& parameterID, float newValue)
 {
-    if (parameterID.contains("bass"))
+    if (parameterID.contains("mode"))
+        currentMode = newValue;
+    else if (parameterID.contains("bass"))
     {
-        for (auto& t : toneStack)
-            t.setBass(newValue);
-    }
-    else if (parameterID.contains("treble"))
-    {
-        for (auto& t : toneStack)
-            t.setTreble(newValue);
+        guitar.setToneControl(0, newValue);
     }
     else if (parameterID.contains("mid"))
     {
-        for (auto& t : toneStack)
-            t.setMid(newValue);
+        guitar.setToneControl(1, newValue);
     }
-    else if (parameterID.contains("mode"))
-        currentMode = newValue;
+    else if (parameterID.contains("treble"))
+    {
+        guitar.setToneControl(2, newValue);
+    }
 }
 
 void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -208,26 +175,11 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     float gain_raw = pow(10.f, (*gain / 20.f));
     float out_raw = pow(10.f, (*outGain / 20.f));
 
-    if (*p_comp > 0.f)
-        comp.process(buffer, *p_comp);
-
-    buffer.applyGain(gain_raw);
-
-    avTriode[0].process(buffer, 0.5f, 1.f);
-
-    if (currentMode == 0)
-        gtrPre.process(buffer, *hiGain);
-
-    avTriode[1].process(buffer, 0.5f, 1.f);
-    avTriode[2].process(buffer, 0.5f, 1.f);
-
-    toneStack[currentMode].process(buffer);
-
-    if (*hiGain)
-        avTriode[3].process(buffer, 2.f, 2.f);
-
-    buffer.applyGain(out_raw);
-    pentodes.processBufferClassB(buffer, 1.f, 1.f);
+    switch (currentMode) {
+    case 0:
+        guitar.processBuffer(buffer);
+        break;
+    }
 
     if (*autoGain)
         buffer.applyGain(1.f / (gain_raw * out_raw));
@@ -279,7 +231,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>("mid", "Mid", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>("treble", "Treble", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterBool>("autoGain", "Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterChoice>("mode", "Mode", StringArray{ "Guitar", "Bass", "Flat" }, 0));
+    params.emplace_back(std::make_unique<AudioParameterChoice>("mode", "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 0));
 
     return { params.begin(), params.end() };
 }

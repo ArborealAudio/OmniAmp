@@ -8,11 +8,12 @@
   <MAINGROUP id="PIsWnH" name="Gamma">
     <GROUP id="{A4EFE4B2-E12C-A3B2-A62C-B4DE2163D277}" name="Source">
       <GROUP id="{3ACFF283-5535-D9E9-4DCE-94E3E5B9C5F8}" name="Processors">
+        <FILE id="HgnRVz" name="Processors.h" compile="0" resource="0" file="Source/Processors/Processors.h"/>
         <FILE id="zpA4Tm" name="Comp.h" compile="0" resource="0" file="Source/Processors/Comp.h"/>
         <FILE id="sVi5jl" name="PostFilters.h" compile="0" resource="0" file="Source/Processors/PostFilters.h"/>
         <FILE id="AvDpup" name="PreFilters.h" compile="0" resource="0" file="Source/Processors/PreFilters.h"/>
         <FILE id="EbHcPE" name="Tube.h" compile="0" resource="0" file="Source/Processors/Tube.h"/>
-        <FILE id="BMYnak" name="WDFtest.h" compile="0" resource="0" file="Source/Processors/WDFtest.h"/>
+        <FILE id="BMYnak" name="ToneStack.h" compile="0" resource="0" file="Source/Processors/ToneStack.h"/>
       </GROUP>
       <FILE id="ekhTzn" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>

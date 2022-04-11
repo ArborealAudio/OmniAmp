@@ -12,8 +12,9 @@
 #include "Processors/Tube.h"
 #include "Processors/PreFilters.h"
 #include "Processors/PostFilters.h"
-#include "Processors/WDFtest.h"
+#include "Processors/ToneStack.h"
 #include "Processors/Comp.h"
+#include "Processors/Processors.h"
 
 //==============================================================================
 /**
@@ -69,40 +70,16 @@ private:
 
     double lastSampleRate = 0.0;
 
-    std::atomic<float>* gain, *outGain, *autoGain, *cutoff, *hiGain, *bass, *mid, *treb, *mix, *p_comp;
+    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *bass, *mid, *treb, *comp;
 
-    OptoComp comp;
-    //OptoModel comp;
-
-    std::array<Tube, 4> triodes
-    { {
-        {Tube()},
-        {Tube()},
-        {Tube()},
-        {Tube()}
-    } };
-
-    std::array<AVTriode, 4> avTriode;
-
-    std::array<KorenTriode, 4> kT
-    { {
-        {KorenTriode(100.f, 1060.f, 150.f, 600.f, 300.f, 1.4f)},
-        {KorenTriode(100.f, 1060.f, 150.f, 600.f, 300.f, 1.4f)},
-        {KorenTriode(100.f, 1060.f, 150.f, 600.f, 300.f, 1.4f)},
-        {KorenTriode(100.f, 1060.f, 150.f, 600.f, 300.f, 1.4f)}
-    } };
-    KorenPentode kP;
-
-    Tube pentodes;
-
-    std::array<ToneStackNodal, 3> toneStack
+    /*std::array<ToneStackNodal, 3> toneStack
     { {
             {0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.25e6f, 20e3f, 65e3f},
             {0.25e-9f, 22e-9f, 22e-9f, 300e3f, 0.5e6f, 30e3f, 56e3f},
             {0.5e-9f, 22e-9f, 20e-9f, 270e3f, 1e6f, 125e3f, 33e3f}
-    } };
+    } };*/
 
-    GuitarPreFilter gtrPre;
+    Guitar guitar;
 
     int currentMode = 0;
 

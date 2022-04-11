@@ -151,7 +151,7 @@ struct ToneStackNodal
         C1(c1), C2(c2), C3(c3), R1(r1), R2(r2), R3(r3), R4(r4)
     {}
 
-    void prepare(dsp::ProcessSpec& spec)
+    void prepare(const dsp::ProcessSpec& spec)
     {
         c = spec.sampleRate * 2.0;
         setCoeffs();
