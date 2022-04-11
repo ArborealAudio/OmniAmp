@@ -17,11 +17,17 @@ struct OptoComp
     void prepare(const dsp::ProcessSpec& spec)
     {
         lastSR = spec.sampleRate;
+
+        hp.prepare(spec);
+        *hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 200.f, 1.02f);
+        *lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 5000.f, 0.8f);
     }
 
     void reset()
     {
         xm0 = 0.f, xm1 = 0.f, lastEnv = 0.f, lastGR = 0.f;
+        hp.reset();
+        lp.reset();
     }
 
     inline float detectEnv (float x)
@@ -55,13 +61,13 @@ struct OptoComp
             x = 1.175494351e-38f;
 
         auto env = jmax(0.f, 8.685889638f * std::log10(x / threshold));
-        auto t_env = std::tanh(lastEnv);
 
-        float att = std::exp(-1.f / ((1.f/x) * 0.015f * lastSR));
+        float att_time = jlimit(0.005f, 0.050f, (1.f / x) * 0.015f);
+
+        float att = std::exp(-1.f / (att_time * lastSR));
         /*float rel = std::exp(-1.f / (0.05f * lastSR));
         float rel2 = std::exp(-1.f / (2.f * lastSR));*/
-        //float rel = std::exp(-1.f / (0.6f * lastGR * lastSR));
-        float rel = std::exp(lastGR);
+        float rel = std::exp(-1.f / (0.6f * lastGR * lastSR));
 
         if (env > lastEnv)
         {
@@ -93,20 +99,27 @@ struct OptoComp
         auto inL = buffer.getWritePointer(0);
         auto inR = buffer.getWritePointer(1);
 
-        comp = jmap(comp, 1.f, 4.f);
+        auto c_comp = jmap(comp, 1.f, 6.f);
+
+        //if (c_comp > 4.f) {
+        //    auto thresh_scale = c_comp / 4.f;
+        //    threshold = std::pow(10.f, (-18.f * thresh_scale) / 20.f);
+        //}
+        //else
+        //    threshold = std::pow(10.f, -18.f / 20.f);
 
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            //const float smooth = 0.0001f;
-            //auto abs0 = std::sqrt(xm0 * xm0 + smooth) - std::sqrt(smooth);
-            //auto abs1 = std::sqrt(xm1 * xm1 + smooth) - std::sqrt(smooth);
             float abs0 = std::abs(xm0);
             float abs1 = std::abs(xm1);
+            float max = jmax(abs0, abs1);
+            max = hp.processSample(max);
+            max = lp.processSample(max);
 
-            auto gr = compress(jmax(abs0, abs1));
+            auto gr = compress(max);
 
-            inL[i] *= gr * comp;
-            inR[i] *= gr * comp;
+            inL[i] *= gr * c_comp;
+            inR[i] *= gr * c_comp;
 
             xm0 = inL[i];
             xm1 = inR[i];
@@ -116,10 +129,11 @@ struct OptoComp
 private:
     float lastSR = 44100.f;
 
-    const float threshold = std::pow(10.f, -12.f / 20.f);
-    const float e = MathConstants<float>::euler;
+    float threshold = std::pow(10.f, -18.f / 20.f);
     float lastEnv = 0.f, lastGR = 0.f;
     float xm0 = 0.f, xm1 = 0.f;
+
+    dsp::IIR::Filter<float> hp, lp;
 };
 
 struct OptoModel

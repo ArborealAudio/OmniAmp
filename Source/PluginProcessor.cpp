@@ -211,7 +211,7 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     if (*p_comp > 0.f)
         comp.process(buffer, *p_comp);
 
-    /*buffer.applyGain(gain_raw);
+    buffer.applyGain(gain_raw);
 
     avTriode[0].process(buffer, 0.5f, 1.f);
 
@@ -224,10 +224,10 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     toneStack[currentMode].process(buffer);
 
     if (*hiGain)
-        avTriode[3].process(buffer, 2.f, 2.f);*/
+        avTriode[3].process(buffer, 2.f, 2.f);
 
     buffer.applyGain(out_raw);
-    //pentodes.processBufferClassB(buffer, 1.f, 1.f);
+    pentodes.processBufferClassB(buffer, 1.f, 1.f);
 
     if (*autoGain)
         buffer.applyGain(1.f / (gain_raw * out_raw));
