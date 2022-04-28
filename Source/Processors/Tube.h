@@ -16,7 +16,7 @@ struct Cab
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        for (auto& f : lp) {
+        for (auto& f : sc_lp) {
             f.prepare(spec);
             *f.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 5000.f);
         }
@@ -24,12 +24,12 @@ struct Cab
 
     inline float processSample(float x, int ch)
     {
-        return std::tanh(lp[ch].processSample(x));
+        return std::tanh(sc_lp[ch].processSample(x));
     }
 
 private:
 
-    std::array<dsp::IIR::Filter<float>, 2> lp;
+    std::array<dsp::IIR::Filter<float>, 2> sc_lp;
 };
 
 struct Tube
@@ -40,7 +40,7 @@ struct Tube
     {
         lastSampleRate = spec.sampleRate;
 
-        for (auto& f : lp) {
+        for (auto& f : sc_lp) {
             f.prepare(spec);
             *f.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(lastSampleRate, 5.f);
         }
@@ -52,7 +52,7 @@ struct Tube
 
     void reset()
     {
-        for (auto& f : lp)
+        for (auto& f : sc_lp)
             f.reset();
         for (auto& f : m_lp)
             f.reset();
@@ -127,10 +127,10 @@ private:
     {
         auto xr = fabs(x);
 
-        return 0.251188f * lp[ch].processSample(xr);
+        return 0.251188f * sc_lp[ch].processSample(xr);
     }
 
-    std::array<dsp::IIR::Filter<float>, 2> lp, m_lp;
+    std::array<dsp::IIR::Filter<float>, 2> sc_lp, m_lp;
 
     double lastSampleRate = 0.0;
 
@@ -147,7 +147,7 @@ struct AVTriode
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        for (auto& f : hp) {
+        for (auto& f : sc_hp) {
             f.prepare(spec);
             *f.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 20.f);
         }
@@ -157,7 +157,7 @@ struct AVTriode
 
     void reset()
     {
-        for (auto& f : hp)
+        for (auto& f : sc_hp)
             f.reset();
 
         y_m[0] = 0.f, y_m[1] = 0.f;
@@ -168,7 +168,7 @@ struct AVTriode
         auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
         auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
 
-        auto y = -hp[ch].processSample(f1 + f2);
+        auto y = -sc_hp[ch].processSample(f1 + f2);
 
         y_m[ch] = cab.processSample(y, ch);
 
@@ -192,7 +192,7 @@ private:
 
     float y_m[2]{ 0.f, 0.f };
 
-    std::array<dsp::IIR::Filter<float>,2> hp;
+    std::array<dsp::IIR::Filter<float>,2> sc_hp;
 
     Cab cab;
 };

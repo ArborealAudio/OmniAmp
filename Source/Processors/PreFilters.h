@@ -27,7 +27,7 @@ struct GuitarPreFilter
             h.prepare(spec);
             *h.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighShelf(spec.sampleRate, 350.f, 0.7f, 4.f);
         }
-        for (auto& l : lp) {
+        for (auto& l : sc_lp) {
             l.prepare(spec);
             *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 6200.f);
         }
@@ -39,7 +39,7 @@ struct GuitarPreFilter
             b.reset();
         for (auto& b : hiShelf)
             b.reset();
-        for (auto& b : lp)
+        for (auto& b : sc_lp)
             b.reset();
     }
 
@@ -52,7 +52,7 @@ struct GuitarPreFilter
                 for (int i = 0; i < buffer.getNumSamples(); ++i)
                 {
                     in[i] = hiShelf[ch].processSample(in[i]);
-                    in[i] = lp[ch].processSample(in[i]);
+                    in[i] = sc_lp[ch].processSample(in[i]);
                 }
             }
         }
@@ -69,7 +69,7 @@ struct GuitarPreFilter
     }
 
 private:
-    std::array<dsp::IIR::Filter<float>,2> bandPass, hiShelf, lp;
+    std::array<dsp::IIR::Filter<float>,2> bandPass, hiShelf, sc_lp;
 
     double lastSampleRate = 0.0;
 };

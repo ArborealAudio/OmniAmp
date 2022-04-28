@@ -70,7 +70,7 @@ private:
 
     double lastSampleRate = 0.0;
 
-    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *bass, *mid, *treb, *comp;
+    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *comp;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -80,8 +80,16 @@ private:
     } };*/
 
     Guitar guitar;
+    Channel channel;
 
-    int currentMode = 0;
+    enum Mode
+    {
+        Guitar,
+        Bass,
+        Channel
+    };
+
+    Mode currentMode;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessor)

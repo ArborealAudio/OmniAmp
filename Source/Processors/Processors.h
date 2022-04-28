@@ -20,9 +20,6 @@ struct Guitar
         hiGain = apvts.getRawParameterValue("hiGain");
     }
 
-    ~Guitar()
-    {}
-
     void prepare(const dsp::ProcessSpec& spec)
     {
         comp.prepare(spec);
@@ -67,8 +64,8 @@ struct Guitar
 
     void processBuffer(AudioBuffer<float>& buffer)
     {
-        float gain_raw = pow(10.f, (*inGain / 20.f));
-        float out_raw = pow(10.f, (*outGain / 20.f));
+        float gain_raw = std::pow(10.f, (*inGain / 20.f));
+        float out_raw = std::pow(10.f, (*outGain / 20.f));
 
         if (*p_comp > 0.f)
             comp.process(buffer, *p_comp);
@@ -93,7 +90,7 @@ struct Guitar
 private:
     AudioProcessorValueTreeState& apvts;
 
-    OptoComp comp;
+    OptoComp comp{ OptoComp::Type::Guitar };
     GuitarPreFilter gtrPre;
     ToneStackNodal toneStack{ 0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.25e6f, 20e3f, 65e3f };
     std::array<AVTriode, 4> avTriode;
@@ -104,25 +101,67 @@ private:
 
 struct Channel
 {
-    Channel() = default;
+    Channel(AudioProcessorValueTreeState& a) : apvts(a)
+    {
+        inGain = apvts.getRawParameterValue("inputGain");
+        outGain = apvts.getRawParameterValue("outputGain");
+        p_comp = apvts.getRawParameterValue("comp");
+        hiGain = apvts.getRawParameterValue("hiGain");
+    }
 
     void prepare(const dsp::ProcessSpec& spec)
     {
+        comp.prepare(spec);
 
+        for (auto& t : avTriode)
+            t.prepare(spec);
+
+        pentodes.prepare(spec);
     }
 
     void reset()
     {
+        comp.reset();
 
+        for (auto& t : avTriode)
+            t.reset();
+
+        pentodes.reset();
     }
 
     void processBuffer(AudioBuffer<float>& buffer)
     {
+        float gain_raw = std::pow(10.f, (*inGain / 20.f));
+        float out_raw = std::pow(10.f, (*outGain / 20.f));
 
+        auto c = jmap(inGain->load(), 0.f, 18.f, 0.1f, 1.f);
+
+        if (*p_comp > 0.f)
+            comp.process(buffer, *p_comp);
+
+        buffer.applyGain(gain_raw);
+
+        if (gain_raw > 1.f) {
+            avTriode[0].process(buffer, c, 4.f * c);
+            avTriode[1].process(buffer, c, 4.f * c);
+            if (*hiGain) {
+                avTriode[2].process(buffer, c, 1.f);
+                avTriode[3].process(buffer, c, 1.f);
+            }
+        }
+
+        buffer.applyGain(out_raw);
+
+        if (out_raw > 1.f)
+            pentodes.processBufferClassB(buffer, 1.f, 1.f);
     }
 
 private:
-    OptoComp comp;
+    AudioProcessorValueTreeState& apvts;
+
+    OptoComp comp{ OptoComp::Type::Channel };
     std::array<AVTriode, 4> avTriode;
     Tube pentodes;
+
+    std::atomic<float>* inGain, *outGain, *p_comp, *hiGain;
 };
