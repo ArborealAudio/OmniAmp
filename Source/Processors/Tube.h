@@ -99,8 +99,6 @@ private:
 
     inline void processSamplesClassB(float* in, int ch, size_t numSamples, float gp, float gn)
     {
-        float xn = 0.0, xp = 0.0;
-
         for (int i = 0; i < numSamples; ++i)
         {
             in[i] -= 1.2f * processEnvelopeDetector(in[i], ch);
@@ -125,7 +123,7 @@ private:
 
     inline float processEnvelopeDetector(float x, int ch)
     {
-        auto xr = fabs(x);
+        auto xr = std::fabs(x);
 
         return 0.251188f * sc_lp[ch].processSample(xr);
     }

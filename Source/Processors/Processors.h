@@ -64,8 +64,8 @@ struct Guitar
 
     void processBuffer(AudioBuffer<float>& buffer)
     {
-        float gain_raw = std::pow(10.f, (*inGain / 20.f));
-        float out_raw = std::pow(10.f, (*outGain / 20.f));
+        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
+        float out_raw = jmap(outGain->load(), 1.f, 8.f);
 
         if (*p_comp > 0.f)
             comp.process(buffer, *p_comp);
@@ -131,28 +131,26 @@ struct Channel
 
     void processBuffer(AudioBuffer<float>& buffer)
     {
-        float gain_raw = std::pow(10.f, (*inGain / 20.f));
-        float out_raw = std::pow(10.f, (*outGain / 20.f));
-
-        auto c = jmap(inGain->load(), 0.f, 18.f, 0.1f, 1.f);
+        float gain_raw = jmap(inGain->load(), 1.f, 4.f);
+        float out_raw = jmap(outGain->load(), 1.f, 4.f);
 
         if (*p_comp > 0.f)
             comp.process(buffer, *p_comp);
 
         buffer.applyGain(gain_raw);
 
-        if (gain_raw > 1.f) {
-            avTriode[0].process(buffer, c, 4.f * c);
-            avTriode[1].process(buffer, c, 4.f * c);
+        if (*inGain > 0.f) {
+            avTriode[0].process(buffer, *inGain, 2.f * *inGain);
+            //avTriode[1].process(buffer, c, 4.f * c);
             if (*hiGain) {
-                avTriode[2].process(buffer, c, 1.f);
-                avTriode[3].process(buffer, c, 1.f);
+                avTriode[2].process(buffer, *inGain, 2.f);
+                //avTriode[3].process(buffer, c, 1.f);
             }
         }
 
         buffer.applyGain(out_raw);
 
-        if (out_raw > 1.f)
+        if (*outGain > 0.f)
             pentodes.processBufferClassB(buffer, 1.f, 1.f);
     }
 
