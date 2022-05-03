@@ -4,7 +4,11 @@ project(Gamma VERSION 0.1)
 
 find_package(JUCE CONFIG REQUIRED)
 
-juce_set_vst2_sdk_path(C:/vstsdk2.4)
+if (!APPLE)
+    juce_set_vst2_sdk_path(C:/vstsdk2.4)
+else()
+    juce_set_vst2_sdk_path(/Users/alex/vstsdk2.4)
+endif()
 
 juce_add_plugin(Gamma
     COMPANY_NAME "Arboreal Audio"

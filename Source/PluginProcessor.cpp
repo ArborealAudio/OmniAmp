@@ -106,7 +106,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     lastSampleRate = sampleRate;
 
-    dsp::ProcessSpec spec{ sampleRate, samplesPerBlock, getTotalNumInputChannels() };
+    dsp::ProcessSpec spec{ sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels() };
 
     guitar.prepare(spec);
     channel.prepare(spec);
@@ -125,15 +125,10 @@ bool GammaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
     juce::ignoreUnused (layouts);
     return true;
   #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-    // This checks if the input layout matches the output layout
    #if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
