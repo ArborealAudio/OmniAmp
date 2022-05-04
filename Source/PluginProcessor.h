@@ -80,6 +80,7 @@ private:
     } };*/
 
     Guitar guitar;
+    Bass bass;
     Channel channel;
 
     enum Mode
@@ -89,7 +90,7 @@ private:
         Channel
     };
 
-    Mode currentMode;
+    Mode currentMode = Mode::Guitar;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessor)
