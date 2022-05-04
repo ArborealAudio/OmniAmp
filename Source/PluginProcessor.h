@@ -80,6 +80,7 @@ private:
     } };*/
 
     Guitar guitar;
+    Bass bass;
     Channel channel;
 
     enum Mode

@@ -20,7 +20,7 @@ GammaAudioProcessor::GammaAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        ), apvts(*this, nullptr, "Parameters", createParams()),
-                        guitar(apvts), channel(apvts)
+                        guitar(apvts), bass(apvts), channel(apvts)
 #endif
 {
     gain = apvts.getRawParameterValue("inputGain");
@@ -109,12 +109,14 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     dsp::ProcessSpec spec{ sampleRate, samplesPerBlock, getTotalNumInputChannels() };
 
     guitar.prepare(spec);
+    bass.prepare(spec);
     channel.prepare(spec);
 }
 
 void GammaAudioProcessor::releaseResources()
 {
     guitar.reset();
+    bass.reset();
     channel.reset();
 }
 
@@ -151,14 +153,17 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
     else if (parameterID.contains("bass"))
     {
         guitar.setToneControl(0, newValue);
+        bass.setToneControl(0, newValue);
     }
     else if (parameterID.contains("mid"))
     {
         guitar.setToneControl(1, newValue);
+        bass.setToneControl(1, newValue);
     }
     else if (parameterID.contains("treble"))
     {
         guitar.setToneControl(2, newValue);
+        bass.setToneControl(2, newValue);
     }
 }
 
@@ -175,6 +180,9 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     {
     case Guitar:
         guitar.processBuffer(buffer);
+        break;
+    case Bass:
+        bass.processBuffer(buffer);
         break;
     case Channel:
         channel.processBuffer(buffer);

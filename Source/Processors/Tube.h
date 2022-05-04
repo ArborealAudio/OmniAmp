@@ -168,7 +168,8 @@ struct AVTriode
 
         auto y = -sc_hp[ch].processSample(f1 + f2);
 
-        y_m[ch] = cab.processSample(y, ch);
+        // y_m[ch] = cab.processSample(y, ch);
+        y_m[ch] = y;
 
         return y;
     }

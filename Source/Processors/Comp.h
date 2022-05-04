@@ -41,6 +41,18 @@ struct OptoComp
                 *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 6500.f);
             }
             break;
+        case Bass:
+            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 150.f);
+            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
+            for (auto& h : hp) {
+                h.prepare(spec);
+                *h.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 1000.f);
+            }
+            for (auto& l : lp) {
+                l.prepare(spec);
+                *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
+            }
+            break;
         case Channel:
             *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 100.f, 0.707f);
             *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 5000.f, 0.8f);
@@ -128,13 +140,15 @@ struct OptoComp
 
         auto c_comp = jmap(comp, 1.f, 6.f);
 
-        switch (type) {
+        switch (type)
+        {
         case Channel:{
             auto thresh_scale = c_comp / 3.f;
             threshold = std::pow(10.f, (-18.f * thresh_scale) / 20.f);
             }
             break;
         case Guitar:
+        case Bass:
             threshold = std::pow(10.f, -36.f / 20.f);
             break;
         }
@@ -152,6 +166,7 @@ struct OptoComp
 
             switch (type) {
             case Guitar:
+            case Bass:
                 inL[i] *= c_comp * gr;
                 inR[i] *= c_comp * gr;
                 break;
@@ -173,6 +188,7 @@ struct OptoComp
             switch (type)
             {
             case Guitar:
+            case Bass:
                 auto bpL = hp[0].processSample(inL[i]);
                 // bpL = lp[0].processSample(bpL);
                 auto bpR = hp[1].processSample(inR[i]);
