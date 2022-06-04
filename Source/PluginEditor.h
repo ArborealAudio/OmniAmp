@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include "UI/UI.h"
 
 //==============================================================================
 /**
@@ -25,9 +26,14 @@ public:
     void resized() override;
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
     GammaAudioProcessor& audioProcessor;
+
+    ChoiceMenu mode;
+    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach;
+
+    AmpControls ampControls;
+
+    Background bkgd;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessorEditor)
 };

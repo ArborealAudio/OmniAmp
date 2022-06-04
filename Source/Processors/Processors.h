@@ -92,7 +92,7 @@ private:
 
     OptoComp comp{ OptoComp::Type::Guitar };
     GuitarPreFilter gtrPre;
-    ToneStackNodal toneStack{ 0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.25e6f, 20e3f, 65e3f };
+    ToneStackNodal toneStack{ 0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.5e6f, 20e3f, 65e3f };
     std::array<AVTriode, 4> avTriode;
     Tube pentodes;
 
@@ -177,7 +177,7 @@ private:
     AudioProcessorValueTreeState& apvts;
 
     std::array<AVTriode, 4> avTriode;
-    ToneStackNodal toneStack{ 0.25e-9f, 22e-9f, 22e-9f, 300e3f, 0.5e6f, 30e3f, 56e3f };
+    ToneStackNodal toneStack{ 0.5e-9f, 10e-9f, 10e-9f, 250e3f, 0.5e6f, 30e3f, 100e3f };
     OptoComp comp {OptoComp::Type::Bass};
     Tube pentodes;
 

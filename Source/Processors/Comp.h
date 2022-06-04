@@ -126,7 +126,7 @@ struct OptoComp
 
         lastEnv = env;
         
-        auto gr_db = 10.f * (-env); /*using tanh here makes a nice log curve*/
+        auto gr_db = 10.f * -env; /*using tanh here makes a nice log curve (but also fux w the att/rel curves)*/
         auto gr = std::pow(10.f, gr_db / 20.f);
         lastGR = gr;
 
@@ -143,7 +143,7 @@ struct OptoComp
         switch (type)
         {
         case Channel:{
-            auto thresh_scale = c_comp / 3.f;
+            auto thresh_scale = c_comp / 2.f;
             threshold = std::pow(10.f, (-18.f * thresh_scale) / 20.f);
             }
             break;

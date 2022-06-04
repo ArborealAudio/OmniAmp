@@ -1,0 +1,9 @@
+target_sources(Gamma
+PRIVATE
+    UI.h
+    Knob.h
+    ChoiceMenu.h
+    Button.h
+    Background.h
+    AmpControls.h
+)

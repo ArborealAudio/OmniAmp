@@ -30,6 +30,12 @@ target_sources(Gamma
         Source/PluginProcessor.cpp)
 
 add_subdirectory(Source/Processors)
+add_subdirectory(Source/UI)
+
+juce_add_modules(
+    "/Users/alex/modules/Gin/modules/gin"
+    "/Users/alex/modules/Gin/modules/gin_gui"
+    ALIAS_NAMESPACE gin)
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -37,15 +43,20 @@ target_compile_definitions(Gamma
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
-        JUCE_REPORT_APP_USAGE=0)
+        JUCE_REPORT_APP_USAGE=0
+        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
 
-# juce_add_binary_data(AudioPluginData SOURCES ...)
+juce_add_binary_data(BinaryData SOURCES
+    Resources/drawing.svg
+    Resources/drawing.png)
 
 target_link_libraries(Gamma
     PRIVATE
-        # AudioPluginData           # If we'd created a binary data target, we'd link to it here
+        BinaryData
         juce::juce_audio_utils
         juce::juce_dsp
+        gin::gin
+        gin::gin_gui
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

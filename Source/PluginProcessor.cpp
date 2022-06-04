@@ -193,8 +193,8 @@ bool GammaAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* GammaAudioProcessor::createEditor()
 {
-    //return new GammaAudioProcessorEditor (*this);
-    return new GenericAudioProcessorEditor(*this);
+    return new GammaAudioProcessorEditor (*this);
+    // return new GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -223,15 +223,15 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
 {
     std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
-    params.emplace_back(std::make_unique<AudioParameterFloat>("inputGain", "Input Gain", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterFloat>("outputGain", "Output Gain", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterFloat>("comp", "Compression", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterBool>("hiGain", "High Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterFloat>("bass", "Bass", 0.f, 1.f, 0.5f));
-    params.emplace_back(std::make_unique<AudioParameterFloat>("mid", "Mid", 0.f, 1.f, 0.5f));
-    params.emplace_back(std::make_unique<AudioParameterFloat>("treble", "Treble", 0.f, 1.f, 0.5f));
-    params.emplace_back(std::make_unique<AudioParameterBool>("autoGain", "Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterChoice>("mode", "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 0));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("inputGain", 1), "Input Gain", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("outputGain", 1), "Output Gain", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hiGain", 1), "High Gain", false));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bass", 1), "Bass", 0.f, 1.f, 0.5f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("treble", 1), "Treble", 0.f, 1.f, 0.5f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("autoGain", 1), "Auto Gain", false));
+    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 0));
 
     return { params.begin(), params.end() };
 }
