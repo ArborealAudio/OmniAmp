@@ -33,6 +33,9 @@ private:
 
     AmpControls ampControls;
 
+    Knob hfEnhance;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach;
+
     Background bkgd;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessorEditor)

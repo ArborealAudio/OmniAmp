@@ -28,6 +28,7 @@ GammaAudioProcessor::GammaAudioProcessor()
     comp = apvts.getRawParameterValue("comp");
     hiGain = apvts.getRawParameterValue("hiGain");
     autoGain = apvts.getRawParameterValue("autoGain");
+    hfEnhance = apvts.getRawParameterValue("hfEnhance");
 
     apvts.addParameterListener("treble", this);
     apvts.addParameterListener("mid", this);
@@ -111,6 +112,8 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     guitar.prepare(spec);
     bass.prepare(spec);
     channel.prepare(spec);
+
+    hfEnhancer.prepare(spec);
 }
 
 void GammaAudioProcessor::releaseResources()
@@ -118,6 +121,7 @@ void GammaAudioProcessor::releaseResources()
     guitar.reset();
     bass.reset();
     channel.reset();
+    hfEnhancer.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -183,6 +187,9 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         channel.processBuffer(buffer);
         break;
     }
+
+    if (*hfEnhance)
+        hfEnhancer.processBuffer(buffer, *hfEnhance);
 }
 
 //==============================================================================
@@ -232,6 +239,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("treble", 1), "Treble", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("autoGain", 1), "Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 0));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
 
     return { params.begin(), params.end() };
 }

@@ -15,6 +15,7 @@
 #include "Processors/ToneStack.h"
 #include "Processors/Comp.h"
 #include "Processors/Processors.h"
+#include "Processors/Enhancer.h"
 
 //==============================================================================
 /**
@@ -70,7 +71,7 @@ private:
 
     double lastSampleRate = 0.0;
 
-    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *comp;
+    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *comp, *hfEnhance;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -82,6 +83,7 @@ private:
     Guitar guitar;
     Bass bass;
     Channel channel;
+    HFEnhancer<float> hfEnhancer;
 
     enum Mode
     {

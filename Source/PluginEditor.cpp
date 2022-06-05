@@ -28,6 +28,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     mode.setSize(100, 30);
     mode.setCentrePosition(getLocalBounds().getCentreX(), 20);
 
+    addAndMakeVisible(hfEnhance);
+    hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
+    hfEnhance.setBounds(getLocalBounds().getCentreX(), 100, 100, 100);
+
     setResizable(true, true);
     getConstrainer()->setMinimumSize(200, 150);
     getConstrainer()->setFixedAspectRatio(2.0);

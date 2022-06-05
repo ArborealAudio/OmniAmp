@@ -158,7 +158,7 @@ struct AVTriode
         for (auto& f : sc_hp)
             f.reset();
 
-        y_m[0] = 0.f, y_m[1] = 0.f;
+        y_m[0] = 0.f;
     }
 
     inline float processSample(float x, int ch, float gp, float gn)
@@ -168,8 +168,8 @@ struct AVTriode
 
         auto y = -sc_hp[ch].processSample(f1 + f2);
 
-        // y_m[ch] = cab.processSample(y, ch);
-        y_m[ch] = y;
+        y_m[ch] = cab.processSample(y, ch);
+        // y_m[ch] = y;
 
         return y;
     }
