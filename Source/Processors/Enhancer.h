@@ -32,8 +32,6 @@ struct HFEnhancer
 
         hp1.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
 
-        // subtract(buffer);
-
         wetBuffer.applyGain(jmap(enhance, 1.f, 4.f));
 
         tube.process(wetBuffer, 1.0, 0.5);
@@ -46,20 +44,55 @@ struct HFEnhancer
     }
 
 private:
+    Dsp::SimpleFilter<Dsp::Bessel::HighPass<4>, 2> hp1, hp2;
 
-    void subtract(AudioBuffer<Type>& from, AudioBuffer<Type>& sub)
+    AudioBuffer<Type> wetBuffer;
+
+    AVTriode tube;
+};
+
+template <typename Type>
+struct LFEnhancer
+{
+    LFEnhancer(){}
+    ~LFEnhancer(){}
+
+    void prepare(const dsp::ProcessSpec& spec)
     {
-        auto lp = from.getArrayOfWritePointers();
-        auto hp = sub.getArrayOfWritePointers();
+        lp1.setup(1, spec.sampleRate, 250.0);
+        lp2.setup(2, spec.sampleRate, 250.0);
 
-        for (size_t i = 0; i < from.getNumSamples(); i++)
-        {
-            lp[0][i] -= hp[0][i];
-            lp[1][i] -= hp[1][i];
-        }
+        tube.prepare(spec);
+
+        wetBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
     }
 
-    Dsp::SimpleFilter<Dsp::Bessel::HighPass<4>, 2> hp1, hp2;
+    void reset()
+    {
+        lp1.reset();
+        lp2.reset();
+        tube.reset();
+    }
+
+    void processBuffer(AudioBuffer<Type>& buffer, const Type enhance)
+    {
+        wetBuffer.makeCopyOf(buffer, true);
+
+        lp1.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
+
+        wetBuffer.applyGain(jmap(enhance, 1.f, 4.f));
+
+        tube.process(wetBuffer, 1.0, 0.5);
+
+        lp2.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
+
+        buffer.addFrom(0, 0, wetBuffer.getReadPointer(0), wetBuffer.getNumSamples(), enhance);
+        if (buffer.getNumChannels() > 1)
+            buffer.addFrom(1, 0, wetBuffer.getReadPointer(1), wetBuffer.getNumSamples(), enhance);
+    }
+
+private:
+    Dsp::SimpleFilter<Dsp::Bessel::LowPass<4>, 2> lp1, lp2;
 
     AudioBuffer<Type> wetBuffer;
 
