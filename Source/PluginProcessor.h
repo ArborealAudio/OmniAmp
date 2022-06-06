@@ -71,7 +71,7 @@ private:
 
     double lastSampleRate = 0.0;
 
-    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *comp, *hfEnhance;
+    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *comp, *hfEnhance, *lfEnhance;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -84,6 +84,7 @@ private:
     Bass bass;
     Channel channel;
     HFEnhancer<float> hfEnhancer;
+    LFEnhancer<float> lfEnhancer;
 
     enum Mode
     {

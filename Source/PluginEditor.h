@@ -33,8 +33,8 @@ private:
 
     AmpControls ampControls;
 
-    Knob hfEnhance;
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach;
+    Knob hfEnhance, lfEnhance;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
 
     Background bkgd;
 

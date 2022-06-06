@@ -29,6 +29,7 @@ GammaAudioProcessor::GammaAudioProcessor()
     hiGain = apvts.getRawParameterValue("hiGain");
     autoGain = apvts.getRawParameterValue("autoGain");
     hfEnhance = apvts.getRawParameterValue("hfEnhance");
+    lfEnhance = apvts.getRawParameterValue("lfEnhance");
 
     apvts.addParameterListener("treble", this);
     apvts.addParameterListener("mid", this);
@@ -113,6 +114,8 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     bass.prepare(spec);
     channel.prepare(spec);
 
+    lfEnhancer.prepare(spec);
+    lfEnhancer.setType((LFEnhancer<float>::Mode)currentMode);
     hfEnhancer.prepare(spec);
 }
 
@@ -147,8 +150,10 @@ bool GammaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 
 void GammaAudioProcessor::parameterChanged(const String& parameterID, float newValue)
 {
-    if (parameterID.contains("mode"))
+    if (parameterID.contains("mode")) {
         currentMode = (Mode)newValue;
+        lfEnhancer.setType((LFEnhancer<float>::Mode)currentMode);
+    }
     else if (parameterID.contains("bass"))
     {
         guitar.setToneControl(0, newValue);
@@ -187,6 +192,9 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         channel.processBuffer(buffer);
         break;
     }
+
+    if (*lfEnhance)
+        lfEnhancer.processBuffer(buffer, *lfEnhance);
 
     if (*hfEnhance)
         hfEnhancer.processBuffer(buffer, *hfEnhance);
@@ -240,6 +248,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("autoGain", 1), "Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 0));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
 
     return { params.begin(), params.end() };
 }

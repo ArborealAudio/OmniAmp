@@ -57,14 +57,45 @@ struct LFEnhancer
     LFEnhancer(){}
     ~LFEnhancer(){}
 
+    enum Mode
+    {
+        Guitar,
+        Bass,
+        Channel
+    };
+
     void prepare(const dsp::ProcessSpec& spec)
     {
-        lp1.setup(1, spec.sampleRate, 250.0);
-        lp2.setup(2, spec.sampleRate, 250.0);
+        double freq;
+        switch (type)
+        {
+        case Guitar:
+            freq = 250.0;
+            break;
+        case Bass:
+            freq = 150.0;
+            break;
+        case Channel:
+            freq = 100.0;
+            break;
+        }
+
+        lp1.setup(1, spec.sampleRate, freq);
+        lp2.setup(1, spec.sampleRate, freq);
 
         tube.prepare(spec);
 
         wetBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
+    }
+
+    void setType(Mode newType)
+    {
+        type = newType;
+    }
+
+    Mode getType()
+    {
+        return type;
     }
 
     void reset()
@@ -80,9 +111,9 @@ struct LFEnhancer
 
         lp1.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
 
-        wetBuffer.applyGain(jmap(enhance, 1.f, 4.f));
+        wetBuffer.applyGain(jmap(enhance, -1.f, -4.f));
 
-        tube.process(wetBuffer, 1.0, 0.5);
+        tube.process(wetBuffer, 1.0, 3.0);
 
         lp2.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
 
@@ -92,6 +123,9 @@ struct LFEnhancer
     }
 
 private:
+
+    Mode type;
+
     Dsp::SimpleFilter<Dsp::Bessel::LowPass<4>, 2> lp1, lp2;
 
     AudioBuffer<Type> wetBuffer;

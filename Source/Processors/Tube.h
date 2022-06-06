@@ -161,7 +161,7 @@ struct AVTriode
         y_m[0] = 0.f;
     }
 
-    inline float processSample(float x, int ch, float gp, float gn)
+    inline float processSample(float x, size_t ch, float gp, float gn)
     {
         auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
         auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
