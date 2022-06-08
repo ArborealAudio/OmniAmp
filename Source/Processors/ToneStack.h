@@ -242,6 +242,19 @@ struct ToneStackNodal
         }
     }
 
+    void processBlock(dsp::AudioBlock<float>& block)
+    {
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            for (int i = 0; i < block.getNumSamples(); ++i)
+            {
+                in[i] = processSample(in[i], ch);
+            }
+        }
+    }
+
 private:
     float bass = 0.5, mid = 0.5, treble = 0.5, c = 0, b1 = 0, b2 = 0, b3 = 0, a0 = 0, a1 = 0, a2 = 0, a3 = 0,
         B0 = 0, B1 = 0, B2 = 0, B3 = 0, A0 = 0, A1 = 0, A2 = 0, A3 = 0;

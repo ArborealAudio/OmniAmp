@@ -133,7 +133,7 @@ struct OptoComp
         return gr;
     }
 
-    void process(AudioBuffer<float>& buffer, float comp)
+    void processBuffer(AudioBuffer<float>& buffer, float comp)
     {
         auto inL = buffer.getWritePointer(0);
         auto inR = buffer.getWritePointer(1);
@@ -154,6 +154,74 @@ struct OptoComp
         }
 
         for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            auto abs0 = std::abs(xm0);
+            auto abs1 = std::abs(xm1);
+
+            float max = jmax(abs0, abs1);
+            max = sc_hp.processSample(max);
+            max = sc_lp.processSample(max);
+
+            auto gr = compress(max);
+
+            switch (type) {
+            case Guitar:
+            case Bass:
+                inL[i] *= c_comp * gr;
+                inR[i] *= c_comp * gr;
+                break;
+            case Channel:
+                if (c_comp <= 4.f) {
+                    inL[i] *= gr;
+                    inR[i] *= gr;
+                }
+                else {
+                    inL[i] *= (c_comp / 4.f) * gr;
+                    inR[i] *= (c_comp / 4.f) * gr;
+                }
+                break;
+            }
+
+            xm0 = inL[i];
+            xm1 = inR[i];
+
+            switch (type)
+            {
+            case Guitar:
+            case Bass:
+                auto bpL = hp[0].processSample(inL[i]);
+                // bpL = lp[0].processSample(bpL);
+                auto bpR = hp[1].processSample(inR[i]);
+                // bpR = lp[1].processSample(bpR);
+
+                inL[i] += bpL * comp;
+                inR[i] += bpR * comp;
+                break;
+            }
+        }
+    }
+
+    void processBlock(dsp::AudioBlock<float>& block, float comp)
+    {
+        auto inL = block.getChannelPointer(0);
+        auto inR = block.getChannelPointer(1);
+
+        auto c_comp = jmap(comp, 1.f, 6.f);
+
+        switch (type)
+        {
+        case Channel:{
+            auto thresh_scale = c_comp / 2.f;
+            threshold = std::pow(10.f, (-18.f * thresh_scale) / 20.f);
+            }
+            break;
+        case Guitar:
+        case Bass:
+            threshold = std::pow(10.f, -36.f / 20.f);
+            break;
+        }
+
+        for (int i = 0; i < block.getNumSamples(); ++i)
         {
             auto abs0 = std::abs(xm0);
             auto abs1 = std::abs(xm1);

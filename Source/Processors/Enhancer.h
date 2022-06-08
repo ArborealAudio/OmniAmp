@@ -43,6 +43,32 @@ struct HFEnhancer
             buffer.addFrom(1, 0, wetBuffer.getReadPointer(1), wetBuffer.getNumSamples(), enhance);
     }
 
+    void processBlock(dsp::AudioBlock<float>& block, const float enhance)
+    {
+        int size = (int)block.getNumChannels() * (int)block.getNumSamples();
+        HeapBlock<char> heap{size};
+        dsp::AudioBlock<float> wetBlock(heap, block.getNumChannels(), block.getNumSamples());
+
+        wetBlock.copyFrom(block);
+
+        auto inL = wetBlock.getChannelPointer(0);
+        auto inR = wetBlock.getChannelPointer(1);
+
+        hp1.process(wetBlock.getNumSamples(), 0, inL);
+        hp1.process(wetBlock.getNumSamples(), 1, inR);
+
+        wetBlock.multiplyBy(jmap(enhance, 1.f, 4.f));
+
+        tube.processBlock(wetBlock, 1.0, 0.5);
+
+        hp2.process(wetBlock.getNumSamples(), 0, inL);
+        hp2.process(wetBlock.getNumSamples(), 1, inR);
+
+        wetBlock.multiplyBy(enhance);
+
+        block.add(wetBlock);
+    }
+
 private:
     Dsp::SimpleFilter<Dsp::Bessel::HighPass<4>, 2> hp1, hp2;
 
@@ -51,7 +77,6 @@ private:
     AVTriode tube;
 };
 
-template <typename Type>
 struct LFEnhancer
 {
     LFEnhancer(){}
@@ -66,6 +91,8 @@ struct LFEnhancer
 
     void prepare(const dsp::ProcessSpec& spec)
     {
+        SR = spec.sampleRate;
+
         double freq;
         switch (type)
         {
@@ -93,9 +120,24 @@ struct LFEnhancer
         type = newType;
     }
 
-    Mode getType()
+    void updateFilters()
     {
-        return type;
+        double freq;
+        switch (type)
+        {
+        case Guitar:
+            freq = 250.0;
+            break;
+        case Bass:
+            freq = 150.0;
+            break;
+        case Channel:
+            freq = 100.0;
+            break;
+        }
+
+        lp1.setup(1, SR, freq);
+        lp2.setup(1, SR, freq);
     }
 
     void reset()
@@ -105,7 +147,7 @@ struct LFEnhancer
         tube.reset();
     }
 
-    void processBuffer(AudioBuffer<Type>& buffer, const Type enhance)
+    void processBuffer(AudioBuffer<float>& buffer, const float enhance)
     {
         wetBuffer.makeCopyOf(buffer, true);
 
@@ -122,13 +164,40 @@ struct LFEnhancer
             buffer.addFrom(1, 0, wetBuffer.getReadPointer(1), wetBuffer.getNumSamples(), enhance);
     }
 
+    void processBlock(dsp::AudioBlock<float>& block, const float enhance)
+    {
+        int size = (int)block.getNumChannels() * (int)block.getNumSamples();
+        HeapBlock<char> heap{size};
+        dsp::AudioBlock<float> wetBlock(heap, block.getNumChannels(), block.getNumSamples());
+
+        wetBlock.copyFrom(block);
+
+        auto inL = wetBlock.getChannelPointer(0);
+        auto inR = wetBlock.getChannelPointer(1);
+
+        lp1.process(wetBlock.getNumSamples(), 0, inL);
+        lp1.process(wetBlock.getNumSamples(), 1, inR);
+
+        wetBlock.multiplyBy(jmap(enhance, -1.f, -4.f));
+
+        tube.processBlock(wetBlock, 1.0, 3.0);
+
+        lp2.process(wetBlock.getNumSamples(), 0, inL);
+        lp2.process(wetBlock.getNumSamples(), 1, inR);
+
+        wetBlock.multiplyBy(enhance);
+        block.add(wetBlock);
+    }
+
 private:
 
     Mode type;
 
     Dsp::SimpleFilter<Dsp::Bessel::LowPass<4>, 2> lp1, lp2;
 
-    AudioBuffer<Type> wetBuffer;
+    AudioBuffer<float> wetBuffer;
 
     AVTriode tube;
+
+    double SR = 0.0;
 };

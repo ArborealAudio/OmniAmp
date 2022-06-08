@@ -84,7 +84,8 @@ private:
     Bass bass;
     Channel channel;
     HFEnhancer<float> hfEnhancer;
-    LFEnhancer<float> lfEnhancer;
+    LFEnhancer lfEnhancer;
+    dsp::Oversampling<float> oversample{2, 2, dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR};
 
     enum Mode
     {

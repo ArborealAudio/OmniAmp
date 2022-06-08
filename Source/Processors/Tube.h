@@ -68,6 +68,16 @@ struct Tube
         }
     }
 
+    void processBlock(dsp::AudioBlock<float>& block, float gp, float gn)
+    {
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            processSamples(in, ch, block.getNumSamples(), gp, gn);
+        }
+    }
+
     void processBufferClassB(AudioBuffer<float>& buffer, float gp, float gn)
     {
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
@@ -75,6 +85,16 @@ struct Tube
             auto in = buffer.getWritePointer(ch);
 
             processSamplesClassB(in, ch, buffer.getNumSamples(), gp, gn);
+        }
+    }
+
+    void processBlockClassB(dsp::AudioBlock<float>& block, float gp, float gn)
+    {
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            processSamplesClassB(in, ch, block.getNumSamples(), gp, gn);
         }
     }
 
@@ -104,6 +124,8 @@ private:
             in[i] -= 1.2f * processEnvelopeDetector(in[i], ch);
 
             in[i] = saturate(in[i], gp, gn);
+
+            in[i] = std::tan(in[i]) * 0.8;
         }
     }
 
@@ -181,6 +203,19 @@ struct AVTriode
             auto in = buffer.getWritePointer(ch);
 
             for (int i = 0; i < buffer.getNumSamples(); ++i)
+            {
+                in[i] = processSample(in[i], ch, gp, gn);
+            }
+        }
+    }
+
+    void processBlock(dsp::AudioBlock<float>& block, float gp, float gn)
+    {
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            for (int i = 0; i < block.getNumSamples(); ++i)
             {
                 in[i] = processSample(in[i], ch, gp, gn);
             }

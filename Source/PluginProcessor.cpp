@@ -106,16 +106,18 @@ void GammaAudioProcessor::changeProgramName (int index, const juce::String& newN
 //==============================================================================
 void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    lastSampleRate = sampleRate;
+    oversample.initProcessing(samplesPerBlock);
 
-    dsp::ProcessSpec spec{ sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels() };
+    lastSampleRate = sampleRate * (double)oversample.getOversamplingFactor();
+
+    dsp::ProcessSpec spec{ sampleRate * (double)oversample.getOversamplingFactor(), (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels() };
 
     guitar.prepare(spec);
     bass.prepare(spec);
     channel.prepare(spec);
 
+    lfEnhancer.setType((LFEnhancer::Mode)currentMode);
     lfEnhancer.prepare(spec);
-    lfEnhancer.setType((LFEnhancer<float>::Mode)currentMode);
     hfEnhancer.prepare(spec);
 }
 
@@ -152,7 +154,8 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
 {
     if (parameterID.contains("mode")) {
         currentMode = (Mode)newValue;
-        lfEnhancer.setType((LFEnhancer<float>::Mode)currentMode);
+        lfEnhancer.setType((LFEnhancer::Mode)currentMode);
+        lfEnhancer.updateFilters();
     }
     else if (parameterID.contains("bass"))
     {
@@ -180,24 +183,32 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    dsp::AudioBlock<float> block(buffer);
+
+    auto osBlock = oversample.processSamplesUp(block);
+
     switch (currentMode)
     {
     case Guitar:
-        guitar.processBuffer(buffer);
+        guitar.processBlock(osBlock);
         break;
     case Bass:
-        bass.processBuffer(buffer);
+        bass.processBlock(osBlock);
         break;
     case Channel:
-        channel.processBuffer(buffer);
+        channel.processBlock(osBlock);
         break;
     }
 
     if (*lfEnhance)
-        lfEnhancer.processBuffer(buffer, *lfEnhance);
+        lfEnhancer.processBlock(osBlock, *lfEnhance);
 
     if (*hfEnhance)
-        hfEnhancer.processBuffer(buffer, *hfEnhance);
+        hfEnhancer.processBlock(osBlock, *hfEnhance);
+
+    oversample.processSamplesDown(block);
+
+    setLatencySamples(oversample.getLatencyInSamples());
 }
 
 //==============================================================================

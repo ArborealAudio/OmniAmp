@@ -68,7 +68,7 @@ struct Guitar
         float out_raw = jmap(outGain->load(), 1.f, 8.f);
 
         if (*p_comp > 0.f)
-            comp.process(buffer, *p_comp);
+            comp.processBuffer(buffer, *p_comp);
 
         buffer.applyGain(gain_raw);
 
@@ -85,8 +85,42 @@ struct Guitar
             avTriode[3].process(buffer, 2.f, 2.f);
 
         buffer.applyGain(out_raw);
-        pentodes.processBufferClassB(buffer, 1.f, 1.f);
+        if (*hiGain)
+            pentodes.processBufferClassB(buffer, 1.f, 1.f);
+        else
+            pentodes.processBufferClassB(buffer, 2.f, 2.f);
     }
+
+    void processBlock(dsp::AudioBlock<float>& block)
+    {
+        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
+        float out_raw = jmap(outGain->load(), 1.f, 8.f);
+
+        if (*p_comp > 0.f)
+            comp.processBlock(block, *p_comp);
+
+        block.multiplyBy(gain_raw);
+
+        avTriode[0].processBlock(block, 0.5f, 1.f);
+
+        gtrPre.processBlock(block, *hiGain);
+
+        avTriode[1].processBlock(block, 0.5f, 1.f);
+        avTriode[2].processBlock(block, 0.5f, 1.f);
+
+        toneStack.processBlock(block);
+
+        if (*hiGain)
+            avTriode[3].processBlock(block, 2.f, 2.f);
+
+        block.multiplyBy(out_raw);
+
+        if (*hiGain)
+            pentodes.processBlockClassB(block, 1.f, 1.f);
+        else
+            pentodes.processBlockClassB(block, 2.f, 2.f);
+    }
+
 private:
     AudioProcessorValueTreeState& apvts;
 
@@ -153,23 +187,58 @@ struct Bass
         float out_raw = jmap(outGain->load(), 1.f, 8.f);
 
         if (*p_comp > 0.f)
-            comp.process(buffer, *p_comp);
+            comp.processBuffer(buffer, *p_comp);
 
         avTriode[0].process(buffer, 0.5, 1.0);
 
         buffer.applyGain(gain_raw);
-        
+        if (*hiGain)
+            buffer.applyGain(2.f);
+
         avTriode[1].process(buffer, 0.5, 1.0);
         if (*hiGain) {
-            avTriode[2].process(buffer, 1.0, 1.5);
-            avTriode[3].process(buffer, 1.0, 1.5);
+            avTriode[2].process(buffer, 1.0, 2.0);
+            avTriode[3].process(buffer, 1.0, 2.0);
         }
 
         toneStack.process(buffer);
 
         buffer.applyGain(out_raw);
 
-        pentodes.processBufferClassB(buffer, 1.f, 1.f);
+        if (!*hiGain)
+            pentodes.processBufferClassB(buffer, 1.f, 1.f);
+        else
+            pentodes.processBufferClassB(buffer, 1.5f, 1.5f);
+    }
+
+    void processBlock(dsp::AudioBlock<float>& block)
+    {
+        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
+        float out_raw = jmap(outGain->load(), 1.f, 8.f);
+
+        if (*p_comp > 0.f)
+            comp.processBlock(block, *p_comp);
+
+        avTriode[0].processBlock(block, 0.5, 1.0);
+
+        block.multiplyBy(gain_raw);
+        if (*hiGain)
+            block.multiplyBy(2.f);
+
+        avTriode[1].processBlock(block, 0.5, 1.0);
+        if (*hiGain) {
+            avTriode[2].processBlock(block, 1.0, 2.0);
+            avTriode[3].processBlock(block, 1.0, 2.0);
+        }
+
+        toneStack.processBlock(block);
+
+        block.multiplyBy(out_raw);
+
+        if (!*hiGain)
+            pentodes.processBlockClassB(block, 1.f, 1.f);
+        else
+            pentodes.processBlockClassB(block, 1.5f, 1.5f);
     }
 
 private:
@@ -220,20 +289,50 @@ struct Channel
         float out_raw = jmap(outGain->load(), 1.f, 4.f);
 
         if (*p_comp > 0.f)
-            comp.process(buffer, *p_comp);
+            comp.processBuffer(buffer, *p_comp);
 
         buffer.applyGain(gain_raw);
 
         if (*inGain > 0.f) {
             avTriode[0].process(buffer, *inGain, 2.f * *inGain);
             if (*hiGain)
-                avTriode[1].process(buffer, *inGain, 2.f);
+                avTriode[1].process(buffer, *inGain, gain_raw);
         }
 
         buffer.applyGain(out_raw);
 
-        if (*outGain > 0.f)
-            pentodes.processBufferClassB(buffer, 1.f, 1.f);
+        if (*outGain > 0.f) {
+            if (!*hiGain)
+                pentodes.processBufferClassB(buffer, 1.f, 1.f);
+            else
+                pentodes.processBufferClassB(buffer, 1.5f, 1.5f);
+        }
+    }
+
+    void processBlock(dsp::AudioBlock<float>& block)
+    {
+        float gain_raw = jmap(inGain->load(), 1.f, 4.f);
+        float out_raw = jmap(outGain->load(), 1.f, 4.f);
+
+        if (*p_comp > 0.f)
+            comp.processBlock(block, *p_comp);
+
+        block.multiplyBy(gain_raw);
+
+        if (*inGain > 0.f) {
+            avTriode[0].processBlock(block, *inGain, 2.f * *inGain);
+            if (*hiGain)
+                avTriode[1].processBlock(block, *inGain, gain_raw);
+        }
+
+        block.multiplyBy(out_raw);
+
+        if (*outGain > 0.f) {
+            if (!*hiGain)
+                pentodes.processBlockClassB(block, 1.f, 1.f);
+            else
+                pentodes.processBlockClassB(block, 1.5f, 1.5f);
+        }
     }
 
 private:
