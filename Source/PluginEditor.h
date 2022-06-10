@@ -9,8 +9,8 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "PluginProcessor.h"
 #include "UI/UI.h"
+#include "PluginProcessor.h"
 
 //==============================================================================
 /**
@@ -37,6 +37,8 @@ private:
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
 
     Background bkgd;
+
+    strix::SineWaveComponent wave;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessorEditor)
 };

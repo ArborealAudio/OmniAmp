@@ -108,9 +108,9 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     oversample.initProcessing(samplesPerBlock);
 
-    lastSampleRate = sampleRate * (double)oversample.getOversamplingFactor();
+    lastSampleRate = sampleRate * oversample.getOversamplingFactor();
 
-    dsp::ProcessSpec spec{ sampleRate * (double)oversample.getOversamplingFactor(), (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels() };
+    dsp::ProcessSpec spec{ sampleRate * oversample.getOversamplingFactor(), (uint32)samplesPerBlock * 4, (uint32)getTotalNumInputChannels() };
 
     guitar.prepare(spec);
     bass.prepare(spec);
@@ -119,6 +119,8 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     lfEnhancer.setType((LFEnhancer::Mode)currentMode);
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
+
+    audioSource.setSize(sampleRate, samplesPerBlock);
 }
 
 void GammaAudioProcessor::releaseResources()
@@ -127,6 +129,7 @@ void GammaAudioProcessor::releaseResources()
     bass.reset();
     channel.reset();
     hfEnhancer.reset();
+    lfEnhancer.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -209,6 +212,8 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     oversample.processSamplesDown(block);
 
     setLatencySamples(oversample.getLatencyInSamples());
+
+    audioSource.copyBuffer(buffer);
 }
 
 //==============================================================================

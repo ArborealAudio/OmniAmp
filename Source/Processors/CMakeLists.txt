@@ -6,4 +6,5 @@ PRIVATE
     Processors.h
     ToneStack.h
     Tube.h
-    Enhancer.h)
+    Enhancer.h
+    Cab.h)

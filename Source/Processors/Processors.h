@@ -10,6 +10,14 @@
 
 #pragma once
 
+#include "Tube.h"
+#include "PreFilters.h"
+#include "PostFilters.h"
+#include "ToneStack.h"
+#include "Comp.h"
+#include "Enhancer.h"
+#include "Cab.h"
+
 struct Guitar
 {
     Guitar(AudioProcessorValueTreeState& a) : apvts(a)

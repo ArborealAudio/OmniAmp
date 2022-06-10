@@ -9,13 +9,8 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "Processors/Tube.h"
-#include "Processors/PreFilters.h"
-#include "Processors/PostFilters.h"
-#include "Processors/ToneStack.h"
-#include "Processors/Comp.h"
 #include "Processors/Processors.h"
-#include "Processors/Enhancer.h"
+#include "UI/SineWave.hpp"
 
 //==============================================================================
 /**
@@ -65,11 +60,13 @@ public:
 
     AudioProcessorValueTreeState apvts;
 
+    strix::AudioSource audioSource;
+
+    double lastSampleRate = 0.0;
+
 private:
 
     AudioProcessorValueTreeState::ParameterLayout createParams();
-
-    double lastSampleRate = 0.0;
 
     std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *comp, *hfEnhance, *lfEnhance;
 
@@ -85,7 +82,7 @@ private:
     Channel channel;
     HFEnhancer<float> hfEnhancer;
     LFEnhancer lfEnhancer;
-    dsp::Oversampling<float> oversample{2, 2, dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR};
+    dsp::Oversampling<float> oversample{2, 2, dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple};
 
     enum Mode
     {

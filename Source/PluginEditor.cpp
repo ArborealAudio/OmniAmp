@@ -11,13 +11,16 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts)
+    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource)
 {
     setSize (800, 400);
 
-    addAndMakeVisible(bkgd);
-    bkgd.setSize(400, 200);
-    bkgd.setCentrePosition(getLocalBounds().getCentreX(), 100);
+    // addAndMakeVisible(bkgd);
+    // bkgd.setSize(400, 200);
+    // bkgd.setCentrePosition(getLocalBounds().getCentreX(), 100);
+    addAndMakeVisible(wave);
+    wave.setSize(400, 200);
+    wave.setCentrePosition(getLocalBounds().getCentreX(), 100);
 
     addAndMakeVisible(ampControls);
     ampControls.setSize(490, 200);
@@ -30,11 +33,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
 
     addAndMakeVisible(lfEnhance);
     lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "lfEnhance", lfEnhance);
-    lfEnhance.setBounds(getLocalBounds().getCentreX() - 200, 100, 100, 100);
+    lfEnhance.setBounds(getLocalBounds().getCentreX() - 300, 100, 100, 100);
 
     addAndMakeVisible(hfEnhance);
     hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
-    hfEnhance.setBounds(getLocalBounds().getCentreX() + 100, 100, 100, 100);
+    hfEnhance.setBounds(getLocalBounds().getCentreX() + 200, 100, 100, 100);
 
     setResizable(true, true);
     getConstrainer()->setMinimumSize(200, 150);

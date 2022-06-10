@@ -7,3 +7,4 @@
 #include "ChoiceMenu.h"
 #include "Knob.h"
 #include "AmpControls.h"
+#include "SineWave.hpp"
