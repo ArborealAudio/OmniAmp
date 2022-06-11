@@ -108,13 +108,13 @@ struct SineWaveComponent : Component, Timer
 {
     SineWaveComponent(AudioSource& s) : src(s)
     {
-        startTimerHz(120);
+        startTimerHz(60);
     }
     ~SineWaveComponent(){ stopTimer(); }
 
     void paint(Graphics& g) override
     {
-        ColourGradient gradient{Colours::white, 0.f, 0.f, Colour(0xff363536), (float)getLocalBounds().getWidth(), 0.f, false};
+        ColourGradient gradient{Colours::white, 0.f, 0.f, Colour(0xff363536), (float)getLocalBounds().getCentreX(), 0.f, false};
         // g.setColour(Colour(0xff363536));
         g.setGradientFill(gradient);
         g.fillRoundedRectangle(getLocalBounds().toFloat(), 3.f);
@@ -127,7 +127,6 @@ struct SineWaveComponent : Component, Timer
 
     void drawSineWave(Graphics& g)
     {
-        f += 0.025;
         auto w = getWidth();
         std::vector<float> wave;
         wave.resize(w);
@@ -169,12 +168,16 @@ struct SineWaveComponent : Component, Timer
         g.strokePath(p[1], PathStrokeType(2.75f));
         g.setColour(Colour(0xff975755));
         g.strokePath(p[0], PathStrokeType(3.f));
+
+        f += 0.05;
+        needsRepaint = false;
     }
 
     void timerCallback() override
     {
         if (src.getFlag()) {
             src.setFlag(false);
+            needsRepaint = true;
             repaint();
         }
     }
@@ -183,6 +186,7 @@ private:
     AudioSource &src;
 
     float f = 0.f;
+    bool needsRepaint = false;
 };
 
 } // namespace strix
