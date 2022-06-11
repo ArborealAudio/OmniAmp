@@ -6,4 +6,4 @@ PRIVATE
     Button.h
     Background.h
     AmpControls.h
-    SineWave.h)
+    SineWave.hpp)

@@ -213,7 +213,8 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     setLatencySamples(oversample.getLatencyInSamples());
 
-    audioSource.copyBuffer(buffer);
+    // audioSource.copyBuffer(buffer);
+    audioSource.getBufferRMS(buffer);
 }
 
 //==============================================================================

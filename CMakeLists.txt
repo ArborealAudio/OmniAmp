@@ -43,8 +43,8 @@ target_compile_definitions(Gamma
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
-        JUCE_REPORT_APP_USAGE=0)
-        # JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
+        JUCE_REPORT_APP_USAGE=0
+        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
 
 juce_add_binary_data(BinaryData SOURCES
     Resources/drawing.svg
