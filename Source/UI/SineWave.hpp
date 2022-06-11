@@ -127,6 +127,9 @@ struct SineWaveComponent : Component, Timer
 
     void drawSineWave(Graphics& g)
     {
+        if (!needsRepaint)
+            return;
+        
         auto w = getWidth();
         std::vector<float> wave;
         wave.resize(w);
