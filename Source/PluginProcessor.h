@@ -65,6 +65,22 @@ public:
 
     double lastSampleRate = 0.0;
 
+    VolumeMeterSource& getActiveGRSource()
+    {
+      switch(currentMode)
+      {
+        case Guitar:
+          return guitar.getActiveGRSource();
+          break;
+        case Bass:
+          return bass.getActiveGRSource();
+          break;
+        case Channel:
+          return channel.getActiveGRSource();
+          break;
+      }
+    }
+
 private:
 
     AudioProcessorValueTreeState::ParameterLayout createParams();

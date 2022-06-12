@@ -38,5 +38,7 @@ private:
 
     strix::SineWaveComponent wave;
 
+    VolumeMeterComponent grMeter;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessorEditor)
 };

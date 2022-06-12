@@ -11,13 +11,10 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource)
+    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource())
 {
     setSize (800, 400);
 
-    // addAndMakeVisible(bkgd);
-    // bkgd.setSize(400, 200);
-    // bkgd.setCentrePosition(getLocalBounds().getCentreX(), 100);
     addAndMakeVisible(wave);
     wave.setSize(400, 200);
     wave.setCentrePosition(getLocalBounds().getCentreX(), 100);
@@ -40,6 +37,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
     hfEnhance.setBounds(getLocalBounds().getCentreX() + 200, 100, 100, 100);
 
+    addAndMakeVisible(grMeter);
+    grMeter.setMeterType(VolumeMeterComponent::Type::Reduction);
+    grMeter.setBounds(100, 200, 35, 150);
+
     setResizable(true, true);
     getConstrainer()->setMinimumSize(200, 150);
     getConstrainer()->setFixedAspectRatio(2.0);
@@ -58,6 +59,7 @@ void GammaAudioProcessorEditor::paint (juce::Graphics& g)
   //                             JUCE_LIVE_CONSTANT((getHeight() / 2) - 35),
   //                             JUCE_LIVE_CONSTANT(70),
   //                             JUCE_LIVE_CONSTANT(70)};
+  grMeter.paint(g);
 }
 
 void GammaAudioProcessorEditor::resized()

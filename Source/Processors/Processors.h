@@ -70,34 +70,7 @@ struct Guitar
         }
     }
 
-    void processBuffer(AudioBuffer<float>& buffer)
-    {
-        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
-        float out_raw = jmap(outGain->load(), 1.f, 8.f);
-
-        if (*p_comp > 0.f)
-            comp.processBuffer(buffer, *p_comp);
-
-        buffer.applyGain(gain_raw);
-
-        avTriode[0].process(buffer, 0.5f, 1.f);
-
-        gtrPre.process(buffer, *hiGain);
-
-        avTriode[1].process(buffer, 0.5f, 1.f);
-        avTriode[2].process(buffer, 0.5f, 1.f);
-
-        toneStack.process(buffer);
-
-        if (*hiGain)
-            avTriode[3].process(buffer, 2.f, 2.f);
-
-        buffer.applyGain(out_raw);
-        if (*hiGain)
-            pentodes.processBufferClassB(buffer, 1.f, 1.f);
-        else
-            pentodes.processBufferClassB(buffer, 2.f, 2.f);
-    }
+    VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
 
     void processBlock(dsp::AudioBlock<float>& block)
     {
@@ -189,35 +162,7 @@ struct Bass
         }
     }
 
-    void processBuffer(AudioBuffer<float>& buffer)
-    {
-        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
-        float out_raw = jmap(outGain->load(), 1.f, 8.f);
-
-        if (*p_comp > 0.f)
-            comp.processBuffer(buffer, *p_comp);
-
-        avTriode[0].process(buffer, 0.5, 1.0);
-
-        buffer.applyGain(gain_raw);
-        if (*hiGain)
-            buffer.applyGain(2.f);
-
-        avTriode[1].process(buffer, 0.5, 1.0);
-        if (*hiGain) {
-            avTriode[2].process(buffer, 1.0, 2.0);
-            avTriode[3].process(buffer, 1.0, 2.0);
-        }
-
-        toneStack.process(buffer);
-
-        buffer.applyGain(out_raw);
-
-        if (!*hiGain)
-            pentodes.processBufferClassB(buffer, 1.f, 1.f);
-        else
-            pentodes.processBufferClassB(buffer, 1.5f, 1.5f);
-    }
+    VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
 
     void processBlock(dsp::AudioBlock<float>& block)
     {
@@ -291,31 +236,7 @@ struct Channel
         pentodes.reset();
     }
 
-    void processBuffer(AudioBuffer<float>& buffer)
-    {
-        float gain_raw = jmap(inGain->load(), 1.f, 4.f);
-        float out_raw = jmap(outGain->load(), 1.f, 4.f);
-
-        if (*p_comp > 0.f)
-            comp.processBuffer(buffer, *p_comp);
-
-        buffer.applyGain(gain_raw);
-
-        if (*inGain > 0.f) {
-            avTriode[0].process(buffer, *inGain, 2.f * *inGain);
-            if (*hiGain)
-                avTriode[1].process(buffer, *inGain, gain_raw);
-        }
-
-        buffer.applyGain(out_raw);
-
-        if (*outGain > 0.f) {
-            if (!*hiGain)
-                pentodes.processBufferClassB(buffer, 1.f, 1.f);
-            else
-                pentodes.processBufferClassB(buffer, 1.5f, 1.5f);
-        }
-    }
+    VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
 
     void processBlock(dsp::AudioBlock<float>& block)
     {
