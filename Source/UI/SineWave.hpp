@@ -10,81 +10,68 @@ struct AudioSource
     AudioSource() { newBuf = false; }
     ~AudioSource(){}
 
-    void setSize(double sampleRate, int numSamples)
+    void prepare(const dsp::ProcessSpec& spec)
     {
-        rmsSize = (0.05f * sampleRate) / (float)numSamples;
-        fifo.setTotalSize(rmsSize);
-        src.assign(rmsSize, 0.f);
+        rmsSize = (0.5f * spec.sampleRate) / (float)spec.maximumBlockSize;
 
-        sum = 0.f;
-
-        if (rmsSize > 1.f) {
-            ptr %= src.size();
-        }
-        else
-            ptr = 0;
-
-        lp.setup(sampleRate, 300.0, 0.707);
-    }
-
-    void copyBuffer(const AudioBuffer<float>& buf)
-    {
-        auto in = buf.getArrayOfReadPointers();
-
-        auto write = fifo.write(buf.getNumSamples());
-
-        for (auto i = 0; i != write.blockSize1; ++i)
+        for (int i = 0; i < 6; ++i)
         {
-            src[write.startIndex1 + i] = (in[0][write.startIndex1 + i] + in[1][write.startIndex1 + i]) / 2.f;
+            src[i].assign(rmsSize, 0.f);
+
+            sum[i] = 0.f;
+
+            if (rmsSize > 1.f) {
+                ptr %= src[i].size();
+            }
+            else
+                ptr = 0;
         }
 
-        for (auto i = 0; i != write.blockSize2; ++i)
+        float freq = 50.f;
+        for (int i = 0; i < 5; ++i)
         {
-            src[write.startIndex2 + i] = (in[0][write.startIndex2 + i] + in[1][write.startIndex2 + i]) / 2.f;
+            freq = jlimit(50.f, 16000.f, freq * (float)(i+1));
+            hp[i].prepare(spec);
+            hp[i].setType(dsp::LinkwitzRileyFilterType::highpass);
+            hp[i].setCutoffFrequency(freq);
         }
 
-        // lp.process(buf.getNumSamples(), 0, src.data());
-
-        newBuf = true;
+        for (auto& b : band)
+            b.setSize(2, spec.maximumBlockSize);
     }
 
     void getBufferRMS(const AudioBuffer<float>& buf)
     {
-        rms = (buf.getRMSLevel(0, 0, buf.getNumSamples()) + buf.getRMSLevel(1, 0, buf.getNumSamples())) / 2.f;
+        splitBuffers(buf);
 
-        if (src.size() > 0) {
-            src[ptr] = rms;
-            ptr = (ptr + 1) % src.size();
+        for (int i = 0; i < 6; ++i)
+        {
+            rms[i] = band[i].getRMSLevel(0, 0, band[i].getNumSamples());
+
+            if (src[i].size() > 0) {
+                src[i][ptr] = rms[i];
+                ptr = (ptr + 1) % src[i].size();
+            }
+            else
+                sum[i] = rms[i];
         }
-        else
-            sum = rms;
 
         newBuf = true;
     }
 
-    inline void readBuffer(std::vector<float>& dest)
+    inline std::array<float, 6> getAvgRMS()
     {
-        // dest.resize(src.size());
+        std::array<float, 6> b_rms;
 
-        auto read = fifo.read(dest.size());
-
-        for (auto i = 0; i != read.blockSize1; ++i)
+        for (int i = 0; i < 6; ++i)
         {
-            dest[read.startIndex1 + i] = src[read.startIndex1 + i];
+            if (src[i].size() > 0)
+                b_rms[i] = std::sqrt(std::accumulate(src[i].begin(), src[i].end(), 0.f) / (float)src[i].size());
+            else
+                b_rms[i] = std::sqrt(sum[i]);
         }
 
-        for (auto i = 0; i != read.blockSize2; ++i)
-        {
-            dest[read.startIndex2 + i] = src[read.startIndex2 + i];
-        }
-    }
-
-    inline float getAvgRMS()
-    {
-        if (src.size() > 0)
-            return std::sqrt(std::accumulate(src.begin(), src.end(), 0.f) / (float)src.size());
-
-        return std::sqrt(sum);
+        return b_rms;
     }
 
     void setFlag(bool newFlag) { newBuf = newFlag; }
@@ -92,16 +79,35 @@ struct AudioSource
     bool getFlag() const { return newBuf; }
 
 private:
-    AbstractFifo fifo{1024};
     float rmsSize = 0.f;
-    float rms = 0.f;
+    float rms[6] {0.f};
     size_t ptr = 0;
-    std::atomic<float> sum;
-    std::vector<float> src;
+    std::atomic<float> sum[6];
+    std::vector<float> src[6];
 
-    Dsp::SimpleFilter<Dsp::RBJ::LowPass, 1> lp;
+    dsp::LinkwitzRileyFilter<float> hp[5];
+    AudioBuffer<float> band[6];
 
     std::atomic<bool> newBuf;
+
+    void splitBuffers(const AudioBuffer<float>& buf)
+    {
+        for (int i = 0; i < 5; ++i)
+        {
+            if (i == 0) {
+                for (auto& b : band)
+                    b.makeCopyOf(buf);
+            }
+            auto hpf = band[i + 1].getArrayOfWritePointers();
+            auto lpf = band[i].getWritePointer(0);
+            for (auto j = 0; j < buf.getNumSamples(); ++j)
+            {
+                auto mono = (hpf[0][j] + hpf[1][j]) / 2.f;
+                hpf[0][j] = hp[i].processSample(0, mono);
+                lpf[j] = lpf[j] - hpf[0][j];
+            }
+        }
+    }
 };
 
 struct SineWaveComponent : Component, Timer
@@ -116,13 +122,13 @@ struct SineWaveComponent : Component, Timer
     {
         ColourGradient gradient{Colours::white, 0.f, 0.f, Colour(0xff363536), (float)getLocalBounds().getCentreX(), 0.f, false};
         // g.setColour(Colour(0xff363536));
-        g.setGradientFill(gradient);
-        g.fillRoundedRectangle(getLocalBounds().toFloat(), 3.f);
+        // g.setGradientFill(gradient);
+        // g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
 
         drawSineWave(g);
 
         g.setColour(Colours::black);
-        g.drawRoundedRectangle(getLocalBounds().toFloat(), 3.f, 2.f);
+        g.drawRoundedRectangle(getLocalBounds().toFloat(), 5.f, 3.f);
     }
 
     void drawSineWave(Graphics& g)
@@ -131,8 +137,8 @@ struct SineWaveComponent : Component, Timer
             return;
         
         auto w = getWidth();
-        std::vector<float> wave;
-        wave.resize(w);
+        // std::vector<float> wave;
+        // wave.resize(w);
         // src.readBuffer(wave);
         auto rms = src.getAvgRMS();
 
@@ -147,16 +153,16 @@ struct SineWaveComponent : Component, Timer
         Path p[6];
 
         for (auto& q : p)
-            q.startNewSubPath(0, getLocalBounds().getCentreY());
+            q.startNewSubPath(-1, getLocalBounds().getCentreY());
 
         for (int i = 0; i < w; ++i)
         {
-            p[0].lineTo(i, map(std::sin(i * 0.025 - f) * rms));
-            p[1].lineTo(i, map(std::sin(i * 0.0275 - f) * rms * 0.9));
-            p[2].lineTo(i, map(std::sin(i * 0.03 - f) * rms * 0.8));
-            p[3].lineTo(i, map(std::sin(i * 0.0325 - f) * rms * 0.7));
-            p[4].lineTo(i, map(std::sin(i * 0.035 - f) * rms * 0.6));
-            p[5].lineTo(i, map(std::sin(i * 0.0375 - f) * rms * 0.5));
+            p[0].lineTo(i, map(std::sin(i * 0.025f  - f ) * rms[0]));
+            p[1].lineTo(i, map(std::sin(i * 0.0275f - f ) * rms[1] /*  * 0.9f */));
+            p[2].lineTo(i, map(std::sin(i * 0.03f   - f ) * rms[2]   /*  * 0.8f */));
+            p[3].lineTo(i, map(std::sin(i * 0.0325f - f ) * rms[3] /*  * 0.7f */));
+            p[4].lineTo(i, map(std::sin(i * 0.035f  - f ) * rms[4]  /*  * 0.6f */));
+            p[5].lineTo(i, map(std::sin(i * 0.0375f - f ) * rms[5] /*  * 0.5f */));
         }
 
         g.setColour(Colour(0xff975792));

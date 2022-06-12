@@ -190,9 +190,9 @@ struct OptoComp
             case Guitar:
             case Bass:
                 auto bpL = hp[0].processSample(inL[i]);
-                // bpL = lp[0].processSample(bpL);
+                bpL = lp[0].processSample(bpL);
                 auto bpR = hp[1].processSample(inR[i]);
-                // bpR = lp[1].processSample(bpR);
+                bpR = lp[1].processSample(bpR);
 
                 inL[i] += bpL * comp;
                 inR[i] += bpR * comp;
@@ -253,17 +253,22 @@ struct OptoComp
             xm0 = inL[i];
             xm1 = inR[i];
 
-            switch (type)
-            {
+            switch (type) {
+            case Channel:
+                inL[i] *= c_comp;
+                inR[i] *= c_comp;
+                break;
             case Guitar:
             case Bass:
                 auto bpL = hp[0].processSample(inL[i]);
-                // bpL = lp[0].processSample(bpL);
+                bpL = lp[0].processSample(bpL);
                 auto bpR = hp[1].processSample(inR[i]);
-                // bpR = lp[1].processSample(bpR);
+                bpR = lp[1].processSample(bpR);
 
                 inL[i] += bpL * comp;
                 inR[i] += bpR * comp;
+                inL[i] *= jlimit(1.f, 3.f, c_comp);
+                inR[i] *= jlimit(1.f, 3.f, c_comp);
                 break;
             }
         }
@@ -279,4 +284,6 @@ private:
     dsp::IIR::Filter<float> sc_hp, sc_lp, lp[2], hp[2];
 
     Type type;
+
+    VolumeMeterSource grSource;
 };

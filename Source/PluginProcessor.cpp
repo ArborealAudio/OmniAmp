@@ -120,7 +120,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
 
-    audioSource.setSize(sampleRate, samplesPerBlock);
+    audioSource.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 }
 
 void GammaAudioProcessor::releaseResources()

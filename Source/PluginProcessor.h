@@ -11,6 +11,7 @@
 #include <JuceHeader.h>
 #include "Processors/Processors.h"
 #include "UI/SineWave.hpp"
+#include "VolumeMeter/VolumeMeter.h"
 
 //==============================================================================
 /**

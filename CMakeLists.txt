@@ -35,7 +35,8 @@ add_subdirectory(Source/UI)
 juce_add_modules(
     "/Users/alex/modules/Gin/modules/gin"
     "/Users/alex/modules/Gin/modules/gin_gui"
-    "/Users/alex/modules/DSPFilters/modules/dsp_filters")
+    "/Users/alex/modules/DSPFilters/modules/dsp_filters"
+    "/Users/alex/modules/VolumeMeter")
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -46,18 +47,17 @@ target_compile_definitions(Gamma
         JUCE_REPORT_APP_USAGE=0
         JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
 
-juce_add_binary_data(BinaryData SOURCES
-    Resources/drawing.svg
-    Resources/drawing.png)
+# juce_add_binary_data(BinaryData SOURCES)
 
 target_link_libraries(Gamma
     PRIVATE
-        BinaryData
+        # BinaryData
         juce::juce_audio_utils
         juce::juce_dsp
         gin
         gin_gui
         dsp_filters
+        VolumeMeter
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
