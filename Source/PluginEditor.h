@@ -33,7 +33,7 @@ private:
 
     AmpControls ampControls;
 
-    Knob hfEnhance, lfEnhance;
+    Knob hfEnhance{Knob::Type::HF}, lfEnhance{Knob::Type::LF};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
 
     strix::SineWaveComponent wave;

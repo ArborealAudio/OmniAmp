@@ -45,7 +45,7 @@ struct AmpControls : Component
 private:
     AudioProcessorValueTreeState& apvts;
 
-    Knob comp, inGain, outGain, bass, mid, treble;
+    Knob comp{Knob::Type::Regular}, inGain{Knob::Type::Regular}, outGain{Knob::Type::Regular}, bass{Knob::Type::Regular}, mid{Knob::Type::Regular}, treble{Knob::Type::Regular};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> compAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
 
     TextButton hiGain;

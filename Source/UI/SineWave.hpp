@@ -120,15 +120,13 @@ struct SineWaveComponent : Component, Timer
 
     void paint(Graphics& g) override
     {
-        ColourGradient gradient{Colours::white, 0.f, 0.f, Colour(0xff363536), (float)getLocalBounds().getCentreX(), 0.f, false};
-        // g.setColour(Colour(0xff363536));
-        // g.setGradientFill(gradient);
-        // g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
+        g.setColour(Colour(0xff363536));
+        g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
 
         drawSineWave(g);
 
-        g.setColour(Colours::black);
-        g.drawRoundedRectangle(getLocalBounds().toFloat(), 5.f, 3.f);
+        // g.setColour(Colours::black);
+        // g.drawRoundedRectangle(getLocalBounds().toFloat(), 5.f, 3.f);
     }
 
     void drawSineWave(Graphics& g)
