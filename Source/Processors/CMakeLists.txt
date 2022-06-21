@@ -7,4 +7,5 @@ PRIVATE
     ToneStack.h
     Tube.h
     Enhancer.h
-    Cab.h)
+    Cab.h
+    DistPlus.h)

@@ -25,7 +25,6 @@ GammaAudioProcessor::GammaAudioProcessor()
 {
     gain = apvts.getRawParameterValue("inputGain");
     outGain = apvts.getRawParameterValue("outputGain");
-    comp = apvts.getRawParameterValue("comp");
     hiGain = apvts.getRawParameterValue("hiGain");
     autoGain = apvts.getRawParameterValue("autoGain");
     hfEnhance = apvts.getRawParameterValue("hfEnhance");
@@ -35,10 +34,16 @@ GammaAudioProcessor::GammaAudioProcessor()
     apvts.addParameterListener("mid", this);
     apvts.addParameterListener("bass", this);
     apvts.addParameterListener("mode", this);
+    apvts.addParameterListener("dist", this);
 }
 
 GammaAudioProcessor::~GammaAudioProcessor()
 {
+    apvts.removeParameterListener("treble", this);
+    apvts.removeParameterListener("mid", this);
+    apvts.removeParameterListener("bass", this);
+    apvts.removeParameterListener("mode", this);
+    apvts.removeParameterListener("dist", this);
 }
 
 //==============================================================================
@@ -175,6 +180,11 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
         guitar.setToneControl(2, newValue);
         bass.setToneControl(2, newValue);
     }
+    else if (parameterID.contains("dist"))
+    {
+        guitar.setDistParam(newValue);
+        channel.setDistParam(newValue);
+    }
 }
 
 void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -258,6 +268,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("inputGain", 1), "Input Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("outputGain", 1), "Output Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("dist", 1), "Pedal Distortion", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hiGain", 1), "High Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bass", 1), "Bass", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));

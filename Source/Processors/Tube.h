@@ -125,7 +125,7 @@ private:
 
             in[i] = saturate(in[i], gp, gn);
 
-            in[i] = std::tan(in[i]) * 0.8;
+            in[i] = std::sinh(in[i]) / 6.f;
         }
     }
 

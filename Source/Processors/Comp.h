@@ -12,14 +12,7 @@
 
 struct OptoComp
 {
-    enum Type
-    {
-        Guitar,
-        Bass,
-        Channel
-    };
-
-    OptoComp(Type t) : type(t) {}
+    OptoComp(ProcessorType t) : type(t) {}
 
     void prepare(const dsp::ProcessSpec& spec)
     {
@@ -31,7 +24,7 @@ struct OptoComp
         sc_lp.prepare(spec);
         
         switch (type) {
-        case Guitar:
+        case ProcessorType::Guitar:
             *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 200.f, 1.02f);
             *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 3500.f, 0.8f);
             for (auto& h : hp) {
@@ -43,7 +36,7 @@ struct OptoComp
                 *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 6500.f);
             }
             break;
-        case Bass:
+        case ProcessorType::Bass:
             *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 150.f);
             *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
             for (auto& h : hp) {
@@ -55,7 +48,7 @@ struct OptoComp
                 *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
             }
             break;
-        case Channel:
+        case ProcessorType::Channel:
             *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 100.f, 0.707f);
             *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 5000.f, 0.8f);
             break;
@@ -146,13 +139,13 @@ struct OptoComp
 
         switch (type)
         {
-        case Channel:{
+        case ProcessorType::Channel:{
             auto thresh_scale = c_comp / 2.f;
             threshold = std::pow(10.f, (-18.f * thresh_scale) / 20.f);
             }
             break;
-        case Guitar:
-        case Bass:
+        case ProcessorType::Guitar:
+        case ProcessorType::Bass:
             threshold = std::pow(10.f, -36.f / 20.f);
             break;
         }
@@ -169,12 +162,12 @@ struct OptoComp
             auto gr = compress(max);
 
             switch (type) {
-            case Guitar:
-            case Bass:
+            case ProcessorType::Guitar:
+            case ProcessorType::Bass:
                 inL[i] *= c_comp * gr;
                 inR[i] *= c_comp * gr;
                 break;
-            case Channel:
+            case ProcessorType::Channel:
                 if (c_comp <= 4.f) {
                     inL[i] *= gr;
                     inR[i] *= gr;
@@ -190,12 +183,12 @@ struct OptoComp
             xm1 = inR[i];
 
             switch (type) {
-            case Channel:
+            case ProcessorType::Channel:
                 inL[i] *= c_comp;
                 inR[i] *= c_comp;
                 break;
-            case Guitar:
-            case Bass:
+            case ProcessorType::Guitar:
+            case ProcessorType::Bass:
                 auto bpL = hp[0].processSample(inL[i]);
                 bpL = lp[0].processSample(bpL);
                 auto bpR = hp[1].processSample(inR[i]);
@@ -221,7 +214,7 @@ private:
 
     dsp::IIR::Filter<float> sc_hp, sc_lp, lp[2], hp[2];
 
-    Type type;
+    ProcessorType type;
 
     VolumeMeterSource grSource;
 };

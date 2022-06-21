@@ -21,8 +21,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     wave.setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(ampControls);
-    ampControls.setSize(490, 200);
-    ampControls.setCentrePosition(getLocalBounds().getCentreX(), getLocalBounds().getCentreY() + 100);
+    ampControls.setSize(570, 100);
+    ampControls.setCentrePosition(getLocalBounds().getCentreX(), getLocalBounds().getCentreY() + 50);
 
     addAndMakeVisible(mode);
     modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(p.apvts, "mode", mode);

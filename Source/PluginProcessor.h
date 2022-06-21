@@ -85,7 +85,7 @@ private:
 
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
-    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *comp, *hfEnhance, *lfEnhance;
+    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {

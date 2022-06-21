@@ -10,6 +10,13 @@
 
 #pragma once
 
+enum class ProcessorType
+{
+    Guitar,
+    Bass,
+    Channel
+};
+
 #include "Tube.h"
 #include "PreFilters.h"
 #include "PostFilters.h"
@@ -17,154 +24,105 @@
 #include "Comp.h"
 #include "Enhancer.h"
 #include "Cab.h"
+#include "DistPlus.h"
 
-struct Guitar
+struct Processor
 {
-    Guitar(AudioProcessorValueTreeState& a) : apvts(a)
+    Processor(AudioProcessorValueTreeState& a, ProcessorType t) : apvts(a), comp(t)
     {
         inGain = apvts.getRawParameterValue("inputGain");
         outGain = apvts.getRawParameterValue("outputGain");
         p_comp = apvts.getRawParameterValue("comp");
         hiGain = apvts.getRawParameterValue("hiGain");
+        dist = apvts.getRawParameterValue("dist");
     }
 
-    void prepare(const dsp::ProcessSpec& spec)
-    {
-        comp.prepare(spec);
-        
-        for (auto& t : avTriode)
-            t.prepare(spec);
+    virtual void prepare(const dsp::ProcessSpec &spec) = 0;
 
-        toneStack.prepare(spec);
-        gtrPre.prepare(spec);
-
-        pentodes.prepare(spec);
-    }
-
-    void reset()
+    virtual void reset()
     {
         comp.reset();
 
-        for (auto& t : avTriode)
+        for (auto& t : triode)
             t.reset();
 
-        gtrPre.reset();
-        toneStack.reset();
+        if (toneStack != nullptr)
+            toneStack->reset();
 
-        pentodes.reset();
+        pentode.reset();
+    }
+
+    virtual void setDistParam(float newValue)
+    {
+        mxr.setParams(1.f - newValue);
     }
 
     /*0 = bass | 1 = mid | 2 = treble*/
-    void setToneControl(int control, float newValue)
+    virtual void setToneControl(int control, float newValue)
     {
-        switch (control) {
+        if (toneStack == nullptr)
+            return;
+        
+        switch (control)
+        {
         case 0:
-            toneStack.setBass(newValue);
+            toneStack->setBass(newValue);
             break;
         case 1:
-            toneStack.setMid(newValue);
+            toneStack->setMid(newValue);
             break;
         case 2:
-            toneStack.setTreble(newValue);
+            toneStack->setTreble(newValue);
             break;
         }
     }
 
-    VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
+    virtual VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
 
-    void processBlock(dsp::AudioBlock<float>& block)
-    {
-        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
-        float out_raw = jmap(outGain->load(), 1.f, 8.f);
+    virtual void processBlock(dsp::AudioBlock<float> &block) = 0;
 
-        if (*p_comp > 0.f)
-            comp.processBlock(block, *p_comp);
-
-        block.multiplyBy(gain_raw);
-
-        avTriode[0].processBlock(block, 0.5f, 1.f);
-
-        gtrPre.processBlock(block, *hiGain);
-
-        avTriode[1].processBlock(block, 0.5f, 1.f);
-        avTriode[2].processBlock(block, 0.5f, 1.f);
-
-        toneStack.processBlock(block);
-
-        if (*hiGain)
-            avTriode[3].processBlock(block, 2.f, 2.f);
-
-        block.multiplyBy(out_raw);
-
-        if (*hiGain)
-            pentodes.processBlockClassB(block, 1.f, 1.f);
-        else
-            pentodes.processBlockClassB(block, 2.f, 2.f);
-    }
-
-private:
-    AudioProcessorValueTreeState& apvts;
-
-    OptoComp comp{ OptoComp::Type::Guitar };
-    GuitarPreFilter gtrPre;
-    ToneStackNodal toneStack{ 0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.5e6f, 20e3f, 65e3f };
-    std::array<AVTriode, 4> avTriode;
-    Tube pentodes;
-
-    std::atomic<float>* inGain, *outGain, *hiGain, *p_comp;
-};
-
-struct Bass
-{
-    Bass(AudioProcessorValueTreeState& a) : apvts(a)
-    {
-        inGain = apvts.getRawParameterValue("inputGain");
-        outGain = apvts.getRawParameterValue("outputGain");
-        p_comp = apvts.getRawParameterValue("comp");
-        hiGain = apvts.getRawParameterValue("hiGain");
-    }
-
-    void prepare(const dsp::ProcessSpec& spec)
+protected:
+    void defaultPrepare(const dsp::ProcessSpec& spec)
     {
         comp.prepare(spec);
 
-        for (auto& t : avTriode)
+        mxr.prepare(spec.sampleRate);
+
+        for (auto& t : triode)
             t.prepare(spec);
 
-        toneStack.prepare(spec);
+        if (toneStack != nullptr)
+            toneStack->prepare(spec);
 
-        pentodes.prepare(spec);
+        pentode.prepare(spec);
     }
 
-    void reset()
+    AudioProcessorValueTreeState &apvts;
+
+    OptoComp comp;
+    MXRDistWDF mxr;
+    std::unique_ptr<ToneStackNodal> toneStack;
+    std::vector<AVTriode> triode;
+    Tube pentode;
+
+    std::atomic<float>* inGain, *outGain, *hiGain, *p_comp, *dist;
+};
+
+struct Guitar : Processor
+{
+    Guitar(AudioProcessorValueTreeState& a) : Processor(a, ProcessorType::Guitar)
     {
-        for (auto& a : avTriode)
-            a.reset();
-        
-        toneStack.reset();
-        
-        pentodes.reset();
+        toneStack = std::make_unique<ToneStackNodal>(0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.5e6f, 20e3f, 65e3f);
+        triode.resize(4);
     }
 
-    /*0 = bass | 1 = mid | 2 = treble*/
-    void setToneControl(int control, float newValue)
+    void prepare(const dsp::ProcessSpec& spec) override
     {
-        switch (control) {
-        case 0:
-            toneStack.setBass(newValue);
-            break;
-        case 1:
-            toneStack.setMid(newValue);
-            break;
-        case 2:
-            toneStack.setTreble(newValue);
-            break;
-        }
+        defaultPrepare(spec);
+        gtrPre.prepare(spec);
     }
 
-    VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
-
-    void processBlock(dsp::AudioBlock<float>& block)
+    void processBlock(dsp::AudioBlock<float>& block) override
     {
         float gain_raw = jmap(inGain->load(), 1.f, 8.f);
         float out_raw = jmap(outGain->load(), 1.f, 8.f);
@@ -172,104 +130,121 @@ struct Bass
         if (*p_comp > 0.f)
             comp.processBlock(block, *p_comp);
 
-        avTriode[0].processBlock(block, 0.5, 1.0);
+        if (*dist > 0.f)
+            mxr.processBlock(block);
+
+        block.multiplyBy(gain_raw);
+
+        triode[0].processBlock(block, 0.5f, 1.f);
+
+        gtrPre.processBlock(block, *hiGain);
+
+        triode[1].processBlock(block, 0.5f, 1.f);
+        triode[2].processBlock(block, 0.5f, 1.f);
+
+        toneStack->processBlock(block);
+
+        if (*hiGain)
+            triode[3].processBlock(block, 0.5f, 1.f);
+
+        block.multiplyBy(out_raw * 6.f);
+
+        // if (*hiGain) {
+            pentode.processBlockClassB(block, 0.6f, 0.6f);
+        // }
+        // else {
+        //     pentode.processBlockClassB(block, 0.4f, 0.4f);
+        // }
+    }
+
+private:
+    GuitarPreFilter gtrPre;
+};
+
+struct Bass : Processor
+{
+    Bass(AudioProcessorValueTreeState& a) : Processor(a, ProcessorType::Bass)
+    {
+        toneStack = std::make_unique<ToneStackNodal>(0.5e-9f, 10e-9f, 10e-9f, 250e3f, 0.5e6f, 30e3f, 100e3f);
+        triode.resize(4);
+    }
+
+    void prepare(const dsp::ProcessSpec& spec) override
+    {
+        defaultPrepare(spec);
+    }
+
+    void processBlock(dsp::AudioBlock<float>& block) override
+    {
+        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
+        float out_raw = jmap(outGain->load(), 1.f, 8.f);
+
+        if (*p_comp > 0.f)
+            comp.processBlock(block, *p_comp);
+
+        triode[0].processBlock(block, 0.5, 1.0);
 
         block.multiplyBy(gain_raw);
         if (*hiGain)
             block.multiplyBy(2.f);
 
-        avTriode[1].processBlock(block, 0.5, 1.0);
+        triode[1].processBlock(block, 0.5, 1.0);
         if (*hiGain) {
-            avTriode[2].processBlock(block, 1.0, 2.0);
-            avTriode[3].processBlock(block, 1.0, 2.0);
+            triode[2].processBlock(block, 1.0, 2.0);
+            triode[3].processBlock(block, 1.0, 2.0);
         }
 
-        toneStack.processBlock(block);
+        toneStack->processBlock(block);
 
         block.multiplyBy(out_raw);
 
         if (!*hiGain)
-            pentodes.processBlockClassB(block, 1.f, 1.f);
+            pentode.processBlockClassB(block, 1.f, 1.f);
         else
-            pentodes.processBlockClassB(block, 1.5f, 1.5f);
+            pentode.processBlockClassB(block, 1.5f, 1.5f);
     }
-
-private:
-
-    AudioProcessorValueTreeState& apvts;
-
-    std::array<AVTriode, 4> avTriode;
-    ToneStackNodal toneStack{ 0.5e-9f, 10e-9f, 10e-9f, 250e3f, 0.5e6f, 30e3f, 100e3f };
-    OptoComp comp {OptoComp::Type::Bass};
-    Tube pentodes;
-
-    std::atomic<float>* inGain, *outGain, *p_comp, *hiGain;
 };
 
-struct Channel
+struct Channel : Processor
 {
-    Channel(AudioProcessorValueTreeState& a) : apvts(a)
+    Channel(AudioProcessorValueTreeState& a) : Processor(a, ProcessorType::Channel)
     {
-        inGain = apvts.getRawParameterValue("inputGain");
-        outGain = apvts.getRawParameterValue("outputGain");
-        p_comp = apvts.getRawParameterValue("comp");
-        hiGain = apvts.getRawParameterValue("hiGain");
+        toneStack = nullptr;
+        triode.resize(2);
     }
 
-    void prepare(const dsp::ProcessSpec& spec)
+    void prepare(const dsp::ProcessSpec& spec) override
     {
-        comp.prepare(spec);
-
-        for (auto& t : avTriode)
-            t.prepare(spec);
-
-        pentodes.prepare(spec);
+        defaultPrepare(spec);
     }
 
-    void reset()
-    {
-        comp.reset();
-
-        for (auto& t : avTriode)
-            t.reset();
-
-        pentodes.reset();
-    }
-
-    VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
-
-    void processBlock(dsp::AudioBlock<float>& block)
+    void processBlock(dsp::AudioBlock<float>& block) override
     {
         float gain_raw = jmap(inGain->load(), 1.f, 4.f);
         float out_raw = jmap(outGain->load(), 1.f, 4.f);
 
         if (*p_comp > 0.f)
             comp.processBlock(block, *p_comp);
+        
+        if (*dist > 0.f)
+            mxr.processBlock(block);
 
         block.multiplyBy(gain_raw);
 
         if (*inGain > 0.f) {
-            avTriode[0].processBlock(block, *inGain, 2.f * *inGain);
+            triode[0].processBlock(block, *inGain, 2.f * *inGain);
             if (*hiGain)
-                avTriode[1].processBlock(block, *inGain, gain_raw);
+                triode[1].processBlock(block, *inGain, gain_raw);
         }
-
-        block.multiplyBy(out_raw);
 
         if (*outGain > 0.f) {
-            if (!*hiGain)
-                pentodes.processBlockClassB(block, 1.f, 1.f);
-            else
-                pentodes.processBlockClassB(block, 1.5f, 1.5f);
+            block.multiplyBy(out_raw * 6.f);
+            if (!*hiGain) {
+                pentode.processBlockClassB(block, 0.4f, 0.4f);
+            }
+            else {
+                pentode.processBlockClassB(block, 0.6f, 0.6f);
+            }
         }
     }
-
-private:
-    AudioProcessorValueTreeState& apvts;
-
-    OptoComp comp{ OptoComp::Type::Channel };
-    std::array<AVTriode, 2> avTriode;
-    Tube pentodes;
-
-    std::atomic<float>* inGain, *outGain, *p_comp, *hiGain;
 };
