@@ -30,7 +30,7 @@ add_subdirectory(Source/UI)
 
 juce_add_modules(
     "/Users/alex/modules/Gin/modules/gin"
-    "/Users/alex/modules/Gin/modules/gin_gui"
+    # "/Users/alex/modules/Gin/modules/gin_gui"
     "/Users/alex/modules/DSPFilters/modules/dsp_filters"
     "/Users/alex/modules/VolumeMeter"
     "/Users/alex/modules/chowdsp_utils/modules/chowdsp_dsp")
@@ -52,7 +52,7 @@ target_link_libraries(Gamma
         juce::juce_audio_utils
         juce::juce_dsp
         gin
-        gin_gui
+        # gin_gui
         dsp_filters
         VolumeMeter
         chowdsp_dsp

@@ -36,7 +36,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             sg.setColour(Colours::black);
             sg.fillEllipse(rx, ry, rw, rw);
 
-            gin::applyStackBlur(shadow, 5);
+            // gin::applyStackBlur(shadow, 5);
 
             g.drawImageAt(shadow, x-3, y+3);
 
@@ -101,7 +101,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto fac = 1.f + (5.f * sliderPos);
             gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
 
-            gin::applyStackBlur(glow, 5);
+            // gin::applyStackBlur(glow, 5);
 
             g.drawImageAt(glow, x, y);
 
