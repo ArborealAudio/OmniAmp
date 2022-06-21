@@ -4,11 +4,7 @@ project(Gamma VERSION 0.1)
 
 find_package(JUCE CONFIG REQUIRED)
 
-if (!APPLE)
-    juce_set_vst2_sdk_path(C:/vstsdk2.4)
-else()
-    juce_set_vst2_sdk_path(/Users/alex/vstsdk2.4)
-endif()
+juce_set_vst2_sdk_path("${VST2_SDK}")
 
 juce_add_plugin(Gamma
     COMPANY_NAME "Arboreal Audio"
@@ -33,11 +29,11 @@ add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
 
 juce_add_modules(
-    "/Users/alex/modules/Gin/modules/gin"
-    "/Users/alex/modules/Gin/modules/gin_gui"
-    "/Users/alex/modules/DSPFilters/modules/dsp_filters"
-    "/Users/alex/modules/VolumeMeter"
-    "/Users/alex/modules/chowdsp_utils/modules/chowdsp_dsp")
+    "modules/Gin/modules/gin"
+    "modules/Gin/modules/gin_gui"
+    "modules/DSPFilters/modules/dsp_filters"
+    "modules/VolumeMeter"
+    "modules/chowdsp_utils/modules/chowdsp_dsp")
 
 target_compile_definitions(Gamma
     PUBLIC
