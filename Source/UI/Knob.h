@@ -68,13 +68,19 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            g.setColour(Colours::black.withAlpha(0.5f));
-            g.drawEllipse(rx, ry, rw, rw, 3.f);
+            Image glow{Image::PixelFormat::ARGB, width, height, true};
+            Graphics gg(glow);
+            gg.setColour(Colours::wheat);
+            auto fac = 1.f + (5.f * sliderPos);
+            gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
+
+            // gin::applyStackBlur(glow, 5);
+
+            g.drawImageAt(glow, x, y);
 
             ColourGradient gradient{Colours::transparentBlack, centerX, centerY, Colours::black, (float)x, (float)y, true};
             g.setGradientFill(gradient);
             g.fillEllipse(rx, ry, rw, rw);
-            // g.fillEllipse(rx * sliderPos + (1.0 - sliderPos) * centerX, ry * sliderPos + (1.0 - sliderPos) * centerY, rw * sliderPos, rw * sliderPos);
 
             Path p;
             auto ellipseWidth = radius * 0.25f;
@@ -85,8 +91,8 @@ struct KnobLookAndFeel : LookAndFeel_V4
             break;
             }
         case HF: {
-            width *= 0.8;
-            height *= 0.8;
+            // width *= 0.8;
+            // height *= 0.8;
             auto radius = (float)jmin(width / 2, height / 2) - 4.f;
             auto centerX = (float)x + (float)width * 0.5f;
             auto centerY = (float)y + (float)height * 0.5f;
@@ -95,7 +101,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            Image glow{Image::PixelFormat::ARGB, width + 12, height + 12, true};
+            Image glow{Image::PixelFormat::ARGB, width, height, true};
             Graphics gg(glow);
             gg.setColour(Colours::wheat);
             auto fac = 1.f + (5.f * sliderPos);
