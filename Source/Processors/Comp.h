@@ -12,7 +12,7 @@
 
 struct OptoComp
 {
-    OptoComp(ProcessorType t) : type(t) {}
+    OptoComp(ProcessorType t, VolumeMeterSource& s) : type(t), grSource(s) {}
 
     void prepare(const dsp::ProcessSpec& spec)
     {
@@ -73,14 +73,14 @@ struct OptoComp
 
         float env;
 
-        if (t_abs >= lastEnv)
-        {
-            //env = att * (lastEnv - t_abs) + t_abs;
-        }
-        else
-        {
-            //env = rel * (lastEnv - t_abs) + t_abs;
-        }
+        // if (t_abs >= lastEnv)
+        // {
+        //     env = att * (lastEnv - t_abs) + t_abs;
+        // }
+        // else
+        // {
+        //     env = rel * (lastEnv - t_abs) + t_abs;
+        // }
 
         if (env < 1.175494351e-38f)
             env = 1.175494351e-38f;
@@ -110,13 +110,6 @@ struct OptoComp
         else
         {
             env = env + rel * (lastEnv - env);
-            /*auto rel_env1 = env + rel * (lastEnv - env);
-            auto rel_env2 = env + rel2 * (lastEnv - env);
-
-            env = (rel_env1 * t_env) + (rel_env2 * (1.f-t_env));*/
-            /*this method is working well, but it's difficult to get it to change w/
-            the full desired range of rel time. let's try using one envelope w/ a time const
-            determined by last GR*/
         }
 
         lastEnv = env;
@@ -132,6 +125,11 @@ struct OptoComp
 
     void processBlock(dsp::AudioBlock<float>& block, float comp)
     {
+        if (comp == 0.f) {
+            grSource.measureGR(1.f);
+            return;
+        }
+
         auto inL = block.getChannelPointer(0);
         auto inR = block.getChannelPointer(1);
 
@@ -216,5 +214,5 @@ private:
 
     ProcessorType type;
 
-    VolumeMeterSource grSource;
+    VolumeMeterSource& grSource;
 };

@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.15)
 
 project(Gamma VERSION 0.1)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 find_package(JUCE CONFIG REQUIRED)
 
 juce_set_vst2_sdk_path("${VST2_SDK}")
@@ -11,7 +14,7 @@ juce_add_plugin(Gamma
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Arau
     PLUGIN_CODE Gamm
-    FORMATS AU VST3 VST
+    FORMATS AU VST3 VST Standalone
     VST2_CATEGORY kPlugCategEffect
     VST3_CATEGORY Fx
     AU_MAIN_TYPE kAudioUnitType_Effect
@@ -29,11 +32,11 @@ add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
 
 juce_add_modules(
-    "/Users/alex/modules/Gin/modules/gin"
-    # "/Users/alex/modules/Gin/modules/gin_gui"
-    "/Users/alex/modules/DSPFilters/modules/dsp_filters"
-    "/Users/alex/modules/VolumeMeter"
-    "/Users/alex/modules/chowdsp_utils/modules/chowdsp_dsp")
+    "/modules/Gin/modules/gin"
+    "/modules/Gin/modules/gin_gui"
+    "/modules/DSPFilters/modules/dsp_filters"
+    "/modules/VolumeMeter"
+    "/modules/chowdsp_utils/modules/chowdsp_dsp")
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -52,7 +55,7 @@ target_link_libraries(Gamma
         juce::juce_audio_utils
         juce::juce_dsp
         gin
-        # gin_gui
+        gin_gui
         dsp_filters
         VolumeMeter
         chowdsp_dsp

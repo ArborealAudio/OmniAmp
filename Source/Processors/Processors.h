@@ -28,7 +28,7 @@ enum class ProcessorType
 
 struct Processor
 {
-    Processor(AudioProcessorValueTreeState& a, ProcessorType t) : apvts(a), comp(t)
+    Processor(AudioProcessorValueTreeState& a, ProcessorType t, VolumeMeterSource& s) : apvts(a), comp(t, s)
     {
         inGain = apvts.getRawParameterValue("inputGain");
         outGain = apvts.getRawParameterValue("outputGain");
@@ -110,7 +110,7 @@ protected:
 
 struct Guitar : Processor
 {
-    Guitar(AudioProcessorValueTreeState& a) : Processor(a, ProcessorType::Guitar)
+    Guitar(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Guitar, s)
     {
         toneStack = std::make_unique<ToneStackNodal>(0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.5e6f, 20e3f, 65e3f);
         triode.resize(4);
@@ -127,8 +127,7 @@ struct Guitar : Processor
         float gain_raw = jmap(inGain->load(), 1.f, 8.f);
         float out_raw = jmap(outGain->load(), 1.f, 8.f);
 
-        if (*p_comp > 0.f)
-            comp.processBlock(block, *p_comp);
+        comp.processBlock(block, *p_comp);
 
         if (*dist > 0.f)
             mxr.processBlock(block);
@@ -163,7 +162,7 @@ private:
 
 struct Bass : Processor
 {
-    Bass(AudioProcessorValueTreeState& a) : Processor(a, ProcessorType::Bass)
+    Bass(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Bass, s)
     {
         toneStack = std::make_unique<ToneStackNodal>(0.5e-9f, 10e-9f, 10e-9f, 250e3f, 0.5e6f, 30e3f, 100e3f);
         triode.resize(4);
@@ -179,8 +178,7 @@ struct Bass : Processor
         float gain_raw = jmap(inGain->load(), 1.f, 8.f);
         float out_raw = jmap(outGain->load(), 1.f, 8.f);
 
-        if (*p_comp > 0.f)
-            comp.processBlock(block, *p_comp);
+        comp.processBlock(block, *p_comp);
 
         triode[0].processBlock(block, 0.5, 1.0);
 
@@ -207,7 +205,7 @@ struct Bass : Processor
 
 struct Channel : Processor
 {
-    Channel(AudioProcessorValueTreeState& a) : Processor(a, ProcessorType::Channel)
+    Channel(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Channel, s)
     {
         toneStack = nullptr;
         triode.resize(2);
@@ -223,8 +221,7 @@ struct Channel : Processor
         float gain_raw = jmap(inGain->load(), 1.f, 4.f);
         float out_raw = jmap(outGain->load(), 1.f, 4.f);
 
-        if (*p_comp > 0.f)
-            comp.processBlock(block, *p_comp);
+        comp.processBlock(block, *p_comp);
         
         if (*dist > 0.f)
             mxr.processBlock(block);

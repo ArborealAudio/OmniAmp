@@ -24,19 +24,19 @@ struct KnobLookAndFeel : LookAndFeel_V4
         {
         case Regular: {
             auto radius = (float)jmin(width / 2, height / 2) - 4.f;
-            auto centerX = (float)x + (float)width * 0.5f;
-            auto centerY = (float)y + (float)height * 0.5f;
+            auto centerX = (float)slider.getLocalBounds().getCentreX();
+            auto centerY = (float)slider.getLocalBounds().getCentreY();
             auto rx = centerX - radius;
             auto ry = centerY - radius;
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            Image shadow{Image::PixelFormat::ARGB, width, height, true};
+            Image shadow{Image::PixelFormat::ARGB, width + 3, height + 3, true};
             Graphics sg(shadow);
             sg.setColour(Colours::black);
             sg.fillEllipse(rx, ry, rw, rw);
 
-            // gin::applyStackBlur(shadow, 5);
+            gin::applyStackBlur(shadow, 5);
 
             g.drawImageAt(shadow, x-3, y+3);
 
@@ -60,23 +60,26 @@ struct KnobLookAndFeel : LookAndFeel_V4
             break;
             }
         case LF: {
+            width *= 0.8;
+            height *= 0.8;
+
             auto radius = (float)jmin(width / 2, height / 2) - 4.f;
-            auto centerX = (float)x + (float)width * 0.5f;
-            auto centerY = (float)y + (float)height * 0.5f;
+            auto centerX = (float)slider.getLocalBounds().getCentreX();
+            auto centerY = (float)slider.getLocalBounds().getCentreY();
             auto rx = centerX - radius;
             auto ry = centerY - radius;
             auto rw = radius * 2.f;
-            auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+            auto angle = rotaryStartAngle * 0.8 + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            Image glow{Image::PixelFormat::ARGB, width, height, true};
+            Image glow{Image::PixelFormat::ARGB, width + 20, height + 20, true};
             Graphics gg(glow);
-            gg.setColour(Colours::wheat);
+            gg.setColour(Colours::whitesmoke);
             auto fac = 1.f + (5.f * sliderPos);
             gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
 
-            // gin::applyStackBlur(glow, 5);
+            gin::applyStackBlur(glow, 5);
 
-            g.drawImageAt(glow, x, y);
+            g.drawImageAt(glow, 0, 0);
 
             ColourGradient gradient{Colours::transparentBlack, centerX, centerY, Colours::black, (float)x, (float)y, true};
             g.setGradientFill(gradient);
@@ -91,25 +94,26 @@ struct KnobLookAndFeel : LookAndFeel_V4
             break;
             }
         case HF: {
-            // width *= 0.8;
-            // height *= 0.8;
-            auto radius = (float)jmin(width / 2, height / 2) - 4.f;
-            auto centerX = (float)x + (float)width * 0.5f;
-            auto centerY = (float)y + (float)height * 0.5f;
+            width *= 0.8;
+            height *= 0.8;
+
+            auto radius = (float)jmin(width * 0.5f, height * 0.5f) - 4.f;
+            auto centerX = (float)slider.getLocalBounds().getCentreX();
+            auto centerY = (float)slider.getLocalBounds().getCentreY();
             auto rx = centerX - radius;
             auto ry = centerY - radius;
             auto rw = radius * 2.f;
-            auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+            auto angle = rotaryStartAngle * 0.8 + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            Image glow{Image::PixelFormat::ARGB, width, height, true};
+            Image glow{Image::PixelFormat::ARGB, width + 20, height + 20, true};
             Graphics gg(glow);
             gg.setColour(Colours::wheat);
             auto fac = 1.f + (5.f * sliderPos);
             gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
 
-            // gin::applyStackBlur(glow, 5);
+            gin::applyStackBlur(glow, 5);
 
-            g.drawImageAt(glow, x, y);
+            g.drawImageAt(glow, 0, 0);
 
             ColourGradient gradient{Colours::transparentWhite, centerX, centerY, Colours::white, (float)x, (float)y, true};
             g.setGradientFill(gradient);

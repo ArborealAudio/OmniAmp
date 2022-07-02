@@ -20,7 +20,7 @@ GammaAudioProcessor::GammaAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        ), apvts(*this, nullptr, "Parameters", createParams()),
-                        guitar(apvts), bass(apvts), channel(apvts)
+                        guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource)
 #endif
 {
     gain = apvts.getRawParameterValue("inputGain");
@@ -223,7 +223,6 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     setLatencySamples(oversample.getLatencyInSamples());
 
-    // audioSource.copyBuffer(buffer);
     audioSource.getBufferRMS(buffer);
 }
 

@@ -94,6 +94,8 @@ private:
             {0.5e-9f, 22e-9f, 20e-9f, 270e3f, 1e6f, 125e3f, 33e3f}
     } };*/
 
+    VolumeMeterSource meterSource;
+
     Guitar guitar;
     Bass bass;
     Channel channel;

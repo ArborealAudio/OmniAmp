@@ -21,8 +21,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     wave.setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(ampControls);
-    ampControls.setSize(570, 100);
-    ampControls.setCentrePosition(getLocalBounds().getCentreX(), getLocalBounds().getCentreY() + 50);
+    ampControls.setSize(585, 130);
+    ampControls.setCentrePosition(getLocalBounds().getCentreX(), getLocalBounds().getCentreY() + 65);
 
     addAndMakeVisible(mode);
     modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(p.apvts, "mode", mode);
@@ -38,7 +38,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     hfEnhance.setBounds(getLocalBounds().getCentreX() + 250, 100, 100, 100);
 
     grMeter.setMeterType(VolumeMeterComponent::Type::Reduction);
-    grMeter.setBounds(125, 200, 35, 150);
+    grMeter.setBounds(72, 200, 32, 100);
     addAndMakeVisible(grMeter);
 
     setResizable(true, true);
@@ -54,11 +54,6 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 void GammaAudioProcessorEditor::paint (juce::Graphics& g)
 {
   g.fillAll(Colour(0xff968875));
-
-  // Rectangle<int> testbounds{JUCE_LIVE_CONSTANT(20),
-  //                             JUCE_LIVE_CONSTANT((getHeight() / 2) - 35),
-  //                             JUCE_LIVE_CONSTANT(70),
-  //                             JUCE_LIVE_CONSTANT(70)};
 
   grMeter.paint(g);
 }
