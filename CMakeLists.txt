@@ -47,11 +47,13 @@ target_compile_definitions(Gamma
         JUCE_REPORT_APP_USAGE=0)
         # JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
 
-# juce_add_binary_data(BinaryData SOURCES)
+juce_add_binary_data(BinaryData SOURCES
+    "Resources/IRs/Fender Bassman SM57.wav"
+    "Resources/IRs/grafton bass deluxe.wav")
 
 target_link_libraries(Gamma
     PRIVATE
-        # BinaryData
+        BinaryData
         juce::juce_audio_utils
         juce::juce_dsp
         gin

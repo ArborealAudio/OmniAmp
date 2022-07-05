@@ -120,6 +120,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     guitar.prepare(spec);
     bass.prepare(spec);
     channel.prepare(spec);
+    cab.prepare(dsp::ProcessSpec(sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()));
 
     lfEnhancer.setType((LFEnhancer::Mode)currentMode);
     lfEnhancer.prepare(spec);
@@ -135,6 +136,7 @@ void GammaAudioProcessor::releaseResources()
     channel.reset();
     hfEnhancer.reset();
     lfEnhancer.reset();
+    cab.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -164,6 +166,7 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
         currentMode = (Mode)newValue;
         lfEnhancer.setType((LFEnhancer::Mode)currentMode);
         lfEnhancer.updateFilters();
+        cab.changeIR((ProcessorType)currentMode);
     }
     else if (parameterID.contains("bass"))
     {
@@ -222,6 +225,9 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     oversample.processSamplesDown(block);
 
     setLatencySamples(oversample.getLatencyInSamples());
+
+    if (currentMode != Mode::Channel)
+        cab.processBlock(block);
 
     audioSource.getBufferRMS(buffer);
 }

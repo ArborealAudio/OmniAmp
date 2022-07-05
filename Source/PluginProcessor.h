@@ -101,7 +101,9 @@ private:
     Channel channel;
     HFEnhancer<float> hfEnhancer;
     LFEnhancer lfEnhancer;
-    dsp::Oversampling<float> oversample{2, 2, dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple};
+    dsp::Oversampling<float> oversample{2, 0, dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple};
+
+    ConvoCab cab;
 
     enum Mode
     {
