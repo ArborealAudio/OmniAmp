@@ -9,6 +9,9 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "../chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
+#include "../chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
+#include "../chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
 #include "Processors/Processors.h"
 #include "UI/SineWave.hpp"
 #include "VolumeMeter/VolumeMeter.h"
@@ -101,9 +104,9 @@ private:
     Channel channel;
     HFEnhancer<float> hfEnhancer;
     LFEnhancer lfEnhancer;
-    dsp::Oversampling<float> oversample{2, 0, dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple};
+    dsp::Oversampling<float> oversample{2, 2, dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple};
 
-    ConvoCab cab;
+    ConvoCab<float> cab;
 
     enum Mode
     {

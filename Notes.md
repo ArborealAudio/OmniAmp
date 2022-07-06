@@ -8,7 +8,11 @@
   
   - much to be done here. Multiple mic options, movable mics? Or shall we stick to just a few different cabs, keep it basic?
 
+  - so far have added a guitar cab and a bass cab, not really sure how good they sound yet
+
 - Getting different defaults for different modes? Would need to make them separate States if so.
+
+- SIMD implementation
 
 # NOTES
 Using JUCE 7.0.1

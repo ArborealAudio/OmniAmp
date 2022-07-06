@@ -120,7 +120,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     guitar.prepare(spec);
     bass.prepare(spec);
     channel.prepare(spec);
-    cab.prepare(dsp::ProcessSpec(sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()));
+    cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 
     lfEnhancer.setType((LFEnhancer::Mode)currentMode);
     lfEnhancer.prepare(spec);

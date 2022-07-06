@@ -51,6 +51,7 @@ private:
     float d0[FILTER_ORDER]{0.f}, d1[FILTER_ORDER]{0.f};
 };
 
+template <typename T>
 struct ConvoCab
 {
     ConvoCab() : convo(dsp::Convolution::Latency{0})
@@ -81,9 +82,9 @@ struct ConvoCab
         }
     }
 
-    void processBlock(dsp::AudioBlock<float>& block)
+    void processBlock(dsp::AudioBlock<T>& block)
     {
-        convo.process(dsp::ProcessContextReplacing<float>(block));
+        convo.process(dsp::ProcessContextReplacing<T>(block));
     }
 
 private:

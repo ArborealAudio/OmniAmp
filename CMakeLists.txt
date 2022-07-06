@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(Gamma VERSION 0.1)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(JUCE CONFIG REQUIRED)
@@ -30,13 +30,14 @@ target_sources(Gamma
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
+add_subdirectory(chowdsp_wdf)
+add_subdirectory(chowdsp_utils)
 
 juce_add_modules(
     "/modules/Gin/modules/gin"
     "/modules/Gin/modules/gin_gui"
     "/modules/DSPFilters/modules/dsp_filters"
-    "/modules/VolumeMeter"
-    "/modules/chowdsp_utils/modules/chowdsp_dsp")
+    "/modules/VolumeMeter")
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -60,7 +61,9 @@ target_link_libraries(Gamma
         gin_gui
         dsp_filters
         VolumeMeter
-        chowdsp_dsp
+        chowdsp_wdf
+        chowdsp_simd
+        chowdsp_dsp_data_structures
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

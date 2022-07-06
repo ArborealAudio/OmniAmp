@@ -8,4 +8,5 @@ PRIVATE
     Tube.h
     Enhancer.h
     Cab.h
-    DistPlus.h)
+    DistPlus.h
+    SIMD.h)

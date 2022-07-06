@@ -17,6 +17,7 @@ enum class ProcessorType
     Channel
 };
 
+#include "SIMD.h"
 #include "Tube.h"
 #include "PreFilters.h"
 #include "PostFilters.h"
