@@ -120,13 +120,16 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     guitar.prepare(spec);
     bass.prepare(spec);
     channel.prepare(spec);
-    cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 
-    lfEnhancer.setType((LFEnhancer::Mode)currentMode);
+    lfEnhancer.setType((LFEnhancer<double>::Mode)currentMode);
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
 
+    cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+
     audioSource.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+
+    doubleBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
 }
 
 void GammaAudioProcessor::releaseResources()
@@ -164,7 +167,7 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
 {
     if (parameterID.contains("mode")) {
         currentMode = (Mode)newValue;
-        lfEnhancer.setType((LFEnhancer::Mode)currentMode);
+        lfEnhancer.setType((LFEnhancer<double>::Mode)currentMode);
         lfEnhancer.updateFilters();
         cab.changeIR((ProcessorType)currentMode);
     }
@@ -199,7 +202,9 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    dsp::AudioBlock<float> block(buffer);
+    doubleBuffer.makeCopyOf(buffer);
+
+    dsp::AudioBlock<double> block(doubleBuffer);
 
     auto osBlock = oversample.processSamplesUp(block);
 
@@ -217,17 +222,19 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     }
 
     if (*lfEnhance)
-        lfEnhancer.processBlock(osBlock, *lfEnhance);
+        lfEnhancer.processBlock(osBlock, (double)*lfEnhance);
 
     if (*hfEnhance)
-        hfEnhancer.processBlock(osBlock, *hfEnhance);
+        hfEnhancer.processBlock(osBlock, (double)*hfEnhance);
 
     oversample.processSamplesDown(block);
 
     setLatencySamples(oversample.getLatencyInSamples());
 
-    if (currentMode != Mode::Channel)
-        cab.processBlock(block);
+    // if (currentMode != Mode::Channel)
+    //     cab.processBlock(block);
+
+    buffer.makeCopyOf(doubleBuffer);
 
     audioSource.getBufferRMS(buffer);
 }

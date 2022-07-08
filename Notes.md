@@ -13,6 +13,7 @@
 - Getting different defaults for different modes? Would need to make them separate States if so.
 
 - SIMD implementation
+    - mostly just the enhancers left to optimize. Leaving compressor since it seems like a PITA but definitely could see that being possible too.
 
 # NOTES
-Using JUCE 7.0.1
+Using JUCE 7.0.1 (well, trying to, but created a local branch @ 7.0.0 with some fixes for IPP...TBD)

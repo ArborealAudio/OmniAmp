@@ -15,7 +15,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
 {
     setSize (800, 400);
 
-    addAndMakeVisible(wave);
+    // addAndMakeVisible(wave);
     wave.setSize(400, 200);
     wave.setCentrePosition(getLocalBounds().getCentreX(), 100);
     wave.setInterceptsMouseClicks(false, false);

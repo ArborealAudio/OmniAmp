@@ -10,28 +10,28 @@
 
 #pragma once
 
+template <typename T>
 struct Cab
 {
     Cab() = default;
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        for (auto& f : sc_lp) {
-            f.prepare(spec);
-            *f.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 5000.f);
-        }
+        sc_lp.setType(dsp::StateVariableTPTFilterType::lowpass);
+        sc_lp.setCutoffFrequency(5000.f);
+        sc_lp.prepare(spec);
     }
 
-    inline float processSample(float x, int ch)
+    inline T processSample(T x, int ch)
     {
-        return std::tanh(sc_lp[ch].processSample(x));
+        return std::tanh(sc_lp.processSample(ch, x));
     }
 
 private:
-
-    std::array<dsp::IIR::Filter<float>, 2> sc_lp;
+    dsp::StateVariableTPTFilter<T> sc_lp;
 };
 
+template <typename T>
 struct Tube
 {
     Tube() = default;
@@ -40,13 +40,16 @@ struct Tube
     {
         lastSampleRate = spec.sampleRate;
 
+        sc_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(lastSampleRate, 5.f);
+        m_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(lastSampleRate, 10000.f);
+
         for (auto& f : sc_lp) {
             f.prepare(spec);
-            *f.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(lastSampleRate, 5.f);
+            f.coefficients = sc_coeffs;
         }
         for (auto& f : m_lp) {
             f.prepare(spec);
-            *f.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(lastSampleRate, 10000.f);
+            f.coefficients = m_coeffs;
         }
     }
 
@@ -58,17 +61,7 @@ struct Tube
             f.reset();
     }
 
-    void processBuffer(AudioBuffer<float>& buffer, float gp, float gn)
-    {
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-        {
-            auto in = buffer.getWritePointer(ch);
-
-            processSamples(in, ch, buffer.getNumSamples(), gp, gn);
-        }
-    }
-
-    void processBlock(dsp::AudioBlock<float>& block, float gp, float gn)
+    void processBlock(dsp::AudioBlock<T>& block, T gp, T gn)
     {
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -78,17 +71,17 @@ struct Tube
         }
     }
 
-    void processBufferClassB(AudioBuffer<float>& buffer, float gp, float gn)
+    void processBlock(chowdsp::AudioBlock<T>& block, T gp, T gn)
     {
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
-            auto in = buffer.getWritePointer(ch);
+            auto in = block.getChannelPointer(ch);
 
-            processSamplesClassB(in, ch, buffer.getNumSamples(), gp, gn);
+            processSamples(in, ch, block.getNumSamples(), gp, gn);
         }
     }
 
-    void processBlockClassB(dsp::AudioBlock<float>& block, float gp, float gn)
+    void processBlockClassB(dsp::AudioBlock<T>& block, T gp, T gn)
     {
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -98,9 +91,19 @@ struct Tube
         }
     }
 
+    void processBlockClassB(chowdsp::AudioBlock<T>& block, T gp, T gn)
+    {
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            processSamplesClassBSIMD(in, ch, block.getNumSamples(), gp, gn);
+        }
+    }
+
 private:
 
-    inline void processSamples(float* in, int ch, size_t numSamples, float gp, float gn)
+    inline void processSamples(T* in, int ch, size_t numSamples, T gp, T gn)
     {
         for (int i = 0; i < numSamples; ++i)
         {
@@ -117,7 +120,7 @@ private:
         }
     }
 
-    inline void processSamplesClassB(float* in, int ch, size_t numSamples, float gp, float gn)
+    inline void processSamplesClassB(T* in, int ch, size_t numSamples, T gp, T gn)
     {
         for (int i = 0; i < numSamples; ++i)
         {
@@ -129,7 +132,19 @@ private:
         }
     }
 
-    inline float saturate(float x, float gp, float gn)
+    inline void processSamplesClassBSIMD(T* in, int ch, size_t numSamples, T gp, T gn)
+    {
+        for (int i = 0; i < numSamples; ++i)
+        {
+            in[i] -= (T)1.2 * processEnvelopeDetectorSIMD(in[i], ch);
+
+            in[i] = saturateSIMD(in[i], gp, gn);
+
+            in[i] = xsimd::sinh(in[i]) / (T)6.0;
+        }
+    }
+
+    inline T saturate(T x, T gp, T gn)
     {
         if (x > 0.f)
         {
@@ -143,73 +158,82 @@ private:
         return x;
     }
 
-    inline float processEnvelopeDetector(float x, int ch)
+    inline T saturateSIMD(T x, T gp, T gn)
+    {
+        xsimd::batch_bool<double> pos {x > 0.0};
+        return xsimd::select(pos, (((T)1.0 / gp) * xsimd::tanh(gp * x)),
+        (((T)1.0 / gn) * xsimd::tanh(gn * x)));
+    }
+
+    inline T processEnvelopeDetector(T x, int ch)
     {
         auto xr = std::fabs(x);
 
-        return 0.251188f * sc_lp[ch].processSample(xr);
+        return 0.251188 * sc_lp[ch].processSample(xr);
     }
 
-    std::array<dsp::IIR::Filter<float>, 2> sc_lp, m_lp;
+    inline T processEnvelopeDetectorSIMD(T x, int ch)
+    {
+        auto xr = xsimd::abs(x);
+
+        return (T)0.251188 * sc_lp[ch].processSample(xr);
+    }
+
+    dsp::IIR::Coefficients<double>::Ptr sc_coeffs, m_coeffs;
+
+    std::array<dsp::IIR::Filter<T>, 2> sc_lp, m_lp;
 
     double lastSampleRate = 0.0;
 
-    double r = 1.0 - (1.0 / 800.0);
+    T r = 1.0 - (1.0 / 800.0);
 
-    float x_1 = 0.f, gp_raw = 0.f, gn_raw = 0.f;
-    float xm1[2]{ 0.0, 0.0 }, ym1[2]{ 0.0, 0.0 };
+    T x_1 = 0.f, gp_raw = 0.f, gn_raw = 0.f;
+    T xm1[2]{ 0.0, 0.0 }, ym1[2]{ 0.0, 0.0 };
 
 };
 
+template <typename T>
 struct AVTriode
 {
     AVTriode() = default;
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        for (auto& f : sc_hp) {
-            f.prepare(spec);
-            *f.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 20.f);
-        }
-
-        cab.prepare(spec);
+        r = (T)1.0 - ((T)1.0 / (T)1000.0);
     }
 
     void reset()
     {
-        for (auto& f : sc_hp)
-            f.reset();
-
-        y_m[0] = 0.f;
+        x_m[0] = x_m[1] = y_m[0] = y_m[1] = 0.0;
     }
 
-    inline float processSample(float x, size_t ch, float gp, float gn)
+    inline T processSample(T x, size_t ch, T gp, T gn)
     {
         auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
         auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
 
-        auto y = -sc_hp[ch].processSample(f1 + f2);
-
-        y_m[ch] = cab.processSample(y, ch);
-        // y_m[ch] = y;
+        auto filter_x = f1 + f2;
+        auto y = filter_x - x_m[ch] + r * y_m[ch];
+        x_m[ch] = filter_x;
+        y_m[ch] = y;
 
         return y;
     }
 
-    void process(AudioBuffer<float>& buffer, float gp, float gn)
+    inline T processSampleSIMD(T x, T gp, T gn)
     {
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-        {
-            auto in = buffer.getWritePointer(ch);
+        auto f1 = xsimd::div((vec)1.0, gp) * xsimd::tanh(gp * x) * y_m[0];
+        auto f2 = xsimd::div((vec)1.0, gn) * xsimd::atan(gn * x) * xsimd::sub((vec)1.0, y_m[0]);
 
-            for (int i = 0; i < buffer.getNumSamples(); ++i)
-            {
-                in[i] = processSample(in[i], ch, gp, gn);
-            }
-        }
+        auto filter_x = xsimd::add(f1, f2);
+        auto y = filter_x - x_m[0] + r * y_m[0];
+        x_m[0] = filter_x;
+        y_m[0] = y;
+
+        return y;
     }
 
-    void processBlock(dsp::AudioBlock<float>& block, float gp, float gn)
+    void processBlock(dsp::AudioBlock<T>& block, T gp, T gn)
     {
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -222,13 +246,28 @@ struct AVTriode
         }
     }
 
+    void processBlockSIMD(chowdsp::AudioBlock<T>& block, T gp, T gn)
+    {
+        for (size_t ch = 0; ch < block.getNumChannels(); ch++)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            for (size_t i = 0; i < block.getNumSamples(); i++)
+            {
+                in[i] = processSampleSIMD(in[i], gp, gn);
+            }
+        }
+    }
+
 private:
 
-    float y_m[2]{ 0.f, 0.f };
+    T x_m[2] {0.0}, y_m[2] {0.0};
 
-    std::array<dsp::IIR::Filter<float>,2> sc_hp;
+    T r = 0.0;
 
-    Cab cab;
+    // dsp::StateVariableTPTFilter<T> sc_hp;
+
+    // Cab<T> cab;
 };
 
 struct DZTube

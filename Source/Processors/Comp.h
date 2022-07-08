@@ -10,6 +10,7 @@
 
 #pragma once
 
+template <typename T>
 struct OptoComp
 {
     OptoComp(ProcessorType t, VolumeMeterSource& s) : type(t), grSource(s) {}
@@ -25,39 +26,39 @@ struct OptoComp
         
         switch (type) {
         case ProcessorType::Guitar:
-            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 200.f, 1.02f);
-            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 3500.f, 0.8f);
+            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<T>::makeHighPass(spec.sampleRate, 200.f, 1.02f);
+            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<T>::makeLowPass(spec.sampleRate, 3500.f, 0.8f);
             for (auto& h : hp) {
                 h.prepare(spec);
-                *h.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 2500.f);
+                *h.coefficients = dsp::IIR::ArrayCoefficients<T>::makeFirstOrderHighPass(spec.sampleRate, 2500.f);
             }
             for (auto& l : lp) {
                 l.prepare(spec);
-                *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 6500.f);
+                *l.coefficients = dsp::IIR::ArrayCoefficients<T>::makeFirstOrderLowPass(spec.sampleRate, 6500.f);
             }
             break;
         case ProcessorType::Bass:
-            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 150.f);
-            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
+            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<T>::makeFirstOrderHighPass(spec.sampleRate, 150.f);
+            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<T>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
             for (auto& h : hp) {
                 h.prepare(spec);
-                *h.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 1000.f);
+                *h.coefficients = dsp::IIR::ArrayCoefficients<T>::makeFirstOrderHighPass(spec.sampleRate, 1000.f);
             }
             for (auto& l : lp) {
                 l.prepare(spec);
-                *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
+                *l.coefficients = dsp::IIR::ArrayCoefficients<T>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
             }
             break;
         case ProcessorType::Channel:
-            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 100.f, 0.707f);
-            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 5000.f, 0.8f);
+            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<T>::makeHighPass(spec.sampleRate, 100.f, 0.707f);
+            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<T>::makeLowPass(spec.sampleRate, 5000.f, 0.8f);
             break;
         }
     }
 
     void reset()
     {
-        xm0 = 0.f, xm1 = 0.f, lastEnv = 0.f, lastGR = 0.f;
+        xm0 = 0.0, xm1 = 0.0, lastEnv = 0.0, lastGR = 0.0;
         sc_hp.reset();
         sc_lp.reset();
         
@@ -67,41 +68,18 @@ struct OptoComp
             l.reset();
     }
 
-    inline float detectEnv (float x)
-    {
-        auto t_abs = std::abs(x);
-
-        float env;
-
-        // if (t_abs >= lastEnv)
-        // {
-        //     env = att * (lastEnv - t_abs) + t_abs;
-        // }
-        // else
-        // {
-        //     env = rel * (lastEnv - t_abs) + t_abs;
-        // }
-
-        if (env < 1.175494351e-38f)
-            env = 1.175494351e-38f;
-
-        lastEnv = env;
-
-        return 20.f * std::log10(env);
-    }
-
     /*returns gain reduction multiplier*/
-    inline float compress(float x)
+    inline T compress(T x)
     {     
-        if (x < 1.175494351e-38f)
-            x = 1.175494351e-38f;
+        if (x < 1.175494351e-38)
+            x = 1.175494351e-38;
 
-        auto env = jmax(0.f, 8.685889638f * std::log10(x / threshold));
+        auto env = jmax(0.0, 8.685889638 * std::log10(x / threshold));
 
-        float att_time = jlimit(0.005f, 0.050f, (1.f / x) * 0.015f);
+        T att_time = jlimit(0.0050, 0.050, (1.0 / x) * 0.015);
 
-        float att = std::exp(-1.f / (att_time * lastSR));
-        float rel = std::exp(-1.f / (0.6f * lastGR * lastSR));
+        T att = std::exp(-1.0 / (att_time * lastSR));
+        T rel = std::exp(-1.0 / (0.6 * lastGR * lastSR));
 
         if (env > lastEnv)
         {
@@ -114,8 +92,8 @@ struct OptoComp
 
         lastEnv = env;
         
-        auto gr_db = 10.f * -env; /*using tanh here makes a nice log curve (but also fux w the att/rel curves)*/
-        auto gr = std::pow(10.f, gr_db / 20.f);
+        auto gr_db = 10.0 * -env; /*using tanh here makes a nice log curve (but also fux w the att/rel curves)*/
+        auto gr = std::pow(10.0, gr_db / 20.0);
         lastGR = gr;
 
         grSource.measureGR(gr);
@@ -123,28 +101,28 @@ struct OptoComp
         return gr;
     }
 
-    void processBlock(dsp::AudioBlock<float>& block, float comp)
+    void processBlock(dsp::AudioBlock<T>& block, T comp)
     {
-        if (comp == 0.f) {
-            grSource.measureGR(1.f);
+        if (comp == 0.0) {
+            grSource.measureGR(1.0);
             return;
         }
 
         auto inL = block.getChannelPointer(0);
         auto inR = block.getChannelPointer(1);
 
-        auto c_comp = jmap(comp, 1.f, 6.f);
+        auto c_comp = jmap(comp, 1.0, 6.0);
 
         switch (type)
         {
         case ProcessorType::Channel:{
-            auto thresh_scale = c_comp / 2.f;
-            threshold = std::pow(10.f, (-18.f * thresh_scale) / 20.f);
+            auto thresh_scale = c_comp / 2.0;
+            threshold = std::pow(10.0, (-18.0 * thresh_scale) / 20.0);
             }
             break;
         case ProcessorType::Guitar:
         case ProcessorType::Bass:
-            threshold = std::pow(10.f, -36.f / 20.f);
+            threshold = std::pow(10.0, -36.0 / 20.0);
             break;
         }
 
@@ -153,7 +131,7 @@ struct OptoComp
             auto abs0 = std::abs(xm0);
             auto abs1 = std::abs(xm1);
 
-            float max = jmax(abs0, abs1);
+            T max = jmax(abs0, abs1);
             max = sc_hp.processSample(max);
             max = sc_lp.processSample(max);
 
@@ -171,8 +149,8 @@ struct OptoComp
                     inR[i] *= gr;
                 }
                 else {
-                    inL[i] *= (c_comp / 4.f) * gr;
-                    inR[i] *= (c_comp / 4.f) * gr;
+                    inL[i] *= (c_comp / 4.0) * gr;
+                    inR[i] *= (c_comp / 4.0) * gr;
                 }
                 break;
             }
@@ -194,8 +172,8 @@ struct OptoComp
 
                 inL[i] += bpL * comp;
                 inR[i] += bpR * comp;
-                inL[i] *= jlimit(1.f, 3.f, c_comp);
-                inR[i] *= jlimit(1.f, 3.f, c_comp);
+                inL[i] *= jlimit(1.0, 3.0, c_comp);
+                inR[i] *= jlimit(1.0, 3.0, c_comp);
                 break;
             }
         }
@@ -204,13 +182,13 @@ struct OptoComp
     VolumeMeterSource& getGRSource() { return grSource; }
 
 private:
-    float lastSR = 44100.f;
+    T lastSR = 44100.0;
 
-    float threshold = std::pow(10.f, -18.f / 20.f);
-    float lastEnv = 0.f, lastGR = 0.f;
-    float xm0 = 0.f, xm1 = 0.f;
+    T threshold = std::pow(10.0, -18.0 / 20.0);
+    T lastEnv = 0.0, lastGR = 0.0;
+    T xm0 = 0.0, xm1 = 0.0;
 
-    dsp::IIR::Filter<float> sc_hp, sc_lp, lp[2], hp[2];
+    dsp::IIR::Filter<T> sc_hp, sc_lp, lp[2], hp[2];
 
     ProcessorType type;
 

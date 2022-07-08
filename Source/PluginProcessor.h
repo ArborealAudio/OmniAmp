@@ -8,7 +8,13 @@
 
 #pragma once
 
+// define for SIMD-specific declarations & functions
+#ifndef USE_SIMD
+    #define USE_SIMD 1
+#endif
+
 #include <JuceHeader.h>
+#include "../chowdsp_utils/modules/dsp/chowdsp_math/chowdsp_math.h"
 #include "../chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
 #include "../chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
 #include "../chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
@@ -102,11 +108,13 @@ private:
     Guitar guitar;
     Bass bass;
     Channel channel;
-    HFEnhancer<float> hfEnhancer;
-    LFEnhancer lfEnhancer;
-    dsp::Oversampling<float> oversample{2, 2, dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple};
+    HFEnhancer<double> hfEnhancer;
+    LFEnhancer<double> lfEnhancer;
+    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
 
     ConvoCab<float> cab;
+
+    AudioBuffer<double> doubleBuffer;
 
     enum Mode
     {

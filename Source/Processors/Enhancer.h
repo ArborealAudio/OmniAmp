@@ -43,11 +43,12 @@ struct HFEnhancer
             buffer.addFrom(1, 0, wetBuffer.getReadPointer(1), wetBuffer.getNumSamples(), enhance);
     }
 
-    void processBlock(dsp::AudioBlock<float>& block, const float enhance)
+    template <typename T>
+    void processBlock(dsp::AudioBlock<T>& block, const T enhance)
     {
         int size = (int)block.getNumChannels() * (int)block.getNumSamples();
         HeapBlock<char> heap{size};
-        dsp::AudioBlock<float> wetBlock(heap, block.getNumChannels(), block.getNumSamples());
+        dsp::AudioBlock<T> wetBlock(heap, block.getNumChannels(), block.getNumSamples());
 
         wetBlock.copyFrom(block);
 
@@ -57,7 +58,7 @@ struct HFEnhancer
         hp1.process(wetBlock.getNumSamples(), 0, inL);
         hp1.process(wetBlock.getNumSamples(), 1, inR);
 
-        wetBlock.multiplyBy(jmap(enhance, 1.f, 4.f));
+        wetBlock.multiplyBy(jmap(enhance, (T)1.f, (T)4.f));
 
         tube.processBlock(wetBlock, 1.0, 0.5);
 
@@ -74,9 +75,10 @@ private:
 
     AudioBuffer<Type> wetBuffer;
 
-    AVTriode tube;
+    AVTriode<Type> tube;
 };
 
+template <typename T>
 struct LFEnhancer
 {
     LFEnhancer(){}
@@ -155,7 +157,7 @@ struct LFEnhancer
 
         wetBuffer.applyGain(jmap(enhance, -1.f, -4.f));
 
-        tube.process(wetBuffer, 1.0, 3.0);
+        tube.processBlock(dsp::AudioBlock<float>(wetBuffer), 1.0, 3.0);
 
         lp2.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
 
@@ -164,11 +166,11 @@ struct LFEnhancer
             buffer.addFrom(1, 0, wetBuffer.getReadPointer(1), wetBuffer.getNumSamples(), enhance);
     }
 
-    void processBlock(dsp::AudioBlock<float>& block, const float enhance)
+    void processBlock(dsp::AudioBlock<T>& block, const T enhance)
     {
         int size = (int)block.getNumChannels() * (int)block.getNumSamples();
         HeapBlock<char> heap{size};
-        dsp::AudioBlock<float> wetBlock(heap, block.getNumChannels(), block.getNumSamples());
+        dsp::AudioBlock<T> wetBlock(heap, block.getNumChannels(), block.getNumSamples());
 
         wetBlock.copyFrom(block);
 
@@ -178,7 +180,7 @@ struct LFEnhancer
         lp1.process(wetBlock.getNumSamples(), 0, inL);
         lp1.process(wetBlock.getNumSamples(), 1, inR);
 
-        wetBlock.multiplyBy(jmap(enhance, -1.f, -4.f));
+        wetBlock.multiplyBy(jmap(enhance, (T)-1.f, (T)-4.f));
 
         tube.processBlock(wetBlock, 1.0, 3.0);
 
@@ -195,9 +197,9 @@ private:
 
     Dsp::SimpleFilter<Dsp::Bessel::LowPass<4>, 2> lp1, lp2;
 
-    AudioBuffer<float> wetBuffer;
+    AudioBuffer<T> wetBuffer;
 
-    AVTriode tube;
+    AVTriode<T> tube;
 
     double SR = 0.0;
 };

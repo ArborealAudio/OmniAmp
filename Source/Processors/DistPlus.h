@@ -3,6 +3,7 @@
 #pragma once
 namespace WDFT = chowdsp::wdft;
 
+template <typename T>
 class MXRDistWDF
 {
 public:
@@ -10,77 +11,88 @@ public:
 
     void prepare (double sampleRate)
     {
-        C1.prepare ((float) sampleRate);
-        C2.prepare ((float) sampleRate);
-        C3.prepare ((float) sampleRate);
-        C4.prepare ((float) sampleRate);
-        C5.prepare ((float) sampleRate);
+        C1.prepare ((T) sampleRate);
+        C2.prepare ((T) sampleRate);
+        C3.prepare ((T) sampleRate);
+        C4.prepare ((T) sampleRate);
+        C5.prepare ((T) sampleRate);
 
-        Vb.setVoltage (4.5f);
+        Vb.setVoltage ((T)4.5f);
     }
 
-    void setParams (float distParam)
+    void setParams (T distParam)
     {
         ResDist_R3.setResistanceValue (distParam * rDistVal + R3Val);
     }
 
-    inline float processSample (float x)
+    inline T processSample (T x)
     {
         Vin.setVoltage (x);
 
         DP.incident (P3.reflected());
         P3.incident (DP.reflected());
 
-        return WDFT::voltage<float> (Rout);
+        return WDFT::voltage<T> (Rout);
+    }
+    
+    /*currently just one channel, copies L->R*/
+    inline void processBlock(dsp::AudioBlock<T>& block)
+    {
+        auto in = block.getChannelPointer(0);
+        auto R = block.getChannelPointer(1);
+
+        for (auto i = 0; i < block.getNumSamples(); ++i)
+        {
+            in[i] = processSample(in[i]);
+            R[i] = in[i];
+        }
     }
 
-    inline void processBlock(dsp::AudioBlock<float>& block)
+    inline void processBlockSIMD(chowdsp::AudioBlock<T>& block)
     {
-        // for (auto ch = 0; ch < block.getNumChannels(); ++ch)
-        // {
-            auto in = block.getChannelPointer(0);
-            auto R = block.getChannelPointer(1);
+        for (auto ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
 
             for (auto i = 0; i < block.getNumSamples(); ++i)
             {
                 in[i] = processSample(in[i]);
-                R[i] = in[i];
             }
-        // }
+        }
     }
 
 private:
     // Port A
-    WDFT::ResistorT<float> R4 { 1.0e6f };
+    WDFT::ResistorT<T> R4 { 1.0e6f };
 
     // Port B
-    WDFT::ResistiveVoltageSourceT<float> Vin;
-    WDFT::CapacitorT<float> C1 { 1.0e-9f };
-    WDFT::WDFParallelT<float, decltype (Vin), decltype (C1)> P1 { Vin, C1 };
+    WDFT::ResistiveVoltageSourceT<T> Vin;
+    WDFT::CapacitorT<T> C1 { 1.0e-9f };
+    WDFT::WDFParallelT<T, decltype (Vin), decltype (C1)> P1 { Vin, C1 };
 
-    WDFT::ResistorT<float> R1 { 10.0e3f };
-    WDFT::CapacitorT<float> C2 { 10.0e-9f };
-    WDFT::WDFSeriesT<float, decltype (R1), decltype (C2)> S1 { R1, C2 };
+    WDFT::ResistorT<T> R1 { 10.0e3f };
+    WDFT::CapacitorT<T> C2 { 10.0e-9f };
+    WDFT::WDFSeriesT<T, decltype (R1), decltype (C2)> S1 { R1, C2 };
 
-    WDFT::WDFSeriesT<float, decltype (S1), decltype (P1)> S2 { S1, P1 };
-    WDFT::ResistiveVoltageSourceT<float> Vb { 1.0e6f }; // encompasses R2
-    WDFT::WDFParallelT<float, decltype (Vb), decltype (S2)> P2 { Vb, S2 };
+    WDFT::WDFSeriesT<T, decltype (S1), decltype (P1)> S2 { S1, P1 };
+    WDFT::ResistiveVoltageSourceT<T> Vb { 1.0e6f }; // encompasses R2
+    WDFT::WDFParallelT<T, decltype (Vb), decltype (S2)> P2 { Vb, S2 };
 
     // Port C
     static constexpr float R3Val = 4.7e3f;
     static constexpr float rDistVal = 1.0e6f;
-    WDFT::ResistorT<float> ResDist_R3 { rDistVal + R3Val }; //distortion potentiometer
-    WDFT::CapacitorT<float> C3 { 47.0e-9f };
-    WDFT::WDFSeriesT<float, decltype (ResDist_R3), decltype (C3)> S4 { ResDist_R3, C3 };
+    WDFT::ResistorT<T> ResDist_R3 { rDistVal + R3Val }; //distortion potentiometer
+    WDFT::CapacitorT<T> C3 { 47.0e-9f };
+    WDFT::WDFSeriesT<T, decltype (ResDist_R3), decltype (C3)> S4 { ResDist_R3, C3 };
 
     struct ImpedanceCalc
     {
         template <typename RType>
-        static float calcImpedance (RType& R)
+        static T calcImpedance (RType& R)
         {
-            constexpr float A = 100.0f; // op-amp gain
-            constexpr float Ri = 1.0e9f; // op-amp input impedance
-            constexpr float Ro = 1.0e-1f; // op-amp output impedance
+            const T A = 100.0f; // op-amp gain
+            const T Ri = 1.0e9f; // op-amp input impedance
+            const T Ro = 1.0e-1f; // op-amp output impedance
 
             const auto [Ra, Rb, Rc] = R.getPortImpedances();
 
@@ -96,20 +108,20 @@ private:
         }
     };
 
-    WDFT::RtypeAdaptor<float, 3, ImpedanceCalc, decltype (R4), decltype (P2), decltype (S4)> R { std::tie (R4, P2, S4) };
+    WDFT::RtypeAdaptor<T, 3, ImpedanceCalc, decltype (R4), decltype (P2), decltype (S4)> R { std::tie (R4, P2, S4) };
 
     // Port D
-    WDFT::ResistorT<float> R5 { 10.0e3f };
-    WDFT::CapacitorT<float> C4 { 1.0e-6f };
-    WDFT::WDFSeriesT<float, decltype (R5), decltype (C4)> S6 { R5, C4 };
-    WDFT::WDFSeriesT<float, decltype (S6), decltype (R)> S7 { S6, R };
+    WDFT::ResistorT<T> R5 { 10.0e3f };
+    WDFT::CapacitorT<T> C4 { 1.0e-6f };
+    WDFT::WDFSeriesT<T, decltype (R5), decltype (C4)> S6 { R5, C4 };
+    WDFT::WDFSeriesT<T, decltype (S6), decltype (R)> S7 { S6, R };
 
-    WDFT::ResistorT<float> Rout { 10.0e3f };
-    WDFT::WDFParallelT<float, decltype (Rout), decltype (S7)> P4 { Rout, S7 };
-    WDFT::CapacitorT<float> C5 { 1.0e-9f };
-    WDFT::WDFParallelT<float, decltype (C5), decltype (P4)> P3 { C5, P4 };
+    WDFT::ResistorT<T> Rout { 10.0e3f };
+    WDFT::WDFParallelT<T, decltype (Rout), decltype (S7)> P4 { Rout, S7 };
+    WDFT::CapacitorT<T> C5 { 1.0e-9f };
+    WDFT::WDFParallelT<T, decltype (C5), decltype (P4)> P3 { C5, P4 };
 
-    WDFT::DiodePairT<float, decltype (P3), WDFT::DiodeQuality::Best> DP { P3, 2.52e-9f, 25.85e-3f * 1.75f };
+    WDFT::DiodePairT<T, decltype (P3), WDFT::DiodeQuality::Best> DP { P3, 2.52e-9f, 25.85e-3f * 1.75f };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MXRDistWDF)
 };

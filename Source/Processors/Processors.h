@@ -80,8 +80,6 @@ struct Processor
 
     virtual VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
 
-    virtual void processBlock(dsp::AudioBlock<float> &block) = 0;
-
 protected:
     void defaultPrepare(const dsp::ProcessSpec& spec)
     {
@@ -96,24 +94,28 @@ protected:
             toneStack->prepare(spec);
 
         pentode.prepare(spec);
+
+        simd.setInterleavedBlockSize(1, spec.maximumBlockSize);
     }
 
     AudioProcessorValueTreeState &apvts;
 
-    OptoComp comp;
-    MXRDistWDF mxr;
-    std::unique_ptr<ToneStackNodal> toneStack;
-    std::vector<AVTriode> triode;
-    Tube pentode;
+    OptoComp<double> comp;
+    MXRDistWDF<vec> mxr;
+    std::unique_ptr<ToneStackNodal<vec>> toneStack;
+    std::vector<AVTriode<vec>> triode;
+    Tube<vec> pentode;
 
     std::atomic<float>* inGain, *outGain, *hiGain, *p_comp, *dist;
+
+    SIMD<double> simd;
 };
 
 struct Guitar : Processor
 {
     Guitar(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Guitar, s)
     {
-        toneStack = std::make_unique<ToneStackNodal>(0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.5e6f, 20e3f, 65e3f);
+        toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)0.5e6, (vec)20e3, (vec)65e3);
         triode.resize(4);
     }
 
@@ -123,49 +125,49 @@ struct Guitar : Processor
         gtrPre.prepare(spec);
     }
 
-    void processBlock(dsp::AudioBlock<float>& block) override
+    template <typename T>
+    void processBlock(dsp::AudioBlock<T>& block)
     {
-        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
-        float out_raw = jmap(outGain->load(), 1.f, 8.f);
+        T gain_raw = jmap(inGain->load(), 1.f, 8.f);
+        T out_raw = jmap(outGain->load(), 1.f, 8.f);
 
         comp.processBlock(block, *p_comp);
 
+        auto simdBlock = simd.interleaveBlock(block);
+
         if (*dist > 0.f)
-            mxr.processBlock(block);
+            mxr.processBlockSIMD(simdBlock);
 
-        block.multiplyBy(gain_raw);
+        simdBlock.multiplyBy(gain_raw);
+        triode[0].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
 
-        triode[0].processBlock(block, 0.5f, 1.f);
+        gtrPre.processBlock(simdBlock, *hiGain);
 
-        gtrPre.processBlock(block, *hiGain);
+        triode[1].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
+        triode[2].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
 
-        triode[1].processBlock(block, 0.5f, 1.f);
-        triode[2].processBlock(block, 0.5f, 1.f);
+        toneStack->processBlock(simdBlock);
 
-        toneStack->processBlock(block);
+        if (*hiGain) {
+            triode[3].processBlockSIMD(simdBlock, (vec)0.5f, (vec)1.f);
+        }
 
-        if (*hiGain)
-            triode[3].processBlock(block, 0.5f, 1.f);
+        simdBlock.multiplyBy(out_raw * 6.f);
 
-        block.multiplyBy(out_raw * 6.f);
+        pentode.processBlockClassB(simdBlock, 0.6f, 0.6f);
 
-        // if (*hiGain) {
-            pentode.processBlockClassB(block, 0.6f, 0.6f);
-        // }
-        // else {
-        //     pentode.processBlockClassB(block, 0.4f, 0.4f);
-        // }
+        block = simd.deinterleaveBlock(simdBlock);
     }
 
 private:
-    GuitarPreFilter gtrPre;
+    GuitarPreFilter<vec> gtrPre;
 };
 
 struct Bass : Processor
 {
     Bass(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Bass, s)
     {
-        toneStack = std::make_unique<ToneStackNodal>(0.5e-9f, 10e-9f, 10e-9f, 250e3f, 0.5e6f, 30e3f, 100e3f);
+        toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.5e-9, (vec)10e-9, (vec)10e-9, (vec)250e3, (vec)0.5e6, (vec)30e3, (vec)100e3);
         triode.resize(4);
     }
 
@@ -174,33 +176,38 @@ struct Bass : Processor
         defaultPrepare(spec);
     }
 
-    void processBlock(dsp::AudioBlock<float>& block) override
+    template <typename T>
+    void processBlock(dsp::AudioBlock<T>& block)
     {
-        float gain_raw = jmap(inGain->load(), 1.f, 8.f);
-        float out_raw = jmap(outGain->load(), 1.f, 8.f);
+        T gain_raw = jmap(inGain->load(), 1.f, 8.f);
+        T out_raw = jmap(outGain->load(), 1.f, 8.f);
 
         comp.processBlock(block, *p_comp);
 
-        triode[0].processBlock(block, 0.5, 1.0);
+        auto simdBlock = simd.interleaveBlock(block);
 
-        block.multiplyBy(gain_raw);
+        triode[0].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
+
+        simdBlock.multiplyBy(gain_raw);
         if (*hiGain)
-            block.multiplyBy(2.f);
+            simdBlock.multiplyBy(2.f);
 
-        triode[1].processBlock(block, 0.5, 1.0);
+        triode[1].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
         if (*hiGain) {
-            triode[2].processBlock(block, 1.0, 2.0);
-            triode[3].processBlock(block, 1.0, 2.0);
+            triode[2].processBlockSIMD(simdBlock, (vec)1.0, (vec)2.0);
+            triode[3].processBlockSIMD(simdBlock, (vec)1.0, (vec)2.0);
         }
 
-        toneStack->processBlock(block);
+        toneStack->processBlock(simdBlock);
 
-        block.multiplyBy(out_raw);
+        simdBlock.multiplyBy(out_raw);
 
         if (!*hiGain)
-            pentode.processBlockClassB(block, 1.f, 1.f);
+            pentode.processBlockClassB(simdBlock, 1.f, 1.f);
         else
-            pentode.processBlockClassB(block, 1.5f, 1.5f);
+            pentode.processBlockClassB(simdBlock, 1.5f, 1.5f);
+        
+        block = simd.deinterleaveBlock(simdBlock);
     }
 };
 
@@ -217,32 +224,38 @@ struct Channel : Processor
         defaultPrepare(spec);
     }
 
-    void processBlock(dsp::AudioBlock<float>& block) override
+    template <typename T>
+    void processBlock(dsp::AudioBlock<T>& block)
     {
-        float gain_raw = jmap(inGain->load(), 1.f, 4.f);
-        float out_raw = jmap(outGain->load(), 1.f, 4.f);
+        T gain_raw = jmap(inGain->load(), 1.f, 4.f);
+        T out_raw = jmap(outGain->load(), 1.f, 4.f);
 
         comp.processBlock(block, *p_comp);
         
-        if (*dist > 0.f)
-            mxr.processBlock(block);
+        auto simdBlock = simd.interleaveBlock(block);
 
-        block.multiplyBy(gain_raw);
+        if (*dist > 0.f)
+            mxr.processBlockSIMD(simdBlock);
+
+        simdBlock.multiplyBy(gain_raw);
 
         if (*inGain > 0.f) {
-            triode[0].processBlock(block, *inGain, 2.f * *inGain);
+            triode[0].processBlockSIMD(simdBlock, (vec)inGain->load(), (vec)2.f * inGain->load());
             if (*hiGain)
-                triode[1].processBlock(block, *inGain, gain_raw);
+                triode[1].processBlockSIMD(simdBlock, (vec)inGain->load(), (vec)gain_raw);
         }
 
         if (*outGain > 0.f) {
-            block.multiplyBy(out_raw * 6.f);
+            simdBlock.multiplyBy(out_raw * 6.f);
+
             if (!*hiGain) {
-                pentode.processBlockClassB(block, 0.4f, 0.4f);
+                pentode.processBlockClassB(simdBlock, 0.4f, 0.4f);
             }
             else {
-                pentode.processBlockClassB(block, 0.6f, 0.6f);
+                pentode.processBlockClassB(simdBlock, 0.6f, 0.6f);
             }
         }
+        
+        block = simd.deinterleaveBlock(simdBlock);
     }
 };

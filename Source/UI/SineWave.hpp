@@ -40,7 +40,8 @@ struct AudioSource
             b.setSize(2, spec.maximumBlockSize);
     }
 
-    void getBufferRMS(const AudioBuffer<float>& buf)
+    template <typename T>
+    void getBufferRMS(const AudioBuffer<T>& buf)
     {
         splitBuffers(buf);
 

@@ -10,26 +10,30 @@
 
 #pragma once
 
+template <typename T>
 struct GuitarPreFilter
 {
-    GuitarPreFilter(){}
+    GuitarPreFilter() = default;
 
     void prepare(const dsp::ProcessSpec& spec)
     {
         lastSampleRate = spec.sampleRate;
 
+        hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(spec.sampleRate, 350.f, 0.7f, 4.f);
+        bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 350.f);
+        lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 6200.f);
+
         for (auto& b : bandPass) {
             b.prepare(spec);
-            //*b.coefficients = dsp::IIR::ArrayCoefficients<float>::makeBandPass(spec.sampleRate, 1300.f, 0.15f);
-            *b.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 350.f);
+            b.coefficients = bp_coeffs;
         }
         for (auto& h : hiShelf) {
             h.prepare(spec);
-            *h.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighShelf(spec.sampleRate, 350.f, 0.7f, 4.f);
+            h.coefficients = hs_coeffs;
         }
         for (auto& l : sc_lp) {
             l.prepare(spec);
-            *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 6200.f);
+            l.coefficients = lp_coeffs;
         }
     }
 
@@ -68,7 +72,32 @@ struct GuitarPreFilter
         }
     }
 
-    void processBlock(dsp::AudioBlock<float>& block, bool hi)
+    void processBlock(dsp::AudioBlock<T>& block, bool hi)
+    {
+        if (hi) {
+            for (int ch = 0; ch < block.getNumChannels(); ++ch)
+            {
+                auto in = block.getChannelPointer(ch);
+                for (int i = 0; i < block.getNumSamples(); ++i)
+                {
+                    in[i] = hiShelf[ch].processSample(in[i]);
+                    in[i] = sc_lp[ch].processSample(in[i]);
+                }
+            }
+        }
+        else {
+            for (int ch = 0; ch < block.getNumChannels(); ++ch)
+            {
+                auto in = block.getChannelPointer(ch);
+                for (int i = 0; i < block.getNumSamples(); ++i)
+                {
+                    in[i] = bandPass[ch].processSample(in[i]);
+                }
+            }
+        }
+    }
+
+    void processBlock(chowdsp::AudioBlock<T>& block, bool hi)
     {
         if (hi) {
             for (int ch = 0; ch < block.getNumChannels(); ++ch)
@@ -94,7 +123,8 @@ struct GuitarPreFilter
     }
 
 private:
-    std::array<dsp::IIR::Filter<float>,2> bandPass, hiShelf, sc_lp;
+    std::array<dsp::IIR::Filter<T>,2> bandPass, hiShelf, sc_lp;
+    dsp::IIR::Coefficients<double>::Ptr bp_coeffs, hs_coeffs, lp_coeffs;
 
     double lastSampleRate = 0.0;
 };
