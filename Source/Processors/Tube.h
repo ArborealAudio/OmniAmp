@@ -200,6 +200,9 @@ struct AVTriode
     void prepare(const dsp::ProcessSpec& spec)
     {
         r = (T)1.0 - ((T)1.0 / (T)1000.0);
+
+        coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 20.0);
+        sc_hp.coefficients = coeffs;
     }
 
     void reset()
@@ -212,9 +215,7 @@ struct AVTriode
         auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
         auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
 
-        auto filter_x = f1 + f2;
-        auto y = filter_x - x_m[ch] + r * y_m[ch];
-        x_m[ch] = filter_x;
+        auto y = sc_hp.processSample(f1 + f2);
         y_m[ch] = y;
 
         return y;
@@ -222,12 +223,10 @@ struct AVTriode
 
     inline T processSampleSIMD(T x, T gp, T gn)
     {
-        auto f1 = xsimd::div((vec)1.0, gp) * xsimd::tanh(gp * x) * y_m[0];
-        auto f2 = xsimd::div((vec)1.0, gn) * xsimd::atan(gn * x) * xsimd::sub((vec)1.0, y_m[0]);
+        auto f1 = xsimd::div((T)1.0, gp) * xsimd::tanh(gp * x) * y_m[0];
+        auto f2 = xsimd::div((T)1.0, gn) * xsimd::atan(gn * x) * xsimd::sub((T)1.0, y_m[0]);
 
-        auto filter_x = xsimd::add(f1, f2);
-        auto y = filter_x - x_m[0] + r * y_m[0];
-        x_m[0] = filter_x;
+        auto y = sc_hp.processSample(f1 + f2);
         y_m[0] = y;
 
         return y;
@@ -265,7 +264,8 @@ private:
 
     T r = 0.0;
 
-    // dsp::StateVariableTPTFilter<T> sc_hp;
+    dsp::IIR::Filter<T> sc_hp;
+    dsp::IIR::Coefficients<double>::Ptr coeffs;
 
     // Cab<T> cab;
 };
