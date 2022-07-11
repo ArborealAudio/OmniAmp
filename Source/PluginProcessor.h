@@ -10,14 +10,16 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-    #define USE_SIMD 1
+    #if NDEBUG
+        #define USE_SIMD 1
+    #endif
 #endif
 
 #include <JuceHeader.h>
-#include "../chowdsp_utils/modules/dsp/chowdsp_math/chowdsp_math.h"
-#include "../chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
-#include "../chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
-#include "../chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
+#include "../modules/chowdsp_utils/modules/dsp/chowdsp_math/chowdsp_math.h"
+#include "../modules/chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
+#include "../modules/chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
+#include "../modules/chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
 #include "Processors/Processors.h"
 #include "UI/SineWave.hpp"
 #include "VolumeMeter/VolumeMeter.h"
@@ -112,7 +114,7 @@ private:
     LFEnhancer<double> lfEnhancer;
     dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
 
-    ConvoCab<float> cab;
+    // ConvoCab<float> cab;
 
     AudioBuffer<double> doubleBuffer;
 

@@ -35,29 +35,24 @@ public:
         return WDFT::voltage<T> (Rout);
     }
     
-    /*currently just one channel, copies L->R*/
-    inline void processBlock(dsp::AudioBlock<T>& block)
+    /*for reg doubles currently just one channel, copies L->R*/
+    template <class Block>
+    inline void processBlock(Block& block)
     {
         auto in = block.getChannelPointer(0);
         auto R = block.getChannelPointer(1);
 
+        auto isDouble = std::is_same_v<T, double>;
+
         for (auto i = 0; i < block.getNumSamples(); ++i)
         {
-            in[i] = processSample(in[i]);
-            R[i] = in[i];
-        }
-    }
-
-    inline void processBlockSIMD(chowdsp::AudioBlock<T>& block)
-    {
-        for (auto ch = 0; ch < block.getNumChannels(); ++ch)
-        {
-            auto in = block.getChannelPointer(ch);
-
-            for (auto i = 0; i < block.getNumSamples(); ++i)
+            if (isDouble)
             {
                 in[i] = processSample(in[i]);
+                R[i] = in[i];
             }
+            else
+                in[i] = processSample(in[i]);
         }
     }
 

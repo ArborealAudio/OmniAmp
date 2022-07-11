@@ -101,10 +101,17 @@ protected:
     AudioProcessorValueTreeState &apvts;
 
     OptoComp<double> comp;
+#if USE_SIMD
     MXRDistWDF<vec> mxr;
     std::unique_ptr<ToneStackNodal<vec>> toneStack;
     std::vector<AVTriode<vec>> triode;
     Tube<vec> pentode;
+#else
+    MXRDistWDF<double> mxr;
+    std::unique_ptr<ToneStackNodal<double>> toneStack;
+    std::vector<AVTriode<double>> triode;
+    Tube<double> pentode;
+#endif
 
     std::atomic<float>* inGain, *outGain, *hiGain, *p_comp, *dist;
 
@@ -115,7 +122,11 @@ struct Guitar : Processor
 {
     Guitar(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Guitar, s)
     {
+    #if USE_SIMD
         toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)0.5e6, (vec)20e3, (vec)65e3);
+    #else
+        toneStack = std::make_unique<ToneStackNodal<double>>(0.25e-9, 25e-9, 22e-9, 300e3, 0.5e6, 20e3, 65e3);
+    #endif
         triode.resize(4);
     }
 
@@ -133,41 +144,57 @@ struct Guitar : Processor
 
         comp.processBlock(block, *p_comp);
 
+#if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
 
+        auto&& processBlock = simdBlock;
+#else
+        auto&& processBlock = block;
+#endif
+
         if (*dist > 0.f)
-            mxr.processBlockSIMD(simdBlock);
+            mxr.processBlock(processBlock);
 
-        simdBlock.multiplyBy(gain_raw);
-        triode[0].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
+        processBlock.multiplyBy(gain_raw);
+        triode[0].processBlock(processBlock, 0.5, 1.0);
 
-        gtrPre.processBlock(simdBlock, *hiGain);
+        gtrPre.processBlock(processBlock, *hiGain);
 
-        triode[1].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
-        triode[2].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
+        triode[1].processBlock(processBlock, 0.5, 1.0);
+        triode[2].processBlock(processBlock, 0.5, 1.0);
 
-        toneStack->processBlock(simdBlock);
+        toneStack->processBlock(processBlock);
 
         if (*hiGain) {
-            triode[3].processBlockSIMD(simdBlock, (vec)0.5f, (vec)1.f);
+            triode[3].processBlock(processBlock, 0.5f, 1.f);
         }
 
-        simdBlock.multiplyBy(out_raw * 6.f);
+        processBlock.multiplyBy(out_raw * 6.f);
 
-        pentode.processBlockClassB(simdBlock, 0.6f, 0.6f);
+        pentode.processBlockClassB(processBlock, 0.6f, 0.6f);
 
-        block = simd.deinterleaveBlock(simdBlock);
+    #if USE_SIMD
+        block = simd.deinterleaveBlock(processBlock);
+    #endif
     }
 
 private:
+#if USE_SIMD
     GuitarPreFilter<vec> gtrPre;
+#else
+    GuitarPreFilter<double> gtrPre;
+#endif
 };
 
 struct Bass : Processor
 {
     Bass(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Bass, s)
     {
+    #if USE_SIMD
         toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.5e-9, (vec)10e-9, (vec)10e-9, (vec)250e3, (vec)0.5e6, (vec)30e3, (vec)100e3);
+    #else
+        toneStack = std::make_unique<ToneStackNodal<double>>(0.5e-9, 10e-9, 10e-9, 250e3, 0.5e6, 30e3, 100e3);
+    #endif
         triode.resize(4);
     }
 
@@ -184,30 +211,37 @@ struct Bass : Processor
 
         comp.processBlock(block, *p_comp);
 
+    #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
+        auto&& processBlock = simdBlock;
+    #else
+        auto&& processBlock = block;
+    #endif
 
-        triode[0].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
+        triode[0].processBlock(processBlock, 0.5, 1.0);
 
-        simdBlock.multiplyBy(gain_raw);
+        processBlock.multiplyBy(gain_raw);
         if (*hiGain)
-            simdBlock.multiplyBy(2.f);
+            processBlock.multiplyBy(2.f);
 
-        triode[1].processBlockSIMD(simdBlock, (vec)0.5, (vec)1.0);
+        triode[1].processBlock(processBlock, 0.5, 1.0);
         if (*hiGain) {
-            triode[2].processBlockSIMD(simdBlock, (vec)1.0, (vec)2.0);
-            triode[3].processBlockSIMD(simdBlock, (vec)1.0, (vec)2.0);
+            triode[2].processBlock(processBlock, 1.0, 2.0);
+            triode[3].processBlock(processBlock, 1.0, 2.0);
         }
 
-        toneStack->processBlock(simdBlock);
+        toneStack->processBlock(processBlock);
 
-        simdBlock.multiplyBy(out_raw);
+        processBlock.multiplyBy(out_raw);
 
         if (!*hiGain)
-            pentode.processBlockClassB(simdBlock, 1.f, 1.f);
+            pentode.processBlockClassB(processBlock, 1.f, 1.f);
         else
-            pentode.processBlockClassB(simdBlock, 1.5f, 1.5f);
+            pentode.processBlockClassB(processBlock, 1.5f, 1.5f);
         
-        block = simd.deinterleaveBlock(simdBlock);
+    #if USE_SIMD
+        block = simd.deinterleaveBlock(processBlock);
+    #endif
     }
 };
 
@@ -232,30 +266,37 @@ struct Channel : Processor
 
         comp.processBlock(block, *p_comp);
         
+    #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
+        auto&& processBlock = simdBlock;
+    #else
+        auto&& processBlock = block;
+    #endif
 
         if (*dist > 0.f)
-            mxr.processBlockSIMD(simdBlock);
+            mxr.processBlock(processBlock);
 
-        simdBlock.multiplyBy(gain_raw);
+        processBlock.multiplyBy(gain_raw);
 
         if (*inGain > 0.f) {
-            triode[0].processBlockSIMD(simdBlock, (vec)inGain->load(), (vec)2.f * inGain->load());
+            triode[0].processBlock(processBlock, inGain->load(), 2.f * inGain->load());
             if (*hiGain)
-                triode[1].processBlockSIMD(simdBlock, (vec)inGain->load(), (vec)gain_raw);
+                triode[1].processBlock(processBlock, inGain->load(), gain_raw);
         }
 
         if (*outGain > 0.f) {
-            simdBlock.multiplyBy(out_raw * 6.f);
+            processBlock.multiplyBy(out_raw * 6.f);
 
             if (!*hiGain) {
-                pentode.processBlockClassB(simdBlock, 0.4f, 0.4f);
+                pentode.processBlockClassB(processBlock, 0.4f, 0.4f);
             }
             else {
-                pentode.processBlockClassB(simdBlock, 0.6f, 0.6f);
+                pentode.processBlockClassB(processBlock, 0.6f, 0.6f);
             }
         }
         
-        block = simd.deinterleaveBlock(simdBlock);
+    #if USE_SIMD
+        block = simd.deinterleaveBlock(processBlock);
+    #endif
     }
 };

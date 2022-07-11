@@ -7,7 +7,7 @@
     #elif JUCE_INTEL
         using vec = xsimd::batch<double, xsimd::sse4_1>;
     #endif
-#elif
+#elif JUCE_WINDOWS
     using vec = xsimd::batch<double>;
 #endif
 

@@ -243,20 +243,8 @@ struct ToneStackNodal
         }
     }
 
-    void processBlock(dsp::AudioBlock<T>& block)
-    {
-        for (int ch = 0; ch < block.getNumChannels(); ++ch)
-        {
-            auto in = block.getChannelPointer(ch);
-
-            for (int i = 0; i < block.getNumSamples(); ++i)
-            {
-                in[i] = processSample(in[i], ch);
-            }
-        }
-    }
-
-    void processBlock(chowdsp::AudioBlock<T>& block)
+    template <class Block>
+    void processBlock(Block& block)
     {
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {

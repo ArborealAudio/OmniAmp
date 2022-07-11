@@ -21,9 +21,11 @@ juce_add_plugin(Gamma
     PRODUCT_NAME "Gamma"
     HARDENED_RUNTIME_ENABLE TRUE)
 
-find_library(IPP_CORE ippcore.lib PATHS "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/lib/intel64")
-find_library(IPP_S ipps.lib PATHS "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/lib/intel64")
-target_include_directories(Gamma PRIVATE "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/include")
+if(WIN32)
+    find_library(IPP_CORE ippcore.lib PATHS "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/lib/intel64")
+    find_library(IPP_S ipps.lib PATHS "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/lib/intel64")
+    target_include_directories(Gamma PRIVATE "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/include")
+endif()
 
 juce_generate_juce_header(Gamma)
 
@@ -34,8 +36,8 @@ target_sources(Gamma
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
-add_subdirectory(chowdsp_wdf)
-add_subdirectory(chowdsp_utils)
+add_subdirectory(modules/chowdsp_wdf)
+add_subdirectory(modules/chowdsp_utils)
 
 juce_add_modules(
     "/modules/Gin/modules/gin"
@@ -62,6 +64,7 @@ target_link_libraries(Gamma
         BinaryData
         juce::juce_audio_utils
         juce::juce_dsp
+        juce::juce_opengl
         gin
         gin_gui
         dsp_filters

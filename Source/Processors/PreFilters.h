@@ -72,32 +72,8 @@ struct GuitarPreFilter
         }
     }
 
-    void processBlock(dsp::AudioBlock<T>& block, bool hi)
-    {
-        if (hi) {
-            for (int ch = 0; ch < block.getNumChannels(); ++ch)
-            {
-                auto in = block.getChannelPointer(ch);
-                for (int i = 0; i < block.getNumSamples(); ++i)
-                {
-                    in[i] = hiShelf[ch].processSample(in[i]);
-                    in[i] = sc_lp[ch].processSample(in[i]);
-                }
-            }
-        }
-        else {
-            for (int ch = 0; ch < block.getNumChannels(); ++ch)
-            {
-                auto in = block.getChannelPointer(ch);
-                for (int i = 0; i < block.getNumSamples(); ++i)
-                {
-                    in[i] = bandPass[ch].processSample(in[i]);
-                }
-            }
-        }
-    }
-
-    void processBlock(chowdsp::AudioBlock<T>& block, bool hi)
+    template <typename Block>
+    void processBlock(Block& block, bool hi)
     {
         if (hi) {
             for (int ch = 0; ch < block.getNumChannels(); ++ch)

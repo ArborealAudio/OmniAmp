@@ -11,11 +11,16 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource())
+    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource()), tooltip(this)
 {
+#if JUCE_WINDOWS
+    opengl.attachTo(*this);
+    opengl.setImageCacheSize((size_t)64 * 1024);
+#endif
+
     setSize (800, 400);
 
-    // addAndMakeVisible(wave);
+    addAndMakeVisible(wave);
     wave.setSize(400, 200);
     wave.setCentrePosition(getLocalBounds().getCentreX(), 100);
     wave.setInterceptsMouseClicks(false, false);
@@ -48,6 +53,9 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 {
+#if JUCE_WINDOWS
+    opengl.detach();
+#endif
 }
 
 //==============================================================================

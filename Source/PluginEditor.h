@@ -40,5 +40,11 @@ private:
 
     VolumeMeterComponent grMeter;
 
+#if JUCE_WINDOWS
+    OpenGLContext opengl;
+#endif
+
+    TooltipWindow tooltip;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessorEditor)
 };
