@@ -1,6 +1,5 @@
 # TO-DO
-
-- just a quickie: change the MXR & Bass knobs to be logarithmic!
+- Change the default of the Bass knob to whatever it is at 50%
 
 - Working auto-gain processor, probably some distinct class whose gains are supplied by each individual processor
   
