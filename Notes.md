@@ -1,5 +1,4 @@
 # TO-DO
-- Change the default of the Bass knob to whatever it is at 50%
 
 - Working auto-gain processor, probably some distinct class whose gains are supplied by each individual processor
   
@@ -23,8 +22,7 @@
 
 - SIMD implementation
   
-  - mostly just the enhancers left to optimize. Leaving compressor since it seems like a PITA but definitely could see that being possible too.
-  - Glitches w/ NEON? Intel version not scanning in Plugin Doctor? Tune in next time...
+  - If u wanna SIMD the enhancers, you'll need to either write your own Bessel filter or use JUCE IIRs (or some other SIMD-compatible lib)
 
 # NOTES
 

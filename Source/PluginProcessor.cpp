@@ -282,11 +282,11 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("dist", 1), "Pedal Distortion", NormalisableRange<float>(0.f, 1.f, 0.01f, 2.f), 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hiGain", 1), "High Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bass", 1), "Bass", NormalisableRange<float>(0.f, 1.f, 0.01f, 0.25f), 0.5f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bass", 1), "Bass", NormalisableRange<float>(0.f, 1.f, 0.01f, 0.25f), 0.06f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("treble", 1), "Treble", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("autoGain", 1), "Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 0));
+    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 2));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
 

@@ -10,9 +10,9 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-    #if NDEBUG
+    // #if NDEBUG
         #define USE_SIMD 1
-    #endif
+    // #endif
 #endif
 
 #include <JuceHeader.h>
@@ -110,13 +110,12 @@ private:
     Guitar guitar;
     Bass bass;
     Channel channel;
-    HFEnhancer<double> hfEnhancer;
-    LFEnhancer<double> lfEnhancer;
-    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
-
-    // ConvoCab<float> cab;
+    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR};
 
     AudioBuffer<double> doubleBuffer;
+
+    HFEnhancer<double> hfEnhancer;
+    LFEnhancer<double> lfEnhancer;
 
     enum Mode
     {
@@ -125,8 +124,7 @@ private:
         Channel
     };
 
-    Mode currentMode = Mode::Guitar;
-
+    Mode currentMode = Mode::Channel;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessor)
 };

@@ -3,7 +3,7 @@
 #pragma once
 #include "dsp_filters/dsp_filters.h"
 
-template <typename Type>
+template <typename T>
 struct HFEnhancer
 {
     HFEnhancer(){}
@@ -15,8 +15,6 @@ struct HFEnhancer
         hp2.setup(2, spec.sampleRate, 7500.0);
 
         tube.prepare(spec);
-
-        wetBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
     }
 
     void reset()
@@ -26,56 +24,61 @@ struct HFEnhancer
         tube.reset();
     }
 
-    void processBuffer(AudioBuffer<Type>& buffer, const Type enhance)
-    {
-        wetBuffer.makeCopyOf(buffer, true);
-
-        hp1.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
-
-        wetBuffer.applyGain(jmap(enhance, 1.f, 4.f));
-
-        tube.process(wetBuffer, 1.0, 0.5);
-
-        hp2.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
-
-        buffer.addFrom(0, 0, wetBuffer.getReadPointer(0), wetBuffer.getNumSamples(), enhance);
-        if (buffer.getNumChannels() > 1)
-            buffer.addFrom(1, 0, wetBuffer.getReadPointer(1), wetBuffer.getNumSamples(), enhance);
-    }
-
-    template <typename T>
-    void processBlock(dsp::AudioBlock<T>& block, const T enhance)
+    template <class Block>
+    void processBlock(Block& block, const double enhance)
     {
         int size = (int)block.getNumChannels() * (int)block.getNumSamples();
         HeapBlock<char> heap{size};
-        dsp::AudioBlock<T> wetBlock(heap, block.getNumChannels(), block.getNumSamples());
+        Block wetBlock(heap, block.getNumChannels(), block.getNumSamples());
 
         wetBlock.copyFrom(block);
 
-        auto inL = wetBlock.getChannelPointer(0);
-        auto inR = wetBlock.getChannelPointer(1);
-
-        hp1.process(wetBlock.getNumSamples(), 0, inL);
-        hp1.process(wetBlock.getNumSamples(), 1, inR);
-
-        wetBlock.multiplyBy(jmap(enhance, (T)1.f, (T)4.f));
-
-        tube.processBlock(wetBlock, 1.0, 0.5);
-
-        hp2.process(wetBlock.getNumSamples(), 0, inL);
-        hp2.process(wetBlock.getNumSamples(), 1, inR);
-
-        wetBlock.multiplyBy(enhance);
+        if constexpr (std::is_same_v<T, double>)
+            process(wetBlock, enhance);
+        else
+            processSIMD(wetBlock, enhance);
 
         block.add(wetBlock);
     }
 
 private:
+
+    void process(dsp::AudioBlock<T>& block, T enhance)
+    {
+        auto inL = block.getChannelPointer(0);
+        auto inR = block.getChannelPointer(1);
+
+        hp1.process(block.getNumSamples(), 0, inL);
+        hp1.process(block.getNumSamples(), 1, inR);
+
+        block.multiplyBy(jmap(enhance, (T)1.f, (T)4.f));
+
+        tube.processBlock(block, 1.0, 0.5);
+
+        hp2.process(block.getNumSamples(), 0, inL);
+        hp2.process(block.getNumSamples(), 1, inR);
+
+        block.multiplyBy(enhance);
+    }
+
+    void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
+    {
+        auto in = block.getChannelPointer(0);
+
+        hp1.process(block.getNumSamples(), 0, in);
+
+        block.multiplyBy(jmap(enhance, 1.0, 4.0));
+
+        tube.processBlock(block, 1.0, 0.5);
+
+        hp2.process(block.getNumSamples(), 0, in);
+
+        block.multiplyBy(enhance);
+    }
+
     Dsp::SimpleFilter<Dsp::Bessel::HighPass<4>, 2> hp1, hp2;
 
-    AudioBuffer<Type> wetBuffer;
-
-    AVTriode<Type> tube;
+    AVTriode<T> tube;
 };
 
 template <typename T>
@@ -113,8 +116,6 @@ struct LFEnhancer
         lp2.setup(1, spec.sampleRate, freq);
 
         tube.prepare(spec);
-
-        wetBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
     }
 
     void setType(Mode newType)
@@ -149,55 +150,61 @@ struct LFEnhancer
         tube.reset();
     }
 
-    void processBuffer(AudioBuffer<float>& buffer, const float enhance)
-    {
-        wetBuffer.makeCopyOf(buffer, true);
-
-        lp1.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
-
-        wetBuffer.applyGain(jmap(enhance, -1.f, -4.f));
-
-        tube.processBlock(dsp::AudioBlock<float>(wetBuffer), 1.0, 3.0);
-
-        lp2.process(wetBuffer.getNumSamples(), wetBuffer.getArrayOfWritePointers());
-
-        buffer.addFrom(0, 0, wetBuffer.getReadPointer(0), wetBuffer.getNumSamples(), enhance);
-        if (buffer.getNumChannels() > 1)
-            buffer.addFrom(1, 0, wetBuffer.getReadPointer(1), wetBuffer.getNumSamples(), enhance);
-    }
-
-    void processBlock(dsp::AudioBlock<T>& block, const T enhance)
+    template <class Block>
+    void processBlock(Block& block, const double enhance)
     {
         int size = (int)block.getNumChannels() * (int)block.getNumSamples();
         HeapBlock<char> heap{size};
-        dsp::AudioBlock<T> wetBlock(heap, block.getNumChannels(), block.getNumSamples());
+        Block wetBlock(heap, block.getNumChannels(), block.getNumSamples());
 
         wetBlock.copyFrom(block);
 
-        auto inL = wetBlock.getChannelPointer(0);
-        auto inR = wetBlock.getChannelPointer(1);
+        if constexpr (std::is_same_v<T, double>)
+            process(wetBlock, enhance);
+        else
+            processSIMD(wetBlock, enhance);
 
-        lp1.process(wetBlock.getNumSamples(), 0, inL);
-        lp1.process(wetBlock.getNumSamples(), 1, inR);
-
-        wetBlock.multiplyBy(jmap(enhance, (T)-1.f, (T)-4.f));
-
-        tube.processBlock(wetBlock, 1.0, 3.0);
-
-        lp2.process(wetBlock.getNumSamples(), 0, inL);
-        lp2.process(wetBlock.getNumSamples(), 1, inR);
-
-        wetBlock.multiplyBy(enhance);
         block.add(wetBlock);
     }
 
 private:
 
+    void process(dsp::AudioBlock<T>& block, T enhance)
+    {
+        auto inL = block.getChannelPointer(0);
+        auto inR = block.getChannelPointer(1);
+
+        lp1.process(block.getNumSamples(), 0, inL);
+        lp1.process(block.getNumSamples(), 1, inR);
+
+        block.multiplyBy(jmap(enhance, -1.0, -4.0));
+
+        tube.processBlock(block, 1.0, 3.0);
+
+        lp2.process(block.getNumSamples(), 0, inL);
+        lp2.process(block.getNumSamples(), 1, inR);
+
+        block.multiplyBy(enhance);
+    }
+
+    void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
+    {
+        auto in = block.getChannelPointer(0);
+
+        lp1.process(block.getNumSamples(), 0, in);
+
+        block.multiplyBy(jmap(enhance, -1.0, -4.0));
+
+        tube.processBlock(block, 1.0, 3.0);
+
+        lp2.process(block.getNumSamples(), 0, in);
+
+        block.multiplyBy(enhance);
+    }
+
     Mode type;
 
     Dsp::SimpleFilter<Dsp::Bessel::LowPass<4>, 2> lp1, lp2;
-
-    AudioBuffer<T> wetBuffer;
 
     AVTriode<T> tube;
 

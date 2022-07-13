@@ -263,9 +263,9 @@ struct Channel : Processor
     {
         T gain_raw = jmap(inGain->load(), 1.f, 4.f);
         T out_raw = jmap(outGain->load(), 1.f, 4.f);
-
-        comp.processBlock(block, *p_comp);
         
+        comp.processBlock(block, *p_comp);
+
     #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
         auto&& processBlock = simdBlock;

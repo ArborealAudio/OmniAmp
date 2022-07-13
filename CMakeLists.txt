@@ -40,10 +40,10 @@ add_subdirectory(modules/chowdsp_wdf)
 add_subdirectory(modules/chowdsp_utils)
 
 juce_add_modules(
-    "/modules/Gin/modules/gin"
-    "/modules/Gin/modules/gin_gui"
-    "/modules/DSPFilters/modules/dsp_filters"
-    "/modules/VolumeMeter")
+    "$ENV{HOME}/modules/Gin/modules/gin"
+    "$ENV{HOME}/modules/Gin/modules/gin_gui"
+    "$ENV{HOME}/modules/DSPFilters/modules/dsp_filters"
+    "$ENV{HOME}/modules/VolumeMeter")
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -73,8 +73,8 @@ target_link_libraries(Gamma
         chowdsp_simd
         chowdsp_dsp_data_structures
         chowdsp_math
-        ${IPP_CORE}
-        ${IPP_S}
+        # ${IPP_CORE}
+        # ${IPP_S}
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
