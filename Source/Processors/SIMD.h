@@ -1,15 +1,7 @@
 // SIMD.h
 
 #pragma once
-#if JUCE_MAC
-    #if JUCE_ARM
-        using vec = xsimd::batch<double>;
-    #elif JUCE_INTEL
-        using vec = xsimd::batch<double, xsimd::sse4_1>;
-    #endif
-#elif JUCE_WINDOWS
-    using vec = xsimd::batch<double>;
-#endif
+using vec = xsimd::batch<double>;
 
 template <typename T>
 class SIMD
