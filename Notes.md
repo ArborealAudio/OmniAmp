@@ -12,11 +12,11 @@
 
 - Cabs, both the processing and UI features
   
-  - much to be done here. Multiple mic options, movable mics? Or shall we stick to just a few different cabs, keep it basic?
+  - New Plan: combine some kind of FDN w basic IIR filtering, create a couple static modes that satisfy some basic cab needs.
   
-  - so far have added a guitar cab and a bass cab, not really sure how good they sound yet
-  
-  - change convo proc to a file loader so you can test em out?
+  - Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab
+    
+    - Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
 

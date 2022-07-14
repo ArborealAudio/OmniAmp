@@ -11,7 +11,7 @@
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
     // #if NDEBUG
-        #define USE_SIMD 1
+        #define USE_SIMD 0
     // #endif
 #endif
 
@@ -116,6 +116,8 @@ private:
 
     HFEnhancer<double> hfEnhancer;
     LFEnhancer<double> lfEnhancer;
+
+    FDNCab cab;
 
     enum Mode
     {

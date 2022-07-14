@@ -125,7 +125,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
 
-    // cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+    cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 
     audioSource.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 
@@ -139,7 +139,7 @@ void GammaAudioProcessor::releaseResources()
     channel.reset();
     hfEnhancer.reset();
     lfEnhancer.reset();
-    // cab.reset();
+    cab.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -231,10 +231,10 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     setLatencySamples(oversample.getLatencyInSamples());
 
-    buffer.makeCopyOf(doubleBuffer);
+    // if (JUCE_LIVE_CONSTANT(true))
+    cab.processBlock(block);
 
-    // if (currentMode != Mode::Channel)
-    //     cab.processBlock(dsp::AudioBlock<float>(buffer));
+    buffer.makeCopyOf(doubleBuffer);
 
     audioSource.getBufferRMS(buffer);
 }
