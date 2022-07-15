@@ -121,7 +121,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     bass.prepare(spec);
     channel.prepare(spec);
 
-    lfEnhancer.setType((LFEnhancer<double>::Mode)currentMode);
+    lfEnhancer.setType((Processors::LFEnhancer<double>::Mode)currentMode);
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
 
@@ -167,7 +167,7 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
 {
     if (parameterID.contains("mode")) {
         currentMode = (Mode)newValue;
-        lfEnhancer.setType((LFEnhancer<double>::Mode)currentMode);
+        lfEnhancer.setType((Processors::LFEnhancer<double>::Mode)currentMode);
         lfEnhancer.updateFilters();
         // cab.changeIR((ProcessorType)currentMode);
     }

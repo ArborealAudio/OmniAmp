@@ -107,17 +107,17 @@ private:
 
     VolumeMeterSource meterSource;
 
-    Guitar guitar;
-    Bass bass;
-    Channel channel;
-    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR};
+    Processors::Guitar guitar;
+    Processors::Bass bass;
+    Processors::Channel channel;
+    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
 
     AudioBuffer<double> doubleBuffer;
 
-    HFEnhancer<double> hfEnhancer;
-    LFEnhancer<double> lfEnhancer;
+    Processors::HFEnhancer<double> hfEnhancer;
+    Processors::LFEnhancer<double> lfEnhancer;
 
-    FDNCab cab;
+    Processors::FDNCab cab;
 
     enum Mode
     {

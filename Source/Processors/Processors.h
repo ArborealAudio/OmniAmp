@@ -10,6 +10,9 @@
 
 #pragma once
 
+namespace Processors
+{
+
 enum class ProcessorType
 {
     Guitar,
@@ -300,3 +303,5 @@ struct Channel : Processor
     #endif
     }
 };
+
+} // namespace Processors
