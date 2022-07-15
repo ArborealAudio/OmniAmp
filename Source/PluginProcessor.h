@@ -11,7 +11,7 @@
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
     // #if NDEBUG
-        #define USE_SIMD 0
+        #define USE_SIMD 1
     // #endif
 #endif
 

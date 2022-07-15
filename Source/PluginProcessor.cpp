@@ -231,8 +231,8 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     setLatencySamples(oversample.getLatencyInSamples());
 
-    // if (JUCE_LIVE_CONSTANT(true))
-    cab.processBlock(block);
+    if (currentMode != Mode::Channel)
+        cab.processBlock(block);
 
     buffer.makeCopyOf(doubleBuffer);
 

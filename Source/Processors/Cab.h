@@ -213,7 +213,7 @@ public:
         lp1.setType(dsp::StateVariableTPTFilterType::lowpass);
         lp2.setType(dsp::StateVariableTPTFilterType::lowpass);
         lp1.setCutoffFrequency(3500.0);
-        lp2.setCutoffFrequency(1500.0);
+        lp2.setCutoffFrequency(3500.0);
         lp1.setResonance(2.0);
         lp2.setResonance(0.7);
 
@@ -230,9 +230,9 @@ public:
 
     void processBlock(dsp::AudioBlock<double> &block)
     {
+        lp1.process(dsp::ProcessContextReplacing<double>(block));
         fdn.processBlock(block);
         hp.process(dsp::ProcessContextReplacing<double>(block));
-        lp1.process(dsp::ProcessContextReplacing<double>(block));
         lp2.process(dsp::ProcessContextReplacing<double>(block));
     }
 };
