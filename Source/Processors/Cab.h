@@ -98,7 +98,7 @@ class FDNCab
     {
         FDN() = default;
     #ifndef ORDER
-        #define ORDER 4
+        #define ORDER 5
     #endif //  ORDER
 
         void prepare(const dsp::ProcessSpec &spec)
@@ -169,8 +169,8 @@ class FDNCab
                     auto f_l = z[0][n] * fdbk[n] + left[i];
                     auto f_r = z[1][n] * fdbk[n] + right[i];
 
-                    f_l = hp[n].processSample(0, f_l);
-                    f_r = hp[n].processSample(1, f_r);
+                    // f_l = hp[n].processSample(0, f_l);
+                    // f_r = hp[n].processSample(1, f_r);
 
                     f_l = lp[n].processSample(0, f_l);
                     f_r = lp[n].processSample(1, f_r);
@@ -206,16 +206,16 @@ public:
         hp.prepare(spec);
         hp.setType(dsp::StateVariableTPTFilterType::highpass);
         hp.setCutoffFrequency(90.0);
-        hp.setResonance(2.0);
+        hp.setResonance(5.0);
 
         lp1.prepare(spec);
         lp2.prepare(spec);
         lp1.setType(dsp::StateVariableTPTFilterType::lowpass);
-        lp2.setType(dsp::StateVariableTPTFilterType::lowpass);
+        lp2.setType(dsp::StateVariableTPTFilterType::firstOrderLowpass);
         lp1.setCutoffFrequency(3500.0);
         lp2.setCutoffFrequency(3500.0);
         lp1.setResonance(2.0);
-        lp2.setResonance(0.7);
+        lp2.setResonance(1.5);
 
         fdn.prepare(spec);
     }

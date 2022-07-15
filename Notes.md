@@ -17,12 +17,18 @@
   - Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab
     
     - Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)
+  
+  - Current impl makes for a pretty good small cab. Switching gears to prototyping different cab types & generating the UI for that
+  
+  - Loud gtr sounds too highpassed and a bit harsh w/ that model
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
 
 - SIMD implementation
   
   - If u wanna SIMD the enhancers, you'll need to either write your own Bessel filter or use JUCE IIRs (or some other SIMD-compatible lib)
+
+- Add sag???
 
 # NOTES
 
