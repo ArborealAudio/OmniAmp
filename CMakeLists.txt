@@ -47,7 +47,7 @@ add_subdirectory(modules/chowdsp_utils)
 juce_add_modules(
     "$ENV{HOME}/modules/Gin/modules/gin"
     "$ENV{HOME}/modules/Gin/modules/gin_gui"
-    "$ENV{HOME}/modules/DSPFilters/modules/dsp_filters"
+    "modules/DSPFilters/modules/dsp_filters"
     "$ENV{HOME}/modules/VolumeMeter")
 
 target_compile_definitions(Gamma
