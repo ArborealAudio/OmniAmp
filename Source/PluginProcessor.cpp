@@ -125,7 +125,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
 
-    cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+    cab.prepare(spec);
 
     audioSource.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 
@@ -221,6 +221,9 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         break;
     }
 
+    if (currentMode != Mode::Channel)
+        cab.processBlock(osBlock);
+
     if (*lfEnhance)
         lfEnhancer.processBlock(osBlock, (double)*lfEnhance);
 
@@ -231,8 +234,7 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     setLatencySamples(oversample.getLatencyInSamples());
 
-    if (currentMode != Mode::Channel)
-        cab.processBlock(block);
+    
 
     buffer.makeCopyOf(doubleBuffer);
 
