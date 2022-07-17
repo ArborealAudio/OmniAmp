@@ -2,8 +2,6 @@
 
 #pragma once
 
-#define FILTER_ORDER 50
-
 enum CabType
 {
     small,
