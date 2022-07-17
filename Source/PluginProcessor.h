@@ -10,9 +10,9 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-    // #if NDEBUG
+    #if NDEBUG
         #define USE_SIMD 1
-    // #endif
+    #endif
 #endif
 
 #include <JuceHeader.h>
@@ -117,16 +117,18 @@ private:
     Processors::HFEnhancer<double> hfEnhancer;
     Processors::LFEnhancer<double> lfEnhancer;
 
+    Processors::CabType currentCab = Processors::CabType::small;
     Processors::FDNCab cab;
 
     enum Mode
     {
-        Guitar,
-        Bass,
-        Channel
+      Guitar,
+      Bass,
+      Channel
     };
 
     Mode currentMode = Mode::Channel;
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessor)
 };

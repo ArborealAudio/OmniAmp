@@ -168,13 +168,12 @@ struct Guitar : Processor
 
         toneStack->processBlock(processBlock);
 
-        if (*hiGain) {
-            triode[3].processBlock(processBlock, 0.5f, 1.f);
-        }
+        if (*hiGain)
+            triode[3].processBlock(processBlock, 0.5, 1.0);
 
-        processBlock.multiplyBy(out_raw * 6.f);
+        processBlock.multiplyBy(out_raw * 6.0);
 
-        pentode.processBlockClassB(processBlock, 0.6f, 0.6f);
+        pentode.processBlockClassB(processBlock, 0.6, 0.6);
 
     #if USE_SIMD
         block = simd.deinterleaveBlock(processBlock);

@@ -39,8 +39,10 @@ public:
     template <class Block>
     inline void processBlock(Block& block)
     {
-        auto in = block.getChannelPointer(0);
-        auto R = block.getChannelPointer(1);
+        auto L = block.getChannelPointer(0);
+        auto R = L;
+        if (block.getNumChannels() > 1)
+            R = block.getChannelPointer(1);
 
         auto isDouble = std::is_same_v<T, double>;
 
@@ -48,11 +50,11 @@ public:
         {
             if (isDouble)
             {
-                in[i] = processSample(in[i]);
-                R[i] = in[i];
+                L[i] = processSample(L[i]);
+                R[i] = L[i];
             }
             else
-                in[i] = processSample(in[i]);
+                L[i] = processSample(L[i]);
         }
     }
 

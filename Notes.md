@@ -12,15 +12,42 @@
 
 - Cabs, both the processing and UI features
   
-  - New Plan: combine some kind of FDN w basic IIR filtering, create a couple static modes that satisfy some basic cab needs.
-  
   - Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab
     
     - Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)
+    - Basic allpass topology is working ok but there could be more things to do to smooth out the sound. Is sounding a bit metallic and is sucking up a lot of midrange.
   
-  - Current impl makes for a pretty good small cab. Switching gears to prototyping different cab types & generating the UI for that
+  - 2X12:
+    
+    - 1 FDN, dTime of 411, fdbk of 0.06
+    
+    - HP 90 Q 5
+    
+    - LP1 3500 Q .7
+    
+    - LP2 5000 Q 1.5
   
-  - Loud gtr sounds too highpassed and a bit harsh w/ that model
+  - 4x12:
+    
+    - 4 FDNs
+    
+    - dTime0 = 410
+    
+    - dTime1 = 230 (try 340 too)
+    
+    - dTime2 = 120 (or 230)
+    
+    - dTime3 = 326
+    
+    - HP 75 Hz Q 0.8
+    
+    - LP1 2821 Q 0.7
+    
+    - LP2 4191 Q 1.2
+    
+    - BP 1700 Q 2
+  
+  - Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
 

@@ -20,7 +20,8 @@ GammaAudioProcessor::GammaAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        ), apvts(*this, nullptr, "Parameters", createParams()),
-                        guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource)
+                        guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
+                        cab(currentCab)
 #endif
 {
     gain = apvts.getRawParameterValue("inputGain");
@@ -35,6 +36,7 @@ GammaAudioProcessor::GammaAudioProcessor()
     apvts.addParameterListener("bass", this);
     apvts.addParameterListener("mode", this);
     apvts.addParameterListener("dist", this);
+    apvts.addParameterListener("cabType", this);
 }
 
 GammaAudioProcessor::~GammaAudioProcessor()
@@ -44,6 +46,7 @@ GammaAudioProcessor::~GammaAudioProcessor()
     apvts.removeParameterListener("bass", this);
     apvts.removeParameterListener("mode", this);
     apvts.removeParameterListener("dist", this);
+    apvts.removeParameterListener("cabType", this);
 }
 
 //==============================================================================
@@ -125,7 +128,8 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
 
-    cab.prepare(spec);
+    cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+    cab.setCabType((Processors::CabType)(apvts.getRawParameterValue("cabType")->load()));
 
     audioSource.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 
@@ -154,7 +158,7 @@ bool GammaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
         return false;
 
    #if ! JucePlugin_IsSynth
-    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+    if (layouts.getMainOutputChannels() > 2 || layouts.getMainInputChannels() > 2)
         return false;
    #endif
 
@@ -167,9 +171,8 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
 {
     if (parameterID.contains("mode")) {
         currentMode = (Mode)newValue;
-        lfEnhancer.setType((Processors::LFEnhancer<double>::Mode)currentMode);
+        lfEnhancer.setType((Processors::LFEnhancer<double>::Mode)newValue);
         lfEnhancer.updateFilters();
-        // cab.changeIR((ProcessorType)currentMode);
     }
     else if (parameterID.contains("bass"))
     {
@@ -191,6 +194,8 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
         guitar.setDistParam(newValue);
         channel.setDistParam(newValue);
     }
+    else if (parameterID.contains("cabType"))
+        cab.setCabType((Processors::CabType)newValue);
 }
 
 void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -221,9 +226,6 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         break;
     }
 
-    if (currentMode != Mode::Channel)
-        cab.processBlock(osBlock);
-
     if (*lfEnhance)
         lfEnhancer.processBlock(osBlock, (double)*lfEnhance);
 
@@ -234,7 +236,8 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     setLatencySamples(oversample.getLatencyInSamples());
 
-    
+    if (currentMode != Mode::Channel && *apvts.getRawParameterValue("cabOn"))
+        cab.processBlock(block);
 
     buffer.makeCopyOf(doubleBuffer);
 
@@ -249,8 +252,8 @@ bool GammaAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* GammaAudioProcessor::createEditor()
 {
-    return new GammaAudioProcessorEditor (*this);
-    // return new GenericAudioProcessorEditor(*this);
+    // return new GammaAudioProcessorEditor (*this);
+    return new GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -291,6 +294,23 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 2));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("cabOn", 1), "Cab On/Off", true));
+    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("2x12", "4x12", "8x10"), 0));
+    // params.emplace_back(std::make_unique<AudioParameterInt>(ParameterID("fdnOrder", 1), "FDN Order", 1, 5, 2));
+    // for (auto i = 0; i < 6; ++i)
+    // {
+    //     auto index = String(i);
+    //     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("delay" + index, 1), "Delay " + index, 0.f, 1000.f, (float)(i * 100) + (i + 23)));
+    //     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("feedback" + index, 1), "Feedback " + index, 0.f, 1.f, 0.06f));
+    // }
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hpFreq", 1), "HPFreq", 20.f, 600.f, 90.f));
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hpQ", 1), "HPQ", 0.1f, 5.f, 5.f));
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lp1Freq", 1), "LP1Freq", 200.f, 7500.f, 3500.f));
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lp1Q", 1), "LP1Q", 0.1f, 5.f, 0.7f));
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lp2Freq", 1), "LP2Freq", 200.f, 7500.f, 3500.f));
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lp2Q", 1), "LP2Q", 0.1f, 5.f, 1.5f));
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bpFreq", 1), "BPFreq", 20.f, 7500.f, 985.f));
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bpQ", 1), "BPQ", 0.1f, 10.f, 2.f));
 
     return { params.begin(), params.end() };
 }
