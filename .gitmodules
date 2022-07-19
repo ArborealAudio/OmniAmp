@@ -1,9 +1,3 @@
-[submodule "chowdsp_utils"]
-	path = chowdsp_utils
-	url = https://github.com/Chowdhury-DSP/chowdsp_utils
-[submodule "chowdsp_wdf"]
-	path = chowdsp_wdf
-	url = https://github.com/Chowdhury-DSP/chowdsp_wdf
 [submodule "modules/chowdsp_utils"]
 	path = modules/chowdsp_utils
 	url = https://github.com/Chowdhury-DSP/chowdsp_utils
