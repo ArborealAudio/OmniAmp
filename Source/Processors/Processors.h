@@ -29,6 +29,7 @@ enum class ProcessorType
 #include "Enhancer.h"
 #include "Cab.h"
 #include "DistPlus.h"
+#include "Room.h"
 
 struct Processor
 {

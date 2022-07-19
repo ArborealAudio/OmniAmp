@@ -120,6 +120,8 @@ private:
     Processors::CabType currentCab = Processors::CabType::small;
     Processors::FDNCab cab;
 
+    Processors::Room room;
+
     enum Mode
     {
       Guitar,

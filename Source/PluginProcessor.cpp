@@ -21,7 +21,7 @@ GammaAudioProcessor::GammaAudioProcessor()
                      #endif
                        ), apvts(*this, nullptr, "Parameters", createParams()),
                         guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
-                        cab(currentCab)
+                        cab(currentCab), room(50.0, 300.0)
 #endif
 {
     gain = apvts.getRawParameterValue("inputGain");
@@ -131,6 +131,8 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
     cab.setCabType((Processors::CabType)(apvts.getRawParameterValue("cabType")->load()));
 
+    room.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+
     audioSource.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 
     doubleBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
@@ -144,6 +146,7 @@ void GammaAudioProcessor::releaseResources()
     hfEnhancer.reset();
     lfEnhancer.reset();
     cab.reset();
+    room.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -239,6 +242,9 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     if (currentMode != Mode::Channel && *apvts.getRawParameterValue("cabOn"))
         cab.processBlock(block);
 
+    if (*apvts.getRawParameterValue("roomOn"))
+        room.process(doubleBuffer);
+
     buffer.makeCopyOf(doubleBuffer);
 
     audioSource.getBufferRMS(buffer);
@@ -296,6 +302,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("cabOn", 1), "Cab On/Off", true));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("2x12", "4x12", "8x10"), 0));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("roomOn", 1), "Room On/Off", false));
     // params.emplace_back(std::make_unique<AudioParameterInt>(ParameterID("fdnOrder", 1), "FDN Order", 1, 5, 2));
     // for (auto i = 0; i < 6; ++i)
     // {

@@ -47,6 +47,8 @@
     
     - BP 1700 Q 2
   
+  - Might look into nested allpasses to smooth out the sound
+  
   - Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube
 
 - Getting different defaults for different modes? Would need to make them separate States if so.

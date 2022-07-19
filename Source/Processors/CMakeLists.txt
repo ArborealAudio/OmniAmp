@@ -9,4 +9,5 @@ PRIVATE
     Enhancer.h
     Cab.h
     DistPlus.h
-    SIMD.h)
+    SIMD.h
+    Room.h)
