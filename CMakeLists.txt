@@ -15,7 +15,7 @@ juce_add_plugin(Gamma
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Arau
     PLUGIN_CODE Gamm
-    FORMATS AU VST3 VST Standalone
+    FORMATS AU VST3 VST
     VST2_CATEGORY kPlugCategEffect
     VST3_CATEGORY Fx
     AU_MAIN_TYPE kAudioUnitType_Effect
