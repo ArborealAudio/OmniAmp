@@ -48,7 +48,9 @@ juce_add_modules(
     "$ENV{HOME}/modules/Gin/modules/gin"
     "$ENV{HOME}/modules/Gin/modules/gin_gui"
     "modules/DSPFilters/modules/dsp_filters"
-    "$ENV{HOME}/modules/VolumeMeter")
+    "$ENV{HOME}/modules/Arbor_modules/modules/VolumeMeter"
+    "$ENV{HOME}/modules/Arbor_modules/modules/SVTFilter"
+    "$ENV{HOME}/modules/Arbor_modules/modules/Delay")
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -73,11 +75,13 @@ target_link_libraries(Gamma
         gin
         gin_gui
         dsp_filters
-        VolumeMeter
         chowdsp_wdf
         chowdsp_simd
         chowdsp_dsp_data_structures
         chowdsp_math
+        VolumeMeter
+        SVTFilter
+        Delay
         # ${IPP_CORE}
         # ${IPP_S}
     PUBLIC

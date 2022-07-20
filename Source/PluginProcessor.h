@@ -118,9 +118,15 @@ private:
     Processors::LFEnhancer<double> lfEnhancer;
 
     Processors::CabType currentCab = Processors::CabType::small;
-    Processors::FDNCab cab;
+  #if USE_SIMD
+    Processors::FDNCab<vec> cab;
+  #else
+    Processors::FDNCab<double> cab;
+#endif
 
     Processors::Room room;
+
+    SIMD<double, dsp::AudioBlock<double>, chowdsp::AudioBlock<vec>> simd;
 
     enum Mode
     {

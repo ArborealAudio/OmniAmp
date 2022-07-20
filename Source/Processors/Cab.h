@@ -9,11 +9,13 @@ enum CabType
     large
 };
 
+template <typename Type>
 class FDNCab
 {
+    template <typename T>
     struct FDN
     {
-        FDN(CabType t)
+        FDN(AudioProcessorValueTreeState& a, CabType t) : apvts(a)
         {
             switch (t)
             {
@@ -21,7 +23,7 @@ class FDNCab
                 f_order = 1;
                 break;
             case med:
-                f_order = 4;
+                f_order = 3;
                 break;
             case large:
                 f_order = 4;
@@ -30,46 +32,49 @@ class FDNCab
                 f_order = 1;
                 break;
             }
+
             delay.resize(f_order);
             dtime.resize(f_order);
-            z[0].resize(f_order);
-            z[1].resize(f_order);
 
-            lp.resize(f_order);
             hp.resize(f_order);
+            lp.resize(f_order);
 
             dtime[0] = 103.f;
             if (t > 0)
             {
-                dtime[1] = 85.f;
-                dtime[2] = 57.5f;
-                dtime[3] = 81.5f;
+                dtime[0] = 377.f;
+                dtime[1] = 365.f;
+                dtime[2] = 375.f;
             }
             // MUST change these to ms or µs values so as to be samplerate-agnostic
         }
 
-        void prepare(const dsp::ProcessSpec &spec)
+        void prepare(dsp::ProcessSpec spec)
         {
-            for (auto &d : delay) {
-                d.prepare(spec);
-                d.setMaximumDelayInSamples(44100);
+            auto monoSpec = spec;
+            monoSpec.numChannels = 1;
+            for (auto i = 0; i < delay.size(); ++i)
+            {
+                delay[i].prepare(monoSpec);
+                delay[i].setMaximumDelayInSamples(dtime[i] + 1);
             }
 
-            double i = 1.0;
-            for (auto &f : lp) {
+            int i = 1;
+            for (auto &f : lp)
+            {
                 f.prepare(spec);
-                f.setType(dsp::StateVariableTPTFilterType::lowpass);
-                f.setCutoffFrequency(5000.0 - (i * 500.0));
+                f.setType(strix::FilterType::lowpass);
+                f.setCutoffFreq(5000.0 - (i * 500.0));
                 f.setResonance(0.7);
                 ++i;
             }
 
-            i = 1.0;
+            i = 1;
             for (auto &f : hp)
             {
                 f.prepare(spec);
-                f.setType(dsp::StateVariableTPTFilterType::highpass);
-                f.setCutoffFrequency(100.0 - (20.0 * i));
+                f.setType(strix::FilterType::highpass);
+                f.setCutoffFreq(100.0 - (20.0 * i));
                 f.setResonance(1.0);
                 ++i;
             }
@@ -83,12 +88,10 @@ class FDNCab
                 f.reset();
             for (auto& f : hp)
                 f.reset();
-            for (auto& ch : z)
-                for (auto& s : ch)
-                    s = 0.0;
         }
 
-        void processBlock(dsp::AudioBlock<double>& block)
+        template <class Block>
+        void processBlock(Block& block)
         {
             auto left = block.getChannelPointer(0);
             auto right = left;
@@ -97,30 +100,27 @@ class FDNCab
 
             for (auto i = 0; i < block.getNumSamples(); ++i)
             {
-                double out_l = 0.0, out_r = 0.0;
+                T out_l = 0.0, out_r = 0.0;
 
                 for (auto n = 0; n < f_order; ++n)
                 {
                     auto d_l = delay[n].popSample(0, dtime[n]);
-                    auto d_r = delay[n].popSample(1, dtime[n]);
+                    // auto d_r = delay[n].popSample(1, dtime[n]);
 
                     out_l += d_l + left[i] * -fdbk;
-                    out_r += d_r + right[i] * -fdbk;
+                    // out_r += d_r + right[i] * -fdbk;
 
-                    z[0][n] = out_l;
-                    z[1][n] = out_r;
-
-                    auto f_l = z[0][n] * fdbk + left[i];
-                    auto f_r = z[1][n] * fdbk + right[i];
+                    auto f_l = out_l * fdbk + left[i];
+                    // auto f_r = out_r * fdbk + right[i];
 
                     f_l = hp[n].processSample(0, f_l);
-                    f_r = hp[n].processSample(1, f_r);
+                    // f_r = hp[n].processSample(1, f_r);
 
                     f_l = lp[n].processSample(0, f_l);
-                    f_r = lp[n].processSample(1, f_r);
+                    // f_r = lp[n].processSample(1, f_r);
 
                     delay[n].pushSample(0, f_l);
-                    delay[n].pushSample(1, f_r);
+                    // delay[n].pushSample(1, f_r);
                 }
 
                 left[i] = out_l;
@@ -129,15 +129,32 @@ class FDNCab
         }
 
     private:
+
+        // inline T processNestedAllpass(T in, int ch, int index)
+        // {
+        //     auto d = delay[index].popSample(ch, dtime[index]);
+
+        //     auto out = d + in * -fdbk;
+
+        //     auto f = out * fdbk + in;
+
+        //     delay[index].pushSample(ch, f);
+
+        //     return out;
+        // }
+
         size_t f_order;
 
-        std::vector<dsp::DelayLine<double>> delay;
-        std::vector<float> dtime;
+        // std::vector<dsp::DelayLine<T>> delay;
+        std::vector<strix::Delay<T>> delay;
+        std::vector<double> dtime;
 
-        float fdbk = 0.06f;
-        std::vector<double> z[2];
+        T fdbk = 0.1f;
 
-        std::vector<dsp::StateVariableTPTFilter<double>> lp, hp;
+        std::vector<strix::SVTFilter<T>> lp, hp;
+        // std::vector<dsp::IIR::Coefficients<double>::Ptr> lp_c, hp_c;
+
+        AudioProcessorValueTreeState &apvts;
     };
 
     class ReleasePool : Timer
@@ -158,8 +175,9 @@ class FDNCab
     public:
         ReleasePool() { startTimer(1000); }
 
-        template<typename T>
-        void add(const std::shared_ptr<T>& object)
+        // template<typename T>
+        template <typename obj>
+        void add(const std::shared_ptr<obj>& object)
         {
             if (object == nullptr)
                 return;
@@ -169,9 +187,12 @@ class FDNCab
         }
     };
 
-    dsp::StateVariableTPTFilter<double> hp, lp1, lp2, bp;
+    strix::SVTFilter<Type> hp, lp1, lp2, bp;
+    // dsp::IIR::Coefficients<double>::Ptr hp_c, lp1_c, lp2_c, bp_c;
 
-    std::shared_ptr<FDN> fdn;
+    double sr = 44100.0;
+
+    std::shared_ptr<FDN<Type>> fdn;
 
     dsp::ProcessSpec memSpec;
 
@@ -179,10 +200,12 @@ class FDNCab
 
     ReleasePool releasePool;
 
+    AudioProcessorValueTreeState &apvts;
+
 public:
-    FDNCab(CabType t)
+    FDNCab(AudioProcessorValueTreeState& a, CabType t) : apvts(a)
     {
-        fdn = std::make_shared<FDN>(t);
+        fdn = std::make_shared<FDN<Type>>(a, t);
     }
 
     void setCabType(CabType newType)
@@ -190,7 +213,7 @@ public:
         type = newType;
         setParams();
 
-        std::shared_ptr<FDN> new_fdn = std::make_shared<FDN>(newType);
+        std::shared_ptr<FDN<Type>> new_fdn = std::make_shared<FDN<Type>>(apvts, newType);
         new_fdn->prepare(memSpec);
         releasePool.add(new_fdn);
         std::atomic_store(&fdn, new_fdn);
@@ -200,16 +223,18 @@ public:
     {
         memSpec = spec;
 
+        sr = spec.sampleRate;
+
         hp.prepare(spec);
-        hp.setType(dsp::StateVariableTPTFilterType::highpass);
+        hp.setType(strix::FilterType::highpass);
 
         lp1.prepare(spec);
         lp2.prepare(spec);
-        lp1.setType(dsp::StateVariableTPTFilterType::lowpass);
-        lp2.setType(dsp::StateVariableTPTFilterType::firstOrderLowpass);
+        lp1.setType(strix::FilterType::lowpass);
+        lp2.setType(strix::FilterType::firstOrderLowpass);
 
         bp.prepare(spec);
-        bp.setType(dsp::StateVariableTPTFilterType::notch);
+        bp.setType(strix::FilterType::notch);
 
         fdn->prepare(spec);
     }
@@ -227,21 +252,28 @@ public:
         switch (type)
         {
         case small:
-            hp.setCutoffFrequency(90.0);
+            // hp.coefficients = dsp::IIR::Coefficients<double>::makeHighPass(sr, 90.0, 5.0);
+            hp.setCutoffFreq(90.0);
             hp.setResonance(5.0);
-            lp1.setCutoffFrequency(3500.0);
+            // lp1.coefficients = dsp::IIR::Coefficients<double>::makeLowPass(sr, 3500.0);
+            lp1.setCutoffFreq(3500.0);
             lp1.setResonance(0.7);
-            lp2.setCutoffFrequency(5000.0);
+            // lp2.coefficients = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(sr, 5000.0);
+            lp2.setCutoffFreq(5000.0);
             lp2.setResonance(1.5);
             break;
         case med:
-            hp.setCutoffFrequency(75.0);
-            hp.setResonance(0.8);
-            lp1.setCutoffFrequency(2821.0);
-            lp1.setResonance(0.7);
-            lp2.setCutoffFrequency(4191.0);
-            lp2.setResonance(1.2);
-            bp.setCutoffFrequency(1700.0);
+            // hp.coefficients = dsp::IIR::Coefficients<double>::makeHighPass(sr, 75.0, 0.8);
+            hp.setCutoffFreq(75.0);
+            hp.setResonance(1.4);
+            // lp1.coefficients = dsp::IIR::Coefficients<double>::makeLowPass(sr, 2821.0);
+            lp1.setCutoffFreq(2821.0);
+            lp1.setResonance(1.4);
+            // lp2.coefficients = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(sr, 5000.0);
+            lp2.setCutoffFreq(4581.0);
+            lp2.setResonance(1.8);
+            // bp.coefficients = dsp::IIR::Coefficients<double>::makeNotch(sr, 1700.0, 2.0);
+            bp.setCutoffFreq(1700.0);
             bp.setResonance(2.0);
             break;
         case large:
@@ -251,15 +283,28 @@ public:
         }
     }
 
-    void processBlock(dsp::AudioBlock<double> &block)
-    {
-        std::shared_ptr<FDN> proc_fdn = std::atomic_load(&fdn);
+    // void setParams()
+    // {
+    //     hp.setCutoffFrequency(*apvts.getRawParameterValue("hpFreq"));
+    //     hp.setResonance(*apvts.getRawParameterValue("hpQ"));
+    //     lp1.setCutoffFrequency(*apvts.getRawParameterValue("lp1Freq"));
+    //     lp1.setResonance(*apvts.getRawParameterValue("lp1Q"));
+    //     lp2.setCutoffFrequency(*apvts.getRawParameterValue("lp2Freq"));
+    //     lp2.setResonance(*apvts.getRawParameterValue("lp2Q"));
+    //     bp.setCutoffFrequency(*apvts.getRawParameterValue("bpFreq"));
+    //     bp.setResonance(*apvts.getRawParameterValue("bpQ"));
+    // }
 
-        lp1.process(dsp::ProcessContextReplacing<double>(block));
+    template <class Block>
+    void processBlock(Block& block)
+    {
+        std::shared_ptr<FDN<Type>> proc_fdn = std::atomic_load(&fdn);
+
+        lp1.processBlock(block);
         proc_fdn->processBlock(block);
-        hp.process(dsp::ProcessContextReplacing<double>(block));
+        hp.processBlock(block);
         if (type > 0)
-            bp.process(dsp::ProcessContextReplacing<double>(block));
-        lp2.process(dsp::ProcessContextReplacing<double>(block));
+            bp.processBlock(block);
+        lp2.processBlock(block);
     }
 };

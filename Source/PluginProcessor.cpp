@@ -21,7 +21,7 @@ GammaAudioProcessor::GammaAudioProcessor()
                      #endif
                        ), apvts(*this, nullptr, "Parameters", createParams()),
                         guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
-                        cab(currentCab), room(50.0, 300.0)
+                        cab(apvts, currentCab), room(25.0, 1.5)
 #endif
 {
     gain = apvts.getRawParameterValue("inputGain");
@@ -136,6 +136,8 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     audioSource.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
 
     doubleBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
+
+    simd.setInterleavedBlockSize(getTotalNumInputChannels(), samplesPerBlock);
 }
 
 void GammaAudioProcessor::releaseResources()
@@ -239,11 +241,22 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     setLatencySamples(oversample.getLatencyInSamples());
 
+#if USE_SIMD
+    auto simdBlock = simd.interleaveBlock(block);
+    auto &&processBlock = simdBlock;
+#else
+    auto &&processBlock = block;
+#endif
+
     if (currentMode != Mode::Channel && *apvts.getRawParameterValue("cabOn"))
-        cab.processBlock(block);
+        cab.processBlock(processBlock);
+
+#if USE_SIMD
+    block = simd.deinterleaveBlock(processBlock);
+#endif
 
     if (*apvts.getRawParameterValue("roomOn"))
-        room.process(doubleBuffer);
+        room.process(doubleBuffer, *apvts.getRawParameterValue("roomAmt"));
 
     buffer.makeCopyOf(doubleBuffer);
 
@@ -303,11 +316,13 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("cabOn", 1), "Cab On/Off", true));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("2x12", "4x12", "8x10"), 0));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("roomOn", 1), "Room On/Off", false));
-    // params.emplace_back(std::make_unique<AudioParameterInt>(ParameterID("fdnOrder", 1), "FDN Order", 1, 5, 2));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("roomAmt", 1), "Room Amount", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("seriesAP", 1), "Series AP", false));
     // for (auto i = 0; i < 6; ++i)
     // {
     //     auto index = String(i);
     //     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("delay" + index, 1), "Delay " + index, 0.f, 1000.f, (float)(i * 100) + (i + 23)));
+    // }
     //     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("feedback" + index, 1), "Feedback " + index, 0.f, 1.f, 0.06f));
     // }
     // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hpFreq", 1), "HPFreq", 20.f, 600.f, 90.f));
@@ -316,7 +331,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lp1Q", 1), "LP1Q", 0.1f, 5.f, 0.7f));
     // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lp2Freq", 1), "LP2Freq", 200.f, 7500.f, 3500.f));
     // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lp2Q", 1), "LP2Q", 0.1f, 5.f, 1.5f));
-    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bpFreq", 1), "BPFreq", 20.f, 7500.f, 985.f));
+    // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bpFreq", 1), "BPFreq", 20.f, 7500.f, 1700.f));
     // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bpQ", 1), "BPQ", 0.1f, 10.f, 2.f));
 
     return { params.begin(), params.end() };

@@ -31,19 +31,23 @@
     
     - 4 FDNs
     
-    - dTime0 = 410
+    - dTime0 = 377
     
-    - dTime1 = 230 (try 340 too)
+    - dTime1 = 365
     
-    - dTime2 = 120 (or 230)
+    - dTime2 = 375
     
-    - dTime3 = 326
+    - dTime3 = 63
     
-    - HP 75 Hz Q 0.8
+    - dTime4 = 126
     
-    - LP1 2821 Q 0.7
+    - dTime5 = 185
     
-    - LP2 4191 Q 1.2
+    - HP 75 Hz Q 1.4
+    
+    - LP1 2821 Q 1.4
+    
+    - LP2 4581 Q 1.8
     
     - BP 1700 Q 2
   
