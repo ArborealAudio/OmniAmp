@@ -69,14 +69,14 @@ class Room
         Diffuser(float delayRangeinS) : delayRange(delayRangeinS)/*  : maxDelay(max), minDelay(min) */
         {
             delay.resize(channels);
+            rand.setSeed((int64)0);
         }
 
         void prepare(dsp::ProcessSpec spec)
         {
             spec.numChannels = 1;
 
-            Random rand;
-            rand.setSeed((int64)0);
+            invert.clear();
 
             int i = 0;
             for (auto &d : delay)
@@ -87,6 +87,7 @@ class Room
                 d.prepare(spec);
                 d.setMaximumDelayInSamples(maxDelay + 1);
                 d.setDelay(rand.nextInt(Range<int>(minDelay, maxDelay)));
+                invert.push_back(rand.nextInt() % 2 == 0);
                 ++i;
             }
         }
@@ -116,7 +117,7 @@ class Room
                     block.getChannelPointer(ch)[i] = vec[ch];
             }
 
-            shuffleChannels(block);
+            // shuffleChannels(block);
         }
 
     private:
@@ -134,16 +135,19 @@ class Room
 
                 // FloatVectorOperations::copy(out, in, block.getNumSamples());
 
-                if (ch % 2 != 0)
+                if (invert[ch])
                     FloatVectorOperations::multiply(out, -1.0, block.getNumSamples());
             }
         }
 
         std::vector<dsp::DelayLine<double>> delay;
+        std::vector<bool> invert;
 
         float inc;
 
         static constexpr size_t channels = 8;
+
+        Random rand;
     };
 
     struct MixedFeedback
@@ -161,8 +165,6 @@ class Room
                 delays[ch].prepare(spec);
                 delays[ch].setMaximumDelayInSamples(delaySamples[ch] + 1);
             }
-
-            delayBuffer.setSize(channels, spec.maximumBlockSize);
         }
 
         void reset()
@@ -190,7 +192,7 @@ class Room
                     auto sum = in + delayed[ch] * decayGain;
                     delays[ch].pushSample(0, sum);
 
-                    in = delayed[ch];
+                    block.setSample(ch, i, delayed[ch]);
                 }
             }
         }
@@ -203,8 +205,6 @@ class Room
 
         std::array<int, channels> delaySamples;
         std::array<dsp::DelayLine<double>, channels> delays;
-
-        AudioBuffer<double> delayBuffer;
     };
 
     std::vector<Diffuser> diff;
@@ -271,22 +271,22 @@ class Room
 public:
     Room(double roomSizeMs, double rt60)
     {
-        auto diffusion = (2.0 * 0.001);
-        for (int i = 0; i < 8; ++i)
+        auto diffusion = (roomSizeMs * 0.001);
+        for (int i = 0; i < 4; ++i)
         {
+            diffusion *= 0.5;
             diff.emplace_back(diffusion);
-            diffusion *= 2.0;
         }
 
         feedback.delayMs = roomSizeMs;
 
-        // double typicalLoopMs = roomSizeMs * 1.5;
+        double typicalLoopMs = roomSizeMs * 1.5;
 
-        // double loopsPerRt60 = rt60 / (typicalLoopMs * 0.001);
+        double loopsPerRt60 = rt60 / (typicalLoopMs * 0.001);
 
-        // double dbPerCycle = -60.0 / loopsPerRt60;
+        double dbPerCycle = -60.0 / loopsPerRt60;
 
-        // feedback.decayGain = std::pow(10.0, dbPerCycle * 0.05);
+        feedback.decayGain = std::pow(10.0, dbPerCycle * 0.05);
     }
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -307,7 +307,7 @@ public:
         feedback.reset();
     }
 
-    void process(AudioBuffer<double>& buf)
+    void process(AudioBuffer<double>& buf, float amt)
     {
         upMix.stereoToMulti(buf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), buf.getNumSamples());
 
@@ -318,8 +318,11 @@ public:
 
         feedback.process(block);
 
-        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), buf.getArrayOfWritePointers(), buf.getNumSamples());
+        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), stereoBuf.getArrayOfWritePointers(), buf.getNumSamples());
 
-        buf.applyGain(upMix.scalingFactor1()); // need a system for determining whether we need 1 or 2
+        buf.applyGain(1.0 - amt);
+
+        buf.addFrom(0, 0, stereoBuf.getReadPointer(0), buf.getNumSamples(), amt * upMix.scalingFactor1());
+        buf.addFrom(1, 0, stereoBuf.getReadPointer(1), buf.getNumSamples(), amt * upMix.scalingFactor1());
     }
 };
