@@ -219,8 +219,14 @@ struct AVTriode
 
     inline T processSampleSIMD(T x, T gp, T gn)
     {
-        auto f1 = xsimd::div((T)1.0, gp) * xsimd::tanh(gp * x) * y_m[0];
-        auto f2 = xsimd::div((T)1.0, gn) * xsimd::atan(gn * x) * xsimd::sub((T)1.0, y_m[0]);
+        auto f1 = (1.0 / gp) * xsimd::tanh(gp * x) * y_m[0];
+        // auto f1 = (gp * x) / 3.4;
+        // f1 = f1 * 0.5f;
+        // f1 = xsimd::abs(f1 + 0.5) - abs(f1 - 0.5);
+        // f1 = (xsimd::abs(f1) - 2.0) * f1;
+        // f1 = (xsimd::abs(f1) - 2.0) * f1 * (1.0 / gp) * y_m[0];
+        auto f2 = 1.0 / gn * xsimd::atan(gn * x) * (1.0 - y_m[0]);
+        // auto f2 = (1.0 / gn) * ((x * gn) / (1.0 + xsimd::abs(x))) * (1.0 - y_m[0]);
 
         auto y = sc_hp[0].processSample(f1 + f2);
         y_m[0] = y;
