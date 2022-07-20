@@ -36,26 +36,29 @@ public:
     }
     
     /*for reg doubles currently just one channel, copies L->R*/
-    template <class Block>
-    inline void processBlock(Block& block)
+    inline void processBlock(dsp::AudioBlock<double>& block)
     {
         auto L = block.getChannelPointer(0);
         auto R = L;
         if (block.getNumChannels() > 1)
             R = block.getChannelPointer(1);
 
-        auto isDouble = std::is_same_v<T, double>;
-
         for (auto i = 0; i < block.getNumSamples(); ++i)
         {
-            if (isDouble)
-            {
-                L[i] = processSample(L[i]);
-                R[i] = L[i];
-            }
-            else
-                L[i] = processSample(L[i]);
+            L[i] = processSample(L[i]);
+            R[i] = L[i];
         }
+    }
+
+    inline void processBlock(chowdsp::AudioBlock<vec>& block)
+    {
+        auto L = block.getChannelPointer(0);
+        auto R = L;
+        if (block.getNumChannels() > 1)
+            R = block.getChannelPointer(1);
+
+        for (auto i = 0; i < block.getNumSamples(); ++i)
+            L[i] = processSample(L[i]);
     }
 
 private:

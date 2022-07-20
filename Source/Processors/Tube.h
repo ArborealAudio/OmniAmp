@@ -72,17 +72,23 @@ struct Tube
         }
     }
 
-    template <class Block>
-    void processBlockClassB(Block& block, T gp, T gn)
+    void processBlockClassB(dsp::AudioBlock<double>& block, T gp, T gn)
     {
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
 
-            if constexpr (std::is_same_v<T, vec>)
-                processSamplesClassBSIMD(in, ch, block.getNumSamples(), gp, gn);
-            else
-                processSamplesClassB(in, ch, block.getNumSamples(), gp, gn);
+            processSamplesClassB(in, ch, block.getNumSamples(), gp, gn);
+        }
+    }
+
+    void processBlockClassB(chowdsp::AudioBlock<vec>& block, T gp, T gn)
+    {
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            processSamplesClassBSIMD(in, ch, block.getNumSamples(), gp, gn);
         }
     }
 
@@ -235,20 +241,25 @@ struct AVTriode
     //     }
     // }
 
-    template <class Block>
-    void processBlock(Block& block, T gp, T gn)
+    void processBlock(dsp::AudioBlock<double>& block, T gp, T gn)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
             auto in = block.getChannelPointer(ch);
 
             for (size_t i = 0; i < block.getNumSamples(); i++)
-            {
-                if constexpr (std::is_same_v<T, vec>)
-                    in[i] = processSampleSIMD(in[i], gp, gn);
-                else
-                    in[i] = processSample(in[i], ch, gp, gn);
-            }
+                in[i] = processSample(in[i], ch, gp, gn);
+        }
+    }
+
+    void processBlock(chowdsp::AudioBlock<vec>& block, T gp, T gn)
+    {
+        for (size_t ch = 0; ch < block.getNumChannels(); ch++)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            for (size_t i = 0; i < block.getNumSamples(); i++)
+                in[i] = processSampleSIMD(in[i], gp, gn);
         }
     }
 
