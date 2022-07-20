@@ -3,7 +3,7 @@
 #pragma once
 using vec = xsimd::batch<double>;
 
-template <typename T>
+template <typename T, class RegBlock, class SIMDBlock>
 class SIMD
 {
     void interleaveSamples (const T** source, T* dest, int numSamples, int numChannels)
@@ -36,10 +36,10 @@ class SIMD
         }
     }
 
-    chowdsp::AudioBlock<vec> interleaved;
-    chowdsp::AudioBlock<T> zero;
+    SIMDBlock interleaved;
+    RegBlock zero;
 
-    dsp::AudioBlock<T> inBlock;
+    RegBlock inBlock;
 
     HeapBlock<char> interleavedData, zeroData;
     std::vector<const T*> channelPointers;
@@ -51,8 +51,8 @@ public:
     // use the actual number of channels and not just 1!!
     void setInterleavedBlockSize(int numChannels, int numSamples)
     {
-        interleaved = chowdsp::AudioBlock<vec>(interleavedData, numChannels, numSamples);
-        zero = dsp::AudioBlock<T>(zeroData, vec::size, numSamples);
+        interleaved = SIMDBlock(interleavedData, numChannels, numSamples);
+        zero = RegBlock(zeroData, vec::size, numSamples);
         zero.clear();
 
         auto numVecChannels = chowdsp::Math::ceiling_divide((size_t)numChannels, vec::size);
@@ -60,7 +60,7 @@ public:
         channelPointers.resize(numVecChannels * vec::size);
     }
 
-    chowdsp::AudioBlock<vec> interleaveBlock(dsp::AudioBlock<T>& block)
+    SIMDBlock interleaveBlock(RegBlock& block)
     {
         inBlock = std::move(block);
 
@@ -86,7 +86,7 @@ public:
         return interleaved;
     }
 
-    dsp::AudioBlock<T> deinterleaveBlock(chowdsp::AudioBlock<vec>& block)
+    RegBlock deinterleaveBlock(SIMDBlock& block)
     {
         auto n = block.getNumSamples();
         auto numChannels = channelPointers.size();
