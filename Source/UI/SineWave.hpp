@@ -93,12 +93,14 @@ private:
 
     void splitBuffers(const AudioBuffer<float>& buf)
     {
+        for (auto& b : band)
+        {
+            b.clear();
+            b.makeCopyOf(buf, true);
+        }
+
         for (int i = 0; i < 5; ++i)
         {
-            if (i == 0) {
-                for (auto& b : band)
-                    b.makeCopyOf(buf);
-            }
             auto hpf = band[i + 1].getArrayOfWritePointers();
             auto lpf = band[i].getWritePointer(0);
             for (auto j = 0; j < buf.getNumSamples(); ++j)
