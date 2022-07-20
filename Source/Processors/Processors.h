@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "SIMD.h"
+
 namespace Processors
 {
 
@@ -20,7 +22,6 @@ enum class ProcessorType
     Channel
 };
 
-#include "SIMD.h"
 #include "Tube.h"
 #include "PreFilters.h"
 #include "PostFilters.h"
@@ -119,7 +120,7 @@ protected:
 
     std::atomic<float>* inGain, *outGain, *hiGain, *p_comp, *dist;
 
-    SIMD<double> simd;
+    SIMD<double, dsp::AudioBlock<double>, chowdsp::AudioBlock<vec>> simd;
 };
 
 struct Guitar : Processor
