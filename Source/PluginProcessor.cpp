@@ -260,7 +260,8 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     buffer.makeCopyOf(doubleBuffer);
 
-    audioSource.getBufferRMS(buffer);
+    MessageManager::callAsync([=]()
+                              { audioSource.getBufferRMS(buffer); });
 }
 
 //==============================================================================
@@ -271,8 +272,8 @@ bool GammaAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* GammaAudioProcessor::createEditor()
 {
-    // return new GammaAudioProcessorEditor (*this);
-    return new GenericAudioProcessorEditor(*this);
+    return new GammaAudioProcessorEditor (*this);
+    // return new GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
