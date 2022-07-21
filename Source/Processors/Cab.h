@@ -49,10 +49,12 @@ class FDNCab
             // MUST change these to ms or µs values so as to be samplerate-agnostic
         }
 
-        void prepare(dsp::ProcessSpec spec)
+        void prepare(const dsp::ProcessSpec spec)
         {
             auto monoSpec = spec;
+        #if USE_SIMD
             monoSpec.numChannels = 1;
+        #endif
             for (auto i = 0; i < delay.size(); ++i)
             {
                 delay[i].prepare(monoSpec);
@@ -93,38 +95,31 @@ class FDNCab
         template <class Block>
         void processBlock(Block& block)
         {
-            auto left = block.getChannelPointer(0);
-            auto right = left;
-            if (block.getNumChannels() > 1)
-                right = block.getChannelPointer(1);
-
-            for (auto i = 0; i < block.getNumSamples(); ++i)
+            for (auto ch = 0; ch < block.getNumChannels(); ++ch)
             {
-                T out_l = 0.0, out_r = 0.0;
+                auto in = block.getChannelPointer(ch);
 
-                for (auto n = 0; n < f_order; ++n)
+                for (auto i = 0; i < block.getNumSamples(); ++i)
                 {
-                    auto d_l = delay[n].popSample(0, dtime[n]);
-                    // auto d_r = delay[n].popSample(1, dtime[n]);
+                    T out = 0.0;
 
-                    out_l += d_l + left[i] * -fdbk;
-                    // out_r += d_r + right[i] * -fdbk;
+                    for (auto n = 0; n < f_order; ++n)
+                    {
+                        auto d = delay[n].popSample(ch, dtime[n]);
 
-                    auto f_l = out_l * fdbk + left[i];
-                    // auto f_r = out_r * fdbk + right[i];
+                        out += d + in[i] * -fdbk;
 
-                    f_l = hp[n].processSample(0, f_l);
-                    // f_r = hp[n].processSample(1, f_r);
+                        auto f = out * fdbk + in[i];
 
-                    f_l = lp[n].processSample(0, f_l);
-                    // f_r = lp[n].processSample(1, f_r);
+                        f = hp[n].processSample(ch, f);
 
-                    delay[n].pushSample(0, f_l);
-                    // delay[n].pushSample(1, f_r);
+                        f = lp[n].processSample(ch, f);
+
+                        delay[n].pushSample(ch, f);
+                    }
+
+                    in[i] = out;
                 }
-
-                left[i] = out_l;
-                right[i] = out_r;
             }
         }
 
@@ -145,14 +140,12 @@ class FDNCab
 
         size_t f_order;
 
-        // std::vector<dsp::DelayLine<T>> delay;
         std::vector<strix::Delay<T>> delay;
         std::vector<double> dtime;
 
         T fdbk = 0.1f;
 
         std::vector<strix::SVTFilter<T>> lp, hp;
-        // std::vector<dsp::IIR::Coefficients<double>::Ptr> lp_c, hp_c;
 
         AudioProcessorValueTreeState &apvts;
     };
