@@ -40,6 +40,10 @@ private:
 
     VolumeMeterComponent grMeter;
 
+    CabsComponent cabComponent;
+
+    ReverbComponent reverbComp;
+
 #if JUCE_WINDOWS
     OpenGLContext opengl;
 #endif

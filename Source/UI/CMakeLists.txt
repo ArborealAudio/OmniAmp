@@ -6,4 +6,6 @@ PRIVATE
     Button.h
     Background.h
     AmpControls.h
-    SineWave.hpp)
+    SineWave.hpp
+    Cabs.h
+    Reverb.h)

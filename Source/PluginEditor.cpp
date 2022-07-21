@@ -11,7 +11,7 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource()), tooltip(this)
+    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource()), reverbComp(p.apvts), tooltip(this)
 {
 #if JUCE_WINDOWS
     opengl.attachTo(*this);
@@ -46,9 +46,32 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     grMeter.setBounds(72, 200, 32, 100);
     addAndMakeVisible(grMeter);
 
+    setSize(800, 600);
+
+    auto bottomSection = getLocalBounds().removeFromBottom(200);
+
+    cabComponent.setBounds(bottomSection.removeFromLeft(getWidth() * 0.66));
+    addAndMakeVisible(cabComponent);
+
+    cabComponent.setState(*p.apvts.getRawParameterValue("cabOn") + *p.apvts.getRawParameterValue("cabType"));
+
+    cabComponent.cabChanged = [&](bool state, int newType)
+    {
+      auto type = p.apvts.getParameterAsValue("cabType");
+      auto on = p.apvts.getParameterAsValue("cabOn");
+
+      type = newType;
+      on = state;
+    };
+
+    reverbComp.setBounds(bottomSection);
+    addAndMakeVisible(reverbComp);
+
     setResizable(true, true);
     getConstrainer()->setMinimumSize(200, 150);
-    getConstrainer()->setFixedAspectRatio(2.0);
+    getConstrainer()->setFixedAspectRatio(1.333);
+
+    setBufferedToImage(true);
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -61,7 +84,9 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 //==============================================================================
 void GammaAudioProcessorEditor::paint (juce::Graphics& g)
 {
-  g.fillAll(Colour(0xff968875));
+  // g.fillAll(Colour(0xff968875));
+  g.setColour(Colour(0xffaa8875));
+  g.fillRect(getLocalBounds().withTrimmedBottom(200)); // make this adapt to size!!
 
   grMeter.paint(g);
 }

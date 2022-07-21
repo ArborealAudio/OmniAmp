@@ -248,7 +248,7 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     auto &&processBlock = block;
 #endif
 
-    if (currentMode != Mode::Channel && *apvts.getRawParameterValue("cabOn"))
+    if (*apvts.getRawParameterValue("cabOn"))
         cab.processBlock(processBlock);
 
 #if USE_SIMD
@@ -314,7 +314,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 2));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("cabOn", 1), "Cab On/Off", true));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("cabOn", 1), "Cab On/Off", false));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("2x12", "4x12", "8x10"), 0));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("roomOn", 1), "Room On/Off", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("roomAmt", 1), "Room Amount", 0.f, 1.f, 0.f));

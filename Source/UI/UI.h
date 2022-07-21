@@ -8,3 +8,5 @@
 #include "Knob.h"
 #include "AmpControls.h"
 #include "SineWave.hpp"
+#include "Cabs.h"
+#include "Reverb.h"
