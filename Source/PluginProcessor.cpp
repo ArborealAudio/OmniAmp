@@ -137,7 +137,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     doubleBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
 
-    simd.setInterleavedBlockSize(getTotalNumInputChannels(), samplesPerBlock);
+    simd.setInterleavedBlockSize(1, samplesPerBlock);
 }
 
 void GammaAudioProcessor::releaseResources()
@@ -243,7 +243,7 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
 #if USE_SIMD
     auto simdBlock = simd.interleaveBlock(block);
-    auto &&processBlock = simdBlock;
+    auto&& processBlock = simdBlock;
 #else
     auto &&processBlock = block;
 #endif

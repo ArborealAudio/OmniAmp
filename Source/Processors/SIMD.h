@@ -48,7 +48,6 @@ public:
 
     SIMD() = default;
 
-    // use the actual number of channels and not just 1!!
     void setInterleavedBlockSize(int numChannels, int numSamples)
     {
         interleaved = SIMDBlock(interleavedData, numChannels, numSamples);
