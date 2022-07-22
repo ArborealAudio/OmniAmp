@@ -15,6 +15,8 @@ struct HFEnhancer
         hp2.setup(2, spec.sampleRate, 7500.0);
 
         tube.prepare(spec);
+
+        wetBlock = dsp::AudioBlock<double>(heap, spec.numChannels, spec.maximumBlockSize);
     }
 
     void reset()
@@ -24,22 +26,25 @@ struct HFEnhancer
         tube.reset();
     }
 
-    template <class Block>
-    void processBlock(Block& block, const double enhance)
+    void processBlock(dsp::AudioBlock<T>& block, const double enhance)
     {
-        int size = (int)block.getNumChannels() * (int)block.getNumSamples();
-        HeapBlock<char> heap{size};
-        Block wetBlock(heap, block.getNumChannels(), block.getNumSamples());
-
         wetBlock.copyFrom(block);
 
-        if constexpr (std::is_same_v<T, double>)
-            process(wetBlock, enhance);
-        else
-            processSIMD(wetBlock, enhance);
+        process(wetBlock, enhance);
 
         block.add(wetBlock);
     }
+
+    // void processBlock(chowdsp::AudioBlock<vec>& block, const double enhance)
+    // {
+    //     int size = (int)block.getNumChannels() * (int)block.getNumSamples();
+
+    //     wetBlock.copyFrom(block);
+
+    //     process(wetBlock, enhance);
+
+    //     block.add(wetBlock);
+    // }
 
 private:
 
@@ -61,24 +66,27 @@ private:
         block.multiplyBy(enhance);
     }
 
-    void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
-    {
-        auto in = block.getChannelPointer(0);
+    // void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
+    // {
+    //     auto in = block.getChannelPointer(0);
 
-        hp1.process(block.getNumSamples(), 0, in);
+    //     hp1.process(block.getNumSamples(), 0, in);
 
-        block.multiplyBy(jmap(enhance, 1.0, 4.0));
+    //     block.multiplyBy(jmap(enhance, 1.0, 4.0));
 
-        tube.processBlock(block, 1.0, 0.5);
+    //     tube.processBlock(block, 1.0, 0.5);
 
-        hp2.process(block.getNumSamples(), 0, in);
+    //     hp2.process(block.getNumSamples(), 0, in);
 
-        block.multiplyBy(enhance);
-    }
+    //     block.multiplyBy(enhance);
+    // }
 
     Dsp::SimpleFilter<Dsp::Bessel::HighPass<4>, 2> hp1, hp2;
 
     AVTriode<T> tube;
+
+    HeapBlock<char> heap;
+    dsp::AudioBlock<T> wetBlock;
 };
 
 template <typename T>
@@ -116,6 +124,8 @@ struct LFEnhancer
         lp2.setup(1, spec.sampleRate, freq);
 
         tube.prepare(spec);
+
+        wetBlock = dsp::AudioBlock<T>(heap, spec.numChannels, spec.maximumBlockSize);
     }
 
     void setType(Mode newType)
@@ -150,19 +160,11 @@ struct LFEnhancer
         tube.reset();
     }
 
-    template <class Block>
-    void processBlock(Block& block, const double enhance)
+    void processBlock(dsp::AudioBlock<T>& block, const double enhance)
     {
-        int size = (int)block.getNumChannels() * (int)block.getNumSamples();
-        HeapBlock<char> heap{size};
-        Block wetBlock(heap, block.getNumChannels(), block.getNumSamples());
-
         wetBlock.copyFrom(block);
 
-        if constexpr (std::is_same_v<T, double>)
-            process(wetBlock, enhance);
-        else
-            processSIMD(wetBlock, enhance);
+        process(wetBlock, enhance);
 
         block.add(wetBlock);
     }
@@ -187,26 +189,29 @@ private:
         block.multiplyBy(enhance);
     }
 
-    void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
-    {
-        auto in = block.getChannelPointer(0);
+    // void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
+    // {
+    //     auto in = block.getChannelPointer(0);
 
-        lp1.process(block.getNumSamples(), 0, in);
+    //     lp1.process(block.getNumSamples(), 0, in);
 
-        block.multiplyBy(jmap(enhance, -1.0, -4.0));
+    //     block.multiplyBy(jmap(enhance, -1.0, -4.0));
 
-        tube.processBlock(block, 1.0, 3.0);
+    //     tube.processBlock(block, 1.0, 3.0);
 
-        lp2.process(block.getNumSamples(), 0, in);
+    //     lp2.process(block.getNumSamples(), 0, in);
 
-        block.multiplyBy(enhance);
-    }
+    //     block.multiplyBy(enhance);
+    // }
 
     Mode type;
 
     Dsp::SimpleFilter<Dsp::Bessel::LowPass<4>, 2> lp1, lp2;
 
     AVTriode<T> tube;
+
+    HeapBlock<char> heap;
+    dsp::AudioBlock<T> wetBlock;
 
     double SR = 0.0;
 };
