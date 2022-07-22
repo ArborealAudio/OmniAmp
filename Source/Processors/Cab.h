@@ -49,7 +49,7 @@ class FDNCab
             // MUST change these to ms or µs values so as to be samplerate-agnostic
         }
 
-        void prepare(const dsp::ProcessSpec spec)
+        void prepare(const dsp::ProcessSpec& spec)
         {
             auto monoSpec = spec;
         #if USE_SIMD
@@ -121,6 +121,8 @@ class FDNCab
                     in[i] = out;
                 }
             }
+
+            block.multiplyBy(1.0 / std::sqrt(f_order));
         }
 
     private:
@@ -150,38 +152,7 @@ class FDNCab
         AudioProcessorValueTreeState &apvts;
     };
 
-    class ReleasePool : Timer
-    {
-        std::vector<std::shared_ptr<void>> pool;
-        std::mutex m;
-
-        void timerCallback() override
-        {
-            std::lock_guard<std::mutex> lock(m);
-            pool.erase(
-                std::remove_if(
-                    pool.begin(), pool.end(),
-                    [](auto &object)
-                    { return object.use_count() <= 1; }),
-                pool.end());
-        }
-    public:
-        ReleasePool() { startTimer(1000); }
-
-        // template<typename T>
-        template <typename obj>
-        void add(const std::shared_ptr<obj>& object)
-        {
-            if (object == nullptr)
-                return;
-
-            std::lock_guard<std::mutex> lock(m);
-            pool.emplace_back(object);
-        }
-    };
-
     strix::SVTFilter<Type> hp, lp1, lp2, bp;
-    // dsp::IIR::Coefficients<double>::Ptr hp_c, lp1_c, lp2_c, bp_c;
 
     double sr = 44100.0;
 
@@ -191,7 +162,7 @@ class FDNCab
 
     CabType type;
 
-    ReleasePool releasePool;
+    strix::ReleasePoolShared releasePool;
 
     AudioProcessorValueTreeState &apvts;
 

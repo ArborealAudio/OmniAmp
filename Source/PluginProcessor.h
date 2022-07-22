@@ -124,7 +124,7 @@ private:
     Processors::FDNCab<double> cab;
 #endif
 
-    Processors::Room room;
+    Processors::ReverbManager reverb;
 
     SIMD<double, dsp::AudioBlock<double>, chowdsp::AudioBlock<vec>> simd;
 

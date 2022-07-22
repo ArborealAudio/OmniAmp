@@ -165,12 +165,22 @@ class Room
                 delays[ch].prepare(spec);
                 delays[ch].setMaximumDelayInSamples(delaySamples[ch] + 1);
             }
+
+            auto multiSpec = spec;
+            multiSpec.numChannels = channels;
+
+            lp.prepare(multiSpec);
+            lp.setType(strix::FilterType::firstOrderLowpass);
+            lp.setCutoffFreq(dampening * multiSpec.sampleRate * 0.5);
+            lp.setResonance(1.0);
         }
 
         void reset()
         {
             for (auto& d : delays)
                 d.reset();
+
+            lp.reset();
         }
 
         void process(dsp::AudioBlock<double>& block)
@@ -195,16 +205,22 @@ class Room
                     block.setSample(ch, i, delayed[ch]);
                 }
             }
+
+            lp.processBlock(block);
         }
 
         double delayMs = 150.0;
         double decayGain = 0.85;
+
+        /*A fraction of Nyquist, where the lowpass will be placed in the feedback path*/
+        double dampening = 1.0;
 
     private:
         static constexpr size_t channels = 8;
 
         std::array<int, channels> delaySamples;
         std::array<dsp::DelayLine<double>, channels> delays;
+        strix::SVTFilter<double> lp;
     };
 
     std::vector<Diffuser> diff;
@@ -212,6 +228,7 @@ class Room
     MixedFeedback feedback;
 
     AudioBuffer<double> splitBuf;
+    AudioBuffer<double> erBuf;
     AudioBuffer<double> stereoBuf;
 
     template<typename Sample, int channels>
@@ -268,8 +285,17 @@ class Room
 
     StereoMultiMixer<double, 8> upMix;
 
+    double erLevel = 1.0;
+
 public:
-    Room(double roomSizeMs, double rt60)
+    /**
+     * @param roomSizeMs room size in Ms, use this in conjunction w/ rt60 to create bigger or larger rooms
+     * @param rt60 controls density of reverberation (basically the feedback) of the algo
+     * @param erLevel a value btw 0->1 that sets the level of early reflections. Should taper logarithmically from this value to
+     * something lower.
+     * @param dampening Set the level of dampening, as a fraction of Nyquist, in the feedback path using the Room constructor
+    */
+    Room(double roomSizeMs, double rt60, double erLevel, double dampening) : erLevel(erLevel)
     {
         auto diffusion = (roomSizeMs * 0.001);
         for (int i = 0; i < 4; ++i)
@@ -287,12 +313,15 @@ public:
         double dbPerCycle = -60.0 / loopsPerRt60;
 
         feedback.decayGain = std::pow(10.0, dbPerCycle * 0.05);
+
+        feedback.dampening = dampening;
     }
 
     void prepare(const dsp::ProcessSpec& spec)
     {
         stereoBuf.setSize(2, spec.maximumBlockSize);
         splitBuf.setSize(8, spec.maximumBlockSize);
+        erBuf.setSize(8, spec.maximumBlockSize);
 
         for (auto& d : diff)
             d.prepare(spec);
@@ -313,16 +342,89 @@ public:
 
         dsp::AudioBlock<double> block(splitBuf);
 
-        for (auto& d : diff)
-            d.process(block);
+        erBuf.clear();
+
+        for (auto i = 0; i < diff.size(); ++i)
+        {
+            diff[i].process(block);
+            auto r = i * 1.0 / diff.size();
+            for (auto ch = 0; ch < 8; ++ch)
+                erBuf.addFrom(ch, 0, block.getChannelPointer(ch), erBuf.getNumSamples(), erLevel / std::pow(2.0, r));
+        }
 
         feedback.process(block);
 
-        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), stereoBuf.getArrayOfWritePointers(), buf.getNumSamples());
+        block.add(dsp::AudioBlock<double>(erBuf));
+
+        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), stereoBuf.getArrayOfWritePointers(), stereoBuf.getNumSamples());
 
         buf.applyGain(1.0 - amt);
 
         buf.addFrom(0, 0, stereoBuf.getReadPointer(0), buf.getNumSamples(), amt * upMix.scalingFactor1());
         buf.addFrom(1, 0, stereoBuf.getReadPointer(1), buf.getNumSamples(), amt * upMix.scalingFactor1());
+    }
+};
+
+enum class ReverbType
+{
+    Off,
+    Room,
+    Hall
+};
+
+class ReverbManager
+{
+    strix::ReleasePoolShared relPool;
+
+    std::shared_ptr<Room> rev;
+
+    dsp::ProcessSpec memSpec;
+
+public:
+
+    ReverbManager()
+    {
+        rev = std::make_shared<Room>(75.0, 2.0, 0.5, 0.15);
+    }
+
+    void prepare(const dsp::ProcessSpec& spec)
+    {
+        rev->prepare(spec);
+
+        memSpec = spec;
+    }
+
+    void reset()
+    {
+        rev->reset();
+    }
+
+    void changeRoomType(ReverbType newType)
+    {
+        std::shared_ptr<Room> newRev;
+        
+        switch (newType)
+        {
+        case ReverbType::Off:
+            return;
+        case ReverbType::Room:
+            newRev = std::make_shared<Room>(25.0, 1.0, 0.75, 0.1);
+            break;
+        case ReverbType::Hall:
+            newRev = std::make_shared<Room>(75.0, 2.0, 0.5, 0.15);
+            break;
+        }
+
+        newRev->prepare(memSpec);
+
+        relPool.add(newRev);
+        std::atomic_store(&rev, newRev);
+    }
+
+    void process(AudioBuffer<double>& buffer, float amt)
+    {
+        std::shared_ptr<Room> procRev = std::atomic_load(&rev);
+
+        procRev->process(buffer, amt);
     }
 };

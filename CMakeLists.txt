@@ -50,7 +50,8 @@ juce_add_modules(
     "modules/DSPFilters/modules/dsp_filters"
     "$ENV{HOME}/modules/Arbor_modules/modules/VolumeMeter"
     "$ENV{HOME}/modules/Arbor_modules/modules/SVTFilter"
-    "$ENV{HOME}/modules/Arbor_modules/modules/Delay")
+    "$ENV{HOME}/modules/Arbor_modules/modules/Delay"
+    "$ENV{HOME}/modules/Arbor_modules/modules/ReleasePool")
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -83,6 +84,7 @@ target_link_libraries(Gamma
         VolumeMeter
         SVTFilter
         Delay
+        ReleasePool
         # ${IPP_CORE}
         # ${IPP_S}
     PUBLIC

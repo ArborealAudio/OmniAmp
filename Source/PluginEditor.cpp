@@ -67,6 +67,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     reverbComp.setBounds(bottomSection);
     addAndMakeVisible(reverbComp);
 
+    // reverbComp.typeChanged = [&](bool state, int caller)
+    // {
+    //   p.apvts.getParameterAsValue("reverbType") = state + caller;
+    // };
+
     setResizable(true, true);
     getConstrainer()->setMinimumSize(200, 150);
     getConstrainer()->setFixedAspectRatio(1.333);

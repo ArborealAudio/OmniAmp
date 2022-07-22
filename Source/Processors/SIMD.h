@@ -39,8 +39,6 @@ class SIMD
     SIMDBlock interleaved;
     RegBlock zero;
 
-    RegBlock inBlock;
-
     HeapBlock<char> interleavedData, zeroData;
     std::vector<const T*> channelPointers;
 
@@ -59,23 +57,15 @@ public:
         channelPointers.resize(numVecChannels * vec::size);
     }
 
-    SIMDBlock interleaveBlock(RegBlock& block)
+    SIMDBlock interleaveBlock(const RegBlock& block)
     {
-        inBlock = std::move(block);
-
-        auto n = inBlock.getNumSamples();
+        auto n = block.getNumSamples();
         auto numChannels = channelPointers.size();
         auto* inout = channelPointers.data();
 
         for (auto ch = 0; ch < numChannels; ch++)
-            inout[ch] = (ch < inBlock.getNumChannels() ? const_cast<T*> (inBlock.getChannelPointer (ch)) : zero.getChannelPointer (ch % vec::size));
+            inout[ch] = (ch < block.getNumChannels() ? const_cast<T*> (block.getChannelPointer (ch)) : zero.getChannelPointer (ch % vec::size));
         
-        using Format = AudioData::Format<AudioData::Float32, AudioData::NativeEndian>;
- 
-        // AudioData::interleaveSamples (AudioData::NonInterleavedSource<Format> { inout, vec::size, },
-        //                               AudioData::InterleavedDest<Format>      { reinterpret_cast<T*>(interleaved.getChannelPointer (0)), vec::size },
-        //                               n);
-
         for (size_t ch = 0; ch < numChannels; ch += vec::size)
         {
             auto* simdBlockData = reinterpret_cast<T*> (interleaved.getChannelPointer (ch / vec::size));
@@ -85,16 +75,11 @@ public:
         return interleaved;
     }
 
-    RegBlock deinterleaveBlock(SIMDBlock& block)
+    void deinterleaveBlock(SIMDBlock& block)
     {
         auto n = block.getNumSamples();
         auto numChannels = channelPointers.size();
         auto* inout = channelPointers.data();
-
-        using Format = AudioData::Format<AudioData::Float32, AudioData::NativeEndian>;
-
-        // AudioData::deinterleaveSamples (AudioData::InterleavedSource<Format>  { reinterpret_cast<T*>(interleaved.getChannelPointer (0)), vec::size },
-        //                                 AudioData::NonInterleavedDest<Format> { const_cast<T**>(inout), vec::size}, n);
 
         for (size_t ch = 0; ch < numChannels; ch += vec::size)
         {
@@ -105,6 +90,6 @@ public:
                                 static_cast<int> (vec::size));
         }
 
-        return inBlock;
+        // return inBlock;
     }
 };

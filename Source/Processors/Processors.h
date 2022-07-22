@@ -178,7 +178,7 @@ struct Guitar : Processor
         pentode.processBlockClassB(processBlock, 0.6, 0.6);
 
     #if USE_SIMD
-        block = simd.deinterleaveBlock(processBlock);
+        simd.deinterleaveBlock(processBlock);
     #endif
     }
 
@@ -244,7 +244,7 @@ struct Bass : Processor
             pentode.processBlockClassB(processBlock, 1.5f, 1.5f);
         
     #if USE_SIMD
-        block = simd.deinterleaveBlock(processBlock);
+        simd.deinterleaveBlock(processBlock);
     #endif
     }
 };
@@ -300,7 +300,7 @@ struct Channel : Processor
         }
         
     #if USE_SIMD
-        block = simd.deinterleaveBlock(processBlock);
+        simd.deinterleaveBlock(processBlock);
     #endif
     }
 };
