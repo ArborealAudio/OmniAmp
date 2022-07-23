@@ -287,13 +287,59 @@ class Room
 
     double erLevel = 1.0;
 
+    AudioBuffer<double> dsBuf;
+
+    Dsp::SimpleFilter<Dsp::Bessel::LowPass<8>, 2> dsLP, usLP;
+
+    void downsampleBuffer(AudioBuffer<double>& buf)
+    {
+        auto in = buf.getArrayOfWritePointers();
+        auto out = dsBuf.getArrayOfWritePointers();
+
+        dsLP.process(buf.getNumSamples(), in);
+
+        for (auto ch = 0; ch < buf.getNumChannels(); ++ch)
+        {
+            // int j = 0;
+            for (auto i = 0; i < buf.getNumSamples(); ++i)
+            {
+                auto n = i / 2;
+                out[ch][n] = in[ch][i];
+                // j += 2;
+            }
+        }
+    }
+
+    void upsampleBuffer(AudioBuffer<double>& outBuf)
+    {
+        auto out = outBuf.getArrayOfWritePointers();
+        auto in = dsBuf.getArrayOfReadPointers();
+
+        for (auto ch = 0; ch < outBuf.getNumChannels(); ++ch)
+        {
+            // int j = 0;
+            for (auto i = 0; i < dsBuf.getNumSamples(); ++i)
+            {
+                auto n = i * 2;
+                out[ch][n] = in[ch][i]; // copy every even sample
+                // out[ch][j + 1] = in[ch][i] / 2.0;
+                // j += 2;
+                for (int j = n + 1; j < n + 2; ++j)
+                    out[ch][j] = 0.0;
+            }
+        }
+
+        usLP.process(outBuf.getNumSamples(), out);
+        FloatVectorOperations::multiply(out[0], 2.0, outBuf.getNumSamples());
+        FloatVectorOperations::multiply(out[1], 2.0, outBuf.getNumSamples());
+    }
+
 public:
     /**
      * @param roomSizeMs room size in Ms, use this in conjunction w/ rt60 to create bigger or larger rooms
      * @param rt60 controls density of reverberation (basically the feedback) of the algo
-     * @param erLevel a value btw 0->1 that sets the level of early reflections. Should taper logarithmically from this value to
-     * something lower.
-     * @param dampening Set the level of dampening, as a fraction of Nyquist, in the feedback path using the Room constructor
+     * @param erLevel a gain value that sets the level of early reflections. Tapers logarithmically from this value to something lower.
+     * @param dampening Set the level of dampening, as a fraction of Nyquist, in the feedback path
     */
     Room(double roomSizeMs, double rt60, double erLevel, double dampening) : erLevel(erLevel)
     {
@@ -327,6 +373,14 @@ public:
             d.prepare(spec);
 
         feedback.prepare(spec);
+
+        dsBuf.setSize(spec.numChannels, spec.maximumBlockSize);
+
+        // dsLP.prepare(spec);
+        // dsLP.setType(strix::FilterType::lowpass);
+        // dsLP.setCutoffFreq(18000.0);
+        dsLP.setup(8, spec.sampleRate * 2.0, 9000.0);
+        usLP.setup(8, spec.sampleRate * 2.0, 9000.0);
     }
 
     void reset()
@@ -338,7 +392,9 @@ public:
 
     void process(AudioBuffer<double>& buf, float amt)
     {
-        upMix.stereoToMulti(buf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), buf.getNumSamples());
+        downsampleBuffer(buf);
+
+        upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), dsBuf.getNumSamples());
 
         dsp::AudioBlock<double> block(splitBuf);
 
@@ -358,10 +414,12 @@ public:
 
         upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), stereoBuf.getArrayOfWritePointers(), stereoBuf.getNumSamples());
 
-        buf.applyGain(1.0 - amt);
+        dsBuf.applyGain(1.0 - amt);
 
-        buf.addFrom(0, 0, stereoBuf.getReadPointer(0), buf.getNumSamples(), amt * upMix.scalingFactor1());
-        buf.addFrom(1, 0, stereoBuf.getReadPointer(1), buf.getNumSamples(), amt * upMix.scalingFactor1());
+        dsBuf.addFrom(0, 0, stereoBuf.getReadPointer(0), dsBuf.getNumSamples(), amt * upMix.scalingFactor1());
+        dsBuf.addFrom(1, 0, stereoBuf.getReadPointer(1), dsBuf.getNumSamples(), amt * upMix.scalingFactor1());
+
+        upsampleBuffer(buf);
     }
 };
 
@@ -389,9 +447,12 @@ public:
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        rev->prepare(spec);
+        auto hSpec = spec;
+        hSpec.sampleRate /= 2.0;
+        hSpec.maximumBlockSize /= 2;
+        rev->prepare(hSpec);
 
-        memSpec = spec;
+        memSpec = hSpec;
     }
 
     void reset()
@@ -408,10 +469,10 @@ public:
         case ReverbType::Off:
             return;
         case ReverbType::Room:
-            newRev = std::make_shared<Room>(25.0, 1.0, 0.75, 0.1);
+            newRev = std::make_shared<Room>(25.0, 1.0, 0.75, 1.0);
             break;
         case ReverbType::Hall:
-            newRev = std::make_shared<Room>(75.0, 2.0, 0.5, 0.15);
+            newRev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0);
             break;
         }
 

@@ -120,22 +120,23 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     lastSampleRate = sampleRate * oversample.getOversamplingFactor();
 
-    dsp::ProcessSpec spec{ lastSampleRate, (uint32)samplesPerBlock * 4, (uint32)getTotalNumInputChannels() };
+    dsp::ProcessSpec osSpec{ lastSampleRate, (uint32)samplesPerBlock * 4, (uint32)getTotalNumInputChannels() };
+    dsp::ProcessSpec spec{ sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels() };
 
-    guitar.prepare(spec);
-    bass.prepare(spec);
-    channel.prepare(spec);
+    guitar.prepare(osSpec);
+    bass.prepare(osSpec);
+    channel.prepare(osSpec);
 
     lfEnhancer.setType((Processors::LFEnhancer<double>::Mode)currentMode);
-    lfEnhancer.prepare(spec);
-    hfEnhancer.prepare(spec);
+    lfEnhancer.prepare(osSpec);
+    hfEnhancer.prepare(osSpec);
 
-    cab.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+    cab.prepare(spec);
     cab.setCabType((Processors::CabType)(apvts.getRawParameterValue("cabType")->load()));
 
-    reverb.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+    reverb.prepare(spec);
 
-    audioSource.prepare(dsp::ProcessSpec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()});
+    audioSource.prepare(spec);
 
     doubleBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
 

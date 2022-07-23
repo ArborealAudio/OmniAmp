@@ -57,9 +57,15 @@
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
 
-- SIMD implementation
+- Downsample reverb, improve algos
+
+- Add triple option for enhancer placement:
   
-  - If u wanna SIMD the enhancers, you'll need to either write your own Bessel filter or use JUCE IIRs (or some other SIMD-compatible lib)
+  - Pre
+  
+  - FX Loop
+  
+  - Post cab & verb
 
 - Add sag???
 
