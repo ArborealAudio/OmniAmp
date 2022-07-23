@@ -208,14 +208,14 @@ struct AVTriode
 
     inline T processSample(T x, size_t ch, T gp, T gn)
     {
-        auto f1 = (1.f / gp) * dsp::FastMathApproximations::tanh(gp * x) * y_m[ch];
-        // auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
+        auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
+        auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
         // auto f1 = (gp * x) / 3.4;
         // f1 = f1 * 0.5f;
         // f1 = std::abs(f1 + 0.5) - abs(f1 - 0.5);
         // f1 = (std::abs(f1) - 2.0) * f1;
         // f1 = (std::abs(f1) - 2.0) * f1 * (1.0 / gp) * y_m[0];
-        auto f2 = (1.0 / gn) * ((x * gn) / (1.0 + std::abs(x))) * (1.0 - y_m[ch]);
+        // auto f2 = (1.0 / gn) * ((x * gn) / (1.0 + std::abs(x))) * (1.0 - y_m[ch]);
 
         auto y = sc_hp[ch].processSample(f1 + f2);
         y_m[ch] = y;
@@ -226,7 +226,7 @@ struct AVTriode
     inline T processSampleSIMD(T x, T gp, T gn)
     {
         auto f1 = (1.0 / gp) * xsimd::tanh(gp * x) * y_m[0];
-        auto f2 = 1.0 / gn * xsimd::atan(gn * x) * (1.0 - y_m[0]);
+        auto f2 = (1.0 / gn) * xsimd::atan(gn * x) * (1.0 - y_m[0]);
 
         auto y = sc_hp[0].processSample(f1 + f2);
         y_m[0] = y;
