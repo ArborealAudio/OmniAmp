@@ -67,6 +67,8 @@ struct ReverbButton : TextButton
 
             if (onChange != nullptr)
                 onChange(on, index);
+            
+            return true;
         }
         else if (getBounds().withTrimmedLeft(w / 2).contains(x, y) && leftClick)
         {
@@ -83,7 +85,11 @@ struct ReverbButton : TextButton
 
             if (onChange != nullptr)
                 onChange(on, index);
+
+            return true;
         }
+        else
+            return false;
     }
 
     bool isOn() { return on; }
