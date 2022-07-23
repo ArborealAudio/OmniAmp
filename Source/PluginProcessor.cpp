@@ -265,8 +265,7 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     buffer.makeCopyOf(doubleBuffer, true);
 
-    MessageManager::callAsync([=]()
-                              { audioSource.getBufferRMS(buffer); });
+    audioSource.getBufferRMS(buffer);
 }
 
 //==============================================================================
