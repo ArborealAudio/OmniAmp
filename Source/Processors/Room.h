@@ -172,7 +172,7 @@ class Room
             lp.prepare(multiSpec);
             lp.setType(strix::FilterType::firstOrderLowpass);
             lp.setCutoffFreq(dampening * multiSpec.sampleRate * 0.5);
-            lp.setResonance(1.0);
+            // lp.setResonance(1.0);
         }
 
         void reset()
@@ -191,7 +191,9 @@ class Room
 
                 for (int ch = 0; ch < channels; ++ch)
                 {
-                    delayed.push_back(delays[ch].popSample(0, delaySamples[ch]));
+                    auto d = delays[ch].popSample(0, delaySamples[ch]);
+                    d = lp.processSample(ch, d);
+                    delayed.push_back(d);
                 }
 
                 MixMatrix<channels>::processHouseholder(delayed.data());
@@ -206,7 +208,7 @@ class Room
                 }
             }
 
-            lp.processBlock(block);
+            // lp.processBlock(block);
         }
 
         double delayMs = 150.0;
@@ -289,7 +291,7 @@ class Room
 
     AudioBuffer<double> dsBuf;
 
-    Dsp::SimpleFilter<Dsp::Bessel::LowPass<8>, 2> dsLP, usLP;
+    Dsp::SimpleFilter<Dsp::Butterworth::LowPass<8>, 2> dsLP, usLP;
 
     void downsampleBuffer(AudioBuffer<double>& buf)
     {
@@ -379,8 +381,8 @@ public:
         // dsLP.prepare(spec);
         // dsLP.setType(strix::FilterType::lowpass);
         // dsLP.setCutoffFreq(18000.0);
-        dsLP.setup(8, spec.sampleRate * 2.0, 9000.0);
-        usLP.setup(8, spec.sampleRate * 2.0, 9000.0);
+        dsLP.setup(8, spec.sampleRate * 2.0, 9500.0);
+        usLP.setup(8, spec.sampleRate * 2.0, 9500.0);
     }
 
     void reset()
@@ -442,7 +444,7 @@ public:
 
     ReverbManager()
     {
-        rev = std::make_shared<Room>(75.0, 2.0, 0.5, 0.15);
+        rev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0);
     }
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -469,7 +471,7 @@ public:
         case ReverbType::Off:
             return;
         case ReverbType::Room:
-            newRev = std::make_shared<Room>(25.0, 1.0, 0.75, 1.0);
+            newRev = std::make_shared<Room>(25.0, 1.0, 0.75, 0.23);
             break;
         case ReverbType::Hall:
             newRev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0);
