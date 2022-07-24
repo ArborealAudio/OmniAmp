@@ -67,11 +67,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     reverbComp.setBounds(bottomSection);
     addAndMakeVisible(reverbComp);
 
-    // reverbComp.typeChanged = [&](bool state, int caller)
-    // {
-    //   p.apvts.getParameterAsValue("reverbType") = state + caller;
-    // };
-
     setResizable(true, true);
     getConstrainer()->setMinimumSize(200, 150);
     getConstrainer()->setFixedAspectRatio(1.333);
@@ -91,7 +86,7 @@ void GammaAudioProcessorEditor::paint (juce::Graphics& g)
 {
   // g.fillAll(Colour(0xff968875));
   g.setColour(Colour(0xffaa8875));
-  g.fillRect(getLocalBounds().withTrimmedBottom(200)); // make this adapt to size!!
+  g.fillRect(getLocalBounds().withTrimmedBottom(getHeight() / 3)); // make this adapt to size!!
 
   grMeter.paint(g);
 }
