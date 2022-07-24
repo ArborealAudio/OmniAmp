@@ -7,3 +7,6 @@
 [submodule "modules/clap-juce-extensions"]
 	path = modules/clap-juce-extensions
 	url = https://github.com/free-audio/clap-juce-extensions
+[submodule "modules/DSPFilters"]
+	path = modules/DSPFilters
+	url = https://github.com/ArborealAudio/DSPFilters
