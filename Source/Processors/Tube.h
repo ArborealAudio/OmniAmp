@@ -84,12 +84,9 @@ struct Tube
 
     void processBlockClassB(chowdsp::AudioBlock<vec>& block, T gp, T gn)
     {
-        for (int ch = 0; ch < block.getNumChannels(); ++ch)
-        {
-            auto in = block.getChannelPointer(ch);
+        auto in = block.getChannelPointer(0);
 
-            processSamplesClassBSIMD(in, ch, block.getNumSamples(), gp, gn);
-        }
+        processSamplesClassBSIMD(in, 0, block.getNumSamples(), gp, gn);
     }
 
 private:
@@ -165,7 +162,7 @@ private:
 
     inline T processEnvelopeDetectorSIMD(T x, int ch)
     {
-        auto xr = xsimd::abs(x);
+        auto xr = xsimd::fabs(x);
 
         return (T)0.251188 * sc_lp[ch].processSample(xr);
     }
@@ -190,20 +187,18 @@ struct AVTriode
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        r = (T)1.0 - ((T)1.0 / (T)1000.0);
+        y_m.resize(spec.numChannels);
 
-        coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 20.0);
-
-        for (auto& f : sc_hp)
-        {
-            f.coefficients = coeffs;
-            f.prepare(spec);
-        }
+        sc_hp.prepare(spec);
+        sc_hp.setType(strix::FilterType::highpass);
+        sc_hp.setCutoffFreq(20.0);
     }
 
     void reset()
     {
-        x_m[0] = x_m[1] = y_m[0] = y_m[1] = 0.0;
+        std::fill(y_m.begin(), y_m.end(), 0.0);
+
+        sc_hp.reset();
     }
 
     inline T processSample(T x, size_t ch, T gp, T gn)
@@ -217,7 +212,8 @@ struct AVTriode
         // f1 = (std::abs(f1) - 2.0) * f1 * (1.0 / gp) * y_m[0];
         // auto f2 = (1.0 / gn) * ((x * gn) / (1.0 + std::abs(x))) * (1.0 - y_m[ch]);
 
-        auto y = sc_hp[ch].processSample(f1 + f2);
+        // auto y = sc_hp.processSample(ch, f1 + f2);
+        auto y = (f1 + f2);
         y_m[ch] = y;
 
         return y;
@@ -228,24 +224,11 @@ struct AVTriode
         auto f1 = (1.0 / gp) * xsimd::tanh(gp * x) * y_m[0];
         auto f2 = (1.0 / gn) * xsimd::atan(gn * x) * (1.0 - y_m[0]);
 
-        auto y = sc_hp[0].processSample(f1 + f2);
+        auto y = sc_hp.processSample(0, f1 + f2);
         y_m[0] = y;
 
         return y;
     }
-
-    // void processBlock(dsp::AudioBlock<T>& block, T gp, T gn)
-    // {
-    //     for (int ch = 0; ch < block.getNumChannels(); ++ch)
-    //     {
-    //         auto in = block.getChannelPointer(ch);
-
-    //         for (int i = 0; i < block.getNumSamples(); ++i)
-    //         {
-    //             in[i] = processSample(in[i], ch, gp, gn);
-    //         }
-    //     }
-    // }
 
     void processBlock(dsp::AudioBlock<double>& block, T gp, T gn)
     {
@@ -271,12 +254,9 @@ struct AVTriode
 
 private:
 
-    T x_m[2] {0.0}, y_m[2] {0.0};
+    std::vector<T> y_m;
 
-    T r = 0.0;
-
-    dsp::IIR::Filter<T> sc_hp[2];
-    dsp::IIR::Coefficients<double>::Ptr coeffs;
+    strix::SVTFilter<T> sc_hp;
 
     // Cab<T> cab;
 };
