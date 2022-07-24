@@ -5,6 +5,8 @@
   - had an idea to make each processor have its own auto gain. Like you can alt-click it and a little A will show up above the knob, and that knob will compensate for added gain
   
   - How to handle the EQ section? Each EQ band could have an auto gain component, which gets a little complicated for the gtr tonestack bc it's all one filter and the exact db measurement isn't clear. So maybe not the EQ.
+    
+    - OR: in Channel mode, apply a frequency-weighted auto-gain. Bandpass each gain value to get a rough EL gain compensation
 
 - Comp behavior is currently not-ideal. Just gets louder for first 50% and then real GR kicks in after that. Adding too much gain in the early parts of the knob.
 
@@ -51,13 +53,17 @@
     
     - BP 1700 Q 2
   
+  - MAKE THE BASS CAB!!
+  
   - Might look into nested allpasses to smooth out the sound
   
   - Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
 
-- Downsample reverb, improve algos
+- Get verb to be less aliased, don't do sample conversion on dry signal
+  
+  - Play around w/ different techniques to reduce metallic sound. Modulation, extra allpassing in the diffusion steps or feedback step
 
 - Add triple option for enhancer placement:
   
@@ -68,6 +74,8 @@
   - Post cab & verb
 
 - Add sag???
+
+- Identify potentially unstable process. Something--and it could just be audio discontinuities, is causing a sharp increase in volume at times. Could be some hysteretic NaN-ism... Seems to appear when using any processor, unclear what is causing tho
 
 # NOTES
 

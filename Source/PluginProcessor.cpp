@@ -120,7 +120,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     lastSampleRate = sampleRate * oversample.getOversamplingFactor();
 
-    dsp::ProcessSpec osSpec{ lastSampleRate, (uint32)samplesPerBlock * 4, (uint32)getTotalNumInputChannels() };
+    dsp::ProcessSpec osSpec{ lastSampleRate, static_cast<uint32>(samplesPerBlock * oversample.getOversamplingFactor()), (uint32)getTotalNumInputChannels() };
     dsp::ProcessSpec spec{ sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels() };
 
     guitar.prepare(osSpec);

@@ -110,7 +110,7 @@ private:
     Processors::Guitar guitar;
     Processors::Bass bass;
     Processors::Channel channel;
-    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR};
+    dsp::Oversampling<double> oversample{2, 0, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
 
     AudioBuffer<double> doubleBuffer;
 
