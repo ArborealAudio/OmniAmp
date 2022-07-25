@@ -26,12 +26,6 @@ clap_juce_extensions_plugin(TARGET Gamma
     CLAP_ID "com.ArborealAudio.Gamma.clap"
     CLAP_FEATURES amp "channel strip" guitar bass)
 
-if(WIN32)
-    find_library(IPP_CORE ippcore.lib PATHS "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/lib/intel64")
-    find_library(IPP_S ipps.lib PATHS "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/lib/intel64")
-    target_include_directories(Gamma PRIVATE "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.6.0/include")
-endif()
-
 juce_generate_juce_header(Gamma)
 
 target_sources(Gamma
@@ -60,7 +54,6 @@ target_compile_definitions(Gamma
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
         JUCE_REPORT_APP_USAGE=0
-        # JUCE_IPP_AVAILABLE=1)
         JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
 
 juce_add_binary_data(BinaryData SOURCES
@@ -89,8 +82,6 @@ target_link_libraries(Gamma
         SVTFilter
         Delay
         ReleasePool
-        # ${IPP_CORE}
-        # ${IPP_S}
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
