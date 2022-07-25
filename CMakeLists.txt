@@ -68,6 +68,10 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/4x12.svg"
     "Resources/8x10.svg")
 
+# Need to build BinaryData with -fPIC flag on Linux
+set_target_properties(BinaryData PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE)
+
 target_link_libraries(Gamma
     PRIVATE
         BinaryData
