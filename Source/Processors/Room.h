@@ -207,8 +207,6 @@ class Room
                     block.setSample(ch, i, delayed[ch]);
                 }
             }
-
-            // lp.processBlock(block);
         }
 
         double delayMs = 150.0;
@@ -229,9 +227,7 @@ class Room
 
     MixedFeedback feedback;
 
-    AudioBuffer<double> splitBuf;
-    AudioBuffer<double> erBuf;
-    AudioBuffer<double> stereoBuf;
+    AudioBuffer<double> splitBuf, erBuf, dsBuf, usBuf;
 
     template<typename Sample, int channels>
 	class StereoMultiMixer {
@@ -289,24 +285,23 @@ class Room
 
     double erLevel = 1.0;
 
-    AudioBuffer<double> dsBuf;
+    std::vector<dsp::IIR::Filter<double>> dsLP[2], usLP[2];
 
-    Dsp::SimpleFilter<Dsp::Butterworth::LowPass<8>, 2> dsLP, usLP;
-
-    void downsampleBuffer(AudioBuffer<double>& buf)
+    void downsampleBuffer(const AudioBuffer<double>& buf)
     {
-        auto in = buf.getArrayOfWritePointers();
+        auto in = buf.getArrayOfReadPointers();
         auto out = dsBuf.getArrayOfWritePointers();
-
-        dsLP.process(buf.getNumSamples(), in);
 
         for (auto ch = 0; ch < buf.getNumChannels(); ++ch)
         {
             // int j = 0;
             for (auto i = 0; i < buf.getNumSamples(); ++i)
             {
+                auto f = in[ch][i];
+                for (auto& lp : dsLP[ch])
+                    f = lp.processSample(f);
                 auto n = i / 2;
-                out[ch][n] = in[ch][i];
+                out[ch][n] = f;
                 // j += 2;
             }
         }
@@ -329,9 +324,14 @@ class Room
                 for (int j = n + 1; j < n + 2; ++j)
                     out[ch][j] = 0.0;
             }
+
+            for (auto i = 0; i < outBuf.getNumSamples(); ++i)
+            {
+                for (auto& lp : usLP[ch])
+                    out[ch][i] = lp.processSample(out[ch][i]);
+            }
         }
 
-        usLP.process(outBuf.getNumSamples(), out);
         FloatVectorOperations::multiply(out[0], 2.0, outBuf.getNumSamples());
         FloatVectorOperations::multiply(out[1], 2.0, outBuf.getNumSamples());
     }
@@ -367,22 +367,35 @@ public:
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        stereoBuf.setSize(2, spec.maximumBlockSize);
+        usBuf.setSize(2, spec.maximumBlockSize * 2.0);
         splitBuf.setSize(8, spec.maximumBlockSize);
         erBuf.setSize(8, spec.maximumBlockSize);
+        dsBuf.setSize(spec.numChannels, spec.maximumBlockSize);
 
         for (auto& d : diff)
             d.prepare(spec);
 
         feedback.prepare(spec);
 
-        dsBuf.setSize(spec.numChannels, spec.maximumBlockSize);
 
-        // dsLP.prepare(spec);
-        // dsLP.setType(strix::FilterType::lowpass);
-        // dsLP.setCutoffFreq(18000.0);
-        dsLP.setup(8, spec.sampleRate * 2.0, 9500.0);
-        usLP.setup(8, spec.sampleRate * 2.0, 9500.0);
+        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(9500.0, spec.sampleRate * 2.0, 8);
+
+        for (auto& c : coeffs)
+        {
+            dsLP[0].push_back(dsp::IIR::Filter<double>(c));
+            dsLP[1].push_back(dsp::IIR::Filter<double>(c));
+
+            usLP[0].push_back(dsp::IIR::Filter<double>(c));
+            usLP[1].push_back(dsp::IIR::Filter<double>(c));
+        }
+
+        for (auto& ch : dsLP)
+            for (auto& f : ch)
+                f.prepare(spec);
+        
+        for (auto& ch : usLP)
+            for (auto& f : ch)
+                f.prepare(spec);
     }
 
     void reset()
@@ -414,14 +427,14 @@ public:
 
         block.add(dsp::AudioBlock<double>(erBuf));
 
-        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), stereoBuf.getArrayOfWritePointers(), stereoBuf.getNumSamples());
+        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), dsBuf.getArrayOfWritePointers(), dsBuf.getNumSamples());
 
-        dsBuf.applyGain(1.0 - amt);
+        upsampleBuffer(usBuf);
 
-        dsBuf.addFrom(0, 0, stereoBuf.getReadPointer(0), dsBuf.getNumSamples(), amt * upMix.scalingFactor1());
-        dsBuf.addFrom(1, 0, stereoBuf.getReadPointer(1), dsBuf.getNumSamples(), amt * upMix.scalingFactor1());
+        buf.applyGain(1.0 - amt);
 
-        upsampleBuffer(buf);
+        buf.addFrom(0, 0, usBuf.getReadPointer(0), buf.getNumSamples(), amt * upMix.scalingFactor1());
+        buf.addFrom(1, 0, usBuf.getReadPointer(1), buf.getNumSamples(), amt * upMix.scalingFactor1());
     }
 };
 
