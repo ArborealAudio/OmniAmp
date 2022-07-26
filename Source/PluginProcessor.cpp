@@ -132,9 +132,10 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     hfEnhancer.prepare(osSpec);
 
     cab.prepare(spec);
-    cab.setCabType((Processors::CabType)(apvts.getRawParameterValue("cabType")->load()));
+    cab.setCabType((Processors::CabType)apvts.getRawParameterValue("cabType")->load());
 
     reverb.prepare(spec);
+    reverb.changeRoomType((Processors::ReverbType)apvts.getRawParameterValue("reverbType")->load());
 
     audioSource.prepare(spec);
 
@@ -322,7 +323,6 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("2x12", "4x12", "8x10"), 0));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("reverbType", 1), "Reverb Type", StringArray("Off", "Room", "Hall"), 0));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("roomAmt", 1), "Reverb Amount", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("seriesAP", 1), "Series AP", false));
     // for (auto i = 0; i < 6; ++i)
     // {
     //     auto index = String(i);
