@@ -61,10 +61,6 @@
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
 
-- Get verb to be less aliased, don't do sample conversion on dry signal
-  
-  - Play around w/ different techniques to reduce metallic sound. Modulation, extra allpassing in the diffusion steps or feedback step
-
 - Add triple option for enhancer placement:
   
   - Pre
