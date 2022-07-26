@@ -117,7 +117,7 @@ class Room
                     block.getChannelPointer(ch)[i] = vec[ch];
             }
 
-            // shuffleChannels(block);
+            shuffleChannels(block);
         }
 
     private:
@@ -143,8 +143,6 @@ class Room
         std::vector<dsp::DelayLine<double>> delay;
         std::vector<bool> invert;
 
-        float inc;
-
         static constexpr size_t channels = 8;
 
         Random rand;
@@ -164,6 +162,11 @@ class Room
                 delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
                 delays[ch].prepare(spec);
                 delays[ch].setMaximumDelayInSamples(delaySamples[ch] + 1);
+
+                osc[ch].initialise([](double x)
+                                    { return std::sin(x); });
+                osc[ch].setFrequency(std::pow(modFreq, (double)ch / channels));
+                osc[ch].prepare(spec);
             }
 
             auto multiSpec = spec;
@@ -172,7 +175,10 @@ class Room
             lp.prepare(multiSpec);
             lp.setType(strix::FilterType::firstOrderLowpass);
             lp.setCutoffFreq(dampening * multiSpec.sampleRate * 0.5);
-            // lp.setResonance(1.0);
+
+            hp.prepare(multiSpec);
+            hp.setType(strix::FilterType::firstOrderHighpass);
+            hp.setCutoffFreq(150.0);
         }
 
         void reset()
@@ -181,6 +187,9 @@ class Room
                 d.reset();
 
             lp.reset();
+            hp.reset();
+            for (auto& o : osc)
+                o.reset();
         }
 
         void process(dsp::AudioBlock<double>& block)
@@ -191,8 +200,11 @@ class Room
 
                 for (int ch = 0; ch < channels; ++ch)
                 {
-                    auto d = delays[ch].popSample(0, delaySamples[ch]);
+                    auto mod = osc[ch].processSample(delaySamples[ch]);
+                    auto dtime = delaySamples[ch] - (0.3 * mod);
+                    auto d = delays[ch].popSample(0, dtime);
                     d = lp.processSample(ch, d);
+                    d = hp.processSample(ch, d);
                     delayed.push_back(d);
                 }
 
@@ -215,12 +227,16 @@ class Room
         /*A fraction of Nyquist, where the lowpass will be placed in the feedback path*/
         double dampening = 1.0;
 
+        double modFreq = 1.0;
+
     private:
         static constexpr size_t channels = 8;
 
         std::array<int, channels> delaySamples;
         std::array<dsp::DelayLine<double>, channels> delays;
-        strix::SVTFilter<double> lp;
+        strix::SVTFilter<double> lp, hp;
+
+        std::array<dsp::Oscillator<double>, channels> osc;
     };
 
     std::vector<Diffuser> diff;
@@ -343,7 +359,7 @@ public:
      * @param erLevel a gain value that sets the level of early reflections. Tapers logarithmically from this value to something lower.
      * @param dampening Set the level of dampening, as a fraction of Nyquist, in the feedback path
     */
-    Room(double roomSizeMs, double rt60, double erLevel, double dampening) : erLevel(erLevel)
+    Room(double roomSizeMs, double rt60, double erLevel, double dampening, double modulation) : erLevel(erLevel)
     {
         auto diffusion = (roomSizeMs * 0.001);
         for (int i = 0; i < 4; ++i)
@@ -363,6 +379,8 @@ public:
         feedback.decayGain = std::pow(10.0, dbPerCycle * 0.05);
 
         feedback.dampening = dampening;
+
+        feedback.modFreq = modulation;
     }
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -457,7 +475,7 @@ public:
 
     ReverbManager()
     {
-        rev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0);
+        rev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0, 2.0);
     }
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -484,10 +502,10 @@ public:
         case ReverbType::Off:
             return;
         case ReverbType::Room:
-            newRev = std::make_shared<Room>(25.0, 1.0, 0.75, 0.23);
+            newRev = std::make_shared<Room>(30.0, 0.65, 0.5, 0.23, 1.0);
             break;
         case ReverbType::Hall:
-            newRev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0);
+            newRev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0, 5.0);
             break;
         }
 
