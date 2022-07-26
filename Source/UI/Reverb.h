@@ -93,7 +93,9 @@ struct ReverbButton : TextButton
     }
 
     bool isOn() { return on; }
+    void setOn(bool newState) { on = newState; }
     int getIndex() { return index; }
+    void setIndex(int newIndex) { index = newIndex; }
 
     std::function<void(bool, int)> onChange;
 
@@ -116,6 +118,8 @@ public:
         amtAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "roomAmt", reverbAmount);
 
         addAndMakeVisible(reverb);
+        reverb.setOn(*v.getRawParameterValue("reverbType"));
+        reverb.setIndex((int)*v.getRawParameterValue("reverbType") - (int)reverb.isOn());
         reverb.onChange = [&](bool isOn, int index)
         {
             if (!isOn)
