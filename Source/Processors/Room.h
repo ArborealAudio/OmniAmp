@@ -2,8 +2,9 @@
 
 #pragma once
 
+template <int channels>
 class Room
-{   
+{
     template <int size>
     struct MixMatrix
     {
@@ -143,7 +144,7 @@ class Room
         std::vector<dsp::DelayLine<double>> delay;
         std::vector<bool> invert;
 
-        static constexpr size_t channels = 8;
+        // static constexpr size_t channels = channels;
 
         Random rand;
     };
@@ -230,7 +231,7 @@ class Room
         double modFreq = 1.0;
 
     private:
-        static constexpr size_t channels = 8;
+        // static constexpr size_t channels = channels;
 
         std::array<int, channels> delaySamples;
         std::array<dsp::DelayLine<double>, channels> delays;
@@ -245,7 +246,7 @@ class Room
 
     AudioBuffer<double> splitBuf, erBuf, dsBuf, usBuf;
 
-    template<typename Sample, int channels>
+    template<typename Sample>
 	class StereoMultiMixer {
 		static_assert((channels/2)*2 == channels, "StereoMultiMixer must have an even number of channels");
 		static_assert(channels >= 2, "StereoMultiMixer must have an even number of channels");
@@ -297,7 +298,7 @@ class Room
 		}
 	};
 
-    StereoMultiMixer<double, 8> upMix;
+    StereoMultiMixer<double> upMix;
 
     double erLevel = 1.0;
 
@@ -356,8 +357,11 @@ public:
     /**
      * @param roomSizeMs room size in Ms, use this in conjunction w/ rt60 to create bigger or larger rooms
      * @param rt60 controls density of reverberation (basically the feedback) of the algo
-     * @param erLevel a gain value that sets the level of early reflections. Tapers logarithmically from this value to something lower.
+     * @param erLevel a gain value that sets the level of early reflections. Tapers logarithmically from this
+     * value to something lower.
      * @param dampening Set the level of dampening, as a fraction of Nyquist, in the feedback path
+     * @param modulation Sets the max frequency of the modulation. Each delay line will have a mod rate that
+     * logarithmically ranges from zero to this parameter
     */
     Room(double roomSizeMs, double rt60, double erLevel, double dampening, double modulation) : erLevel(erLevel)
     {
@@ -386,8 +390,8 @@ public:
     void prepare(const dsp::ProcessSpec& spec)
     {
         usBuf.setSize(2, spec.maximumBlockSize * 2.0);
-        splitBuf.setSize(8, spec.maximumBlockSize);
-        erBuf.setSize(8, spec.maximumBlockSize);
+        splitBuf.setSize(channels, spec.maximumBlockSize);
+        erBuf.setSize(channels, spec.maximumBlockSize);
         dsBuf.setSize(spec.numChannels, spec.maximumBlockSize);
 
         for (auto& d : diff)
@@ -437,7 +441,7 @@ public:
         {
             diff[i].process(block);
             auto r = i * 1.0 / diff.size();
-            for (auto ch = 0; ch < 8; ++ch)
+            for (auto ch = 0; ch < channels; ++ch)
                 erBuf.addFrom(ch, 0, block.getChannelPointer(ch), erBuf.getNumSamples(), erLevel / std::pow(2.0, r));
         }
 
@@ -467,7 +471,7 @@ class ReverbManager
 {
     strix::ReleasePoolShared relPool;
 
-    std::shared_ptr<Room> rev;
+    std::shared_ptr<Room<8>> rev;
 
     dsp::ProcessSpec memSpec;
 
@@ -475,7 +479,7 @@ public:
 
     ReverbManager()
     {
-        rev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0, 5.0);
+        rev = std::make_shared<Room<8>>(75.0, 2.0, 0.5, 1.0, 5.0);
     }
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -495,17 +499,17 @@ public:
 
     void changeRoomType(ReverbType newType)
     {
-        std::shared_ptr<Room> newRev;
+        std::shared_ptr<Room<8>> newRev;
         
         switch (newType)
         {
         case ReverbType::Off:
             return;
         case ReverbType::Room:
-            newRev = std::make_shared<Room>(30.0, 0.65, 0.5, 0.23, 3.0);
+            newRev = std::make_shared<Room<8>>(30.0, 0.65, 0.5, 0.23, 3.0);
             break;
         case ReverbType::Hall:
-            newRev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0, 5.0);
+            newRev = std::make_shared<Room<8>>(75.0, 2.0, 0.5, 1.0, 5.0);
             break;
         }
 
@@ -517,7 +521,7 @@ public:
 
     void process(AudioBuffer<double>& buffer, float amt)
     {
-        std::shared_ptr<Room> procRev = std::atomic_load(&rev);
+        std::shared_ptr<Room<8>> procRev = std::atomic_load(&rev);
 
         procRev->process(buffer, amt);
     }
