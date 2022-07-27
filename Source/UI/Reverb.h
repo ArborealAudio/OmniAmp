@@ -11,8 +11,8 @@ struct ReverbButton : TextButton
         auto bounds = getLocalBounds().reduced(15, 15);
         float centerY = bounds.getCentreY();
         float centerX = bounds.getCentreX();
-        auto p1 = Point<float>{centerX - 20.f, centerY};
-        auto p2 = Point<float>{centerX + 20.f, centerY};
+        auto p1 = juce::Point<float>{centerX - 20.f, centerY};
+        auto p2 = juce::Point<float>{centerX + 20.f, centerY};
         if (on)
         {
             ColourGradient gradient{Colours::seagreen, p1, Colours::grey, p2, false};
