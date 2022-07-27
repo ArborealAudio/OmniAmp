@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(Gamma VERSION 0.1)
+project(Gamma VERSION 0.2)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(JUCE CONFIG REQUIRED)
+add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 
-if (!APPLE)
-    juce_set_vst2_sdk_path(C:/vstsdk2.4)
-else()
-    juce_set_vst2_sdk_path(/Users/alex/vstsdk2.4)
-endif()
+juce_set_vst2_sdk_path("${VST2_SDK}")
 
 juce_add_plugin(Gamma
     COMPANY_NAME "Arboreal Audio"
@@ -22,6 +22,10 @@ juce_add_plugin(Gamma
     PRODUCT_NAME "Gamma"
     HARDENED_RUNTIME_ENABLE TRUE)
 
+clap_juce_extensions_plugin(TARGET Gamma
+    CLAP_ID "com.ArborealAudio.Gamma.clap"
+    CLAP_FEATURES amp "channel strip" guitar bass)
+
 juce_generate_juce_header(Gamma)
 
 target_sources(Gamma
@@ -30,6 +34,18 @@ target_sources(Gamma
         Source/PluginProcessor.cpp)
 
 add_subdirectory(Source/Processors)
+add_subdirectory(Source/UI)
+add_subdirectory(modules/chowdsp_wdf)
+add_subdirectory(modules/chowdsp_utils)
+
+juce_add_modules(
+    "$ENV{HOME}/modules/Gin/modules/gin"
+    "$ENV{HOME}/modules/Gin/modules/gin_gui"
+    "modules/DSPFilters/modules/dsp_filters"
+    "$ENV{HOME}/modules/Arbor_modules/modules/VolumeMeter"
+    "$ENV{HOME}/modules/Arbor_modules/modules/SVTFilter"
+    "$ENV{HOME}/modules/Arbor_modules/modules/Delay"
+    "$ENV{HOME}/modules/Arbor_modules/modules/ReleasePool")
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -37,15 +53,35 @@ target_compile_definitions(Gamma
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
-        JUCE_REPORT_APP_USAGE=0)
+        JUCE_REPORT_APP_USAGE=0
+        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
 
-# juce_add_binary_data(AudioPluginData SOURCES ...)
+juce_add_binary_data(BinaryData SOURCES
+    "Resources/2x12.svg"
+    "Resources/4x12.svg"
+    "Resources/8x10.svg")
+
+# Need to build BinaryData with -fPIC flag on Linux
+set_target_properties(BinaryData PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries(Gamma
     PRIVATE
-        # AudioPluginData           # If we'd created a binary data target, we'd link to it here
+        BinaryData
         juce::juce_audio_utils
         juce::juce_dsp
+        juce::juce_opengl
+        gin
+        gin_gui
+        dsp_filters
+        chowdsp_wdf
+        chowdsp_simd
+        chowdsp_dsp_data_structures
+        chowdsp_math
+        VolumeMeter
+        SVTFilter
+        Delay
+        ReleasePool
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

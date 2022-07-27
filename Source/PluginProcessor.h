@@ -8,13 +8,21 @@
 
 #pragma once
 
+// define for SIMD-specific declarations & functions
+#ifndef USE_SIMD
+    #if NDEBUG
+        #define USE_SIMD 1
+    #endif
+#endif
+
 #include <JuceHeader.h>
-#include "Processors/Tube.h"
-#include "Processors/PreFilters.h"
-#include "Processors/PostFilters.h"
-#include "Processors/ToneStack.h"
-#include "Processors/Comp.h"
+#include "../modules/chowdsp_utils/modules/dsp/chowdsp_math/chowdsp_math.h"
+#include "../modules/chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
+#include "../modules/chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
+#include "../modules/chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
 #include "Processors/Processors.h"
+#include "UI/SineWave.hpp"
+#include "VolumeMeter/VolumeMeter.h"
 
 //==============================================================================
 /**
@@ -64,13 +72,31 @@ public:
 
     AudioProcessorValueTreeState apvts;
 
+    strix::AudioSource audioSource;
+
+    double lastSampleRate = 0.0;
+
+    VolumeMeterSource& getActiveGRSource()
+    {
+      switch(currentMode)
+      {
+        case Guitar:
+          return guitar.getActiveGRSource();
+          break;
+        case Bass:
+          return bass.getActiveGRSource();
+          break;
+        case Channel:
+          return channel.getActiveGRSource();
+          break;
+      }
+    }
+
 private:
 
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
-    double lastSampleRate = 0.0;
-
-    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *comp;
+    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -79,18 +105,37 @@ private:
             {0.5e-9f, 22e-9f, 20e-9f, 270e3f, 1e6f, 125e3f, 33e3f}
     } };*/
 
-    Guitar guitar;
-    Bass bass;
-    Channel channel;
+    VolumeMeterSource meterSource;
+
+    Processors::Guitar guitar;
+    Processors::Bass bass;
+    Processors::Channel channel;
+    dsp::Oversampling<double> oversample{2, 0, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
+
+    AudioBuffer<double> doubleBuffer;
+
+    Processors::HFEnhancer<double> hfEnhancer;
+    Processors::LFEnhancer<double> lfEnhancer;
+
+    Processors::CabType currentCab = Processors::CabType::small;
+  #if USE_SIMD
+    Processors::FDNCab<vec> cab;
+  #else
+    Processors::FDNCab<double> cab;
+#endif
+
+    Processors::ReverbManager reverb;
+
+    SIMD<double, dsp::AudioBlock<double>, chowdsp::AudioBlock<vec>> simd;
 
     enum Mode
     {
-        Guitar,
-        Bass,
-        Channel
+      Guitar,
+      Bass,
+      Channel
     };
 
-    Mode currentMode = Mode::Guitar;
+    Mode currentMode = Mode::Channel;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessor)

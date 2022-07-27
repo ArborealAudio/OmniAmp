@@ -10,59 +10,67 @@
 
 #pragma once
 
+template <typename T>
 struct OptoComp
 {
-    enum Type
-    {
-        Guitar,
-        Bass,
-        Channel
-    };
-
-    OptoComp(Type t) : type(t) {}
+    OptoComp(ProcessorType t, VolumeMeterSource& s) : type(t), grSource(s) {}
 
     void prepare(const dsp::ProcessSpec& spec)
     {
         lastSR = spec.sampleRate;
 
+        grSource.prepare(spec);
+
         sc_hp.prepare(spec);
         sc_lp.prepare(spec);
         
         switch (type) {
-        case Guitar:
-            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 200.f, 1.02f);
-            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 3500.f, 0.8f);
-            for (auto& h : hp) {
+        case ProcessorType::Guitar:
+            sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 200.0, 1.02);
+            sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 3500.0, 0.8);
+
+            hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 2500.0);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(spec.sampleRate, 6500.0);
+
+            for (auto &h : hp)
+            {
                 h.prepare(spec);
-                *h.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 2500.f);
+                h.coefficients = hp_coeffs;
             }
             for (auto& l : lp) {
                 l.prepare(spec);
-                *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 6500.f);
+                l.coefficients = lp_coeffs;
             }
             break;
-        case Bass:
-            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 150.f);
-            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
+        case ProcessorType::Bass:
+            sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 150.0);
+            sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(spec.sampleRate, 2500.0);
+
+            hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 1000.0);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(spec.sampleRate, 2500.0);
+
             for (auto& h : hp) {
                 h.prepare(spec);
-                *h.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass(spec.sampleRate, 1000.f);
+                h.coefficients = hp_coeffs;
             }
             for (auto& l : lp) {
                 l.prepare(spec);
-                *l.coefficients = dsp::IIR::ArrayCoefficients<float>::makeFirstOrderLowPass(spec.sampleRate, 2500.f);
+                l.coefficients = lp_coeffs;
             }
             break;
-        case Channel:
-            *sc_hp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeHighPass(spec.sampleRate, 100.f, 0.707f);
-            *sc_lp.coefficients = dsp::IIR::ArrayCoefficients<float>::makeLowPass(spec.sampleRate, 5000.f, 0.8f);
+        case ProcessorType::Channel:
+            sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 100.0, 0.707);
+            sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 5000.0, 0.8);
             break;
         }
+
+        sc_hp.coefficients = sc_hp_coeffs;
+        sc_lp.coefficients = sc_lp_coeffs;
     }
 
     void reset()
     {
-        xm0 = 0.f, xm1 = 0.f, lastEnv = 0.f, lastGR = 0.f;
+        xm0 = 0.0, xm1 = 0.0, lastEnv = 0.0, lastGR = 0.0;
         sc_hp.reset();
         sc_lp.reset();
         
@@ -72,41 +80,181 @@ struct OptoComp
             l.reset();
     }
 
-    inline float detectEnv (float x)
+    template <class Block>
+    void processBlock(Block& block, T comp)
     {
-        auto t_abs = std::abs(x);
-
-        float env;
-
-        if (t_abs >= lastEnv)
+        if constexpr (std::is_same_v<T, double>)
         {
-            //env = att * (lastEnv - t_abs) + t_abs;
+            if (comp == 0.0) {
+                grSource.measureGR(1.0);
+                return;
+            }
+            process(block, comp);
         }
         else
         {
-            //env = rel * (lastEnv - t_abs) + t_abs;
+            xsimd::batch_bool<double> zero{comp == 0.0};
+            if (xsimd::any(zero)) {
+                grSource.measureGR(1.0);
+                return;
+            }
+            processSIMD(block, comp);
+        }
+    }
+
+    VolumeMeterSource& getGRSource() { return grSource; }
+
+private:
+
+    inline void process(dsp::AudioBlock<T>& block, T comp)
+    {
+        auto inL = block.getChannelPointer(0);
+        auto inR = block.getChannelPointer(1);
+
+        T c_comp = jmap(comp, (T)1.0, (T)6.0);
+
+        switch (type)
+        {
+        case ProcessorType::Channel:{
+            auto thresh_scale = c_comp / 2.0;
+            threshold = std::pow(10.0, (-18.0 * thresh_scale) / 20.0);
+            }
+            break;
+        case ProcessorType::Guitar:
+        case ProcessorType::Bass:
+            threshold = std::pow(10.0, -36.0 / 20.0);
+            break;
         }
 
-        if (env < 1.175494351e-38f)
-            env = 1.175494351e-38f;
+        for (int i = 0; i < block.getNumSamples(); ++i)
+        {
+            auto abs0 = std::abs(xm0);
+            auto abs1 = std::abs(xm1);
 
-        lastEnv = env;
+            T max = jmax(abs0, abs1);
+            max = sc_hp.processSample(max);
+            max = sc_lp.processSample(max);
 
-        return 20.f * std::log10(env);
+            auto gr = compress(max);
+
+            switch (type) {
+            case ProcessorType::Guitar:
+            case ProcessorType::Bass:
+                inL[i] *= c_comp * gr;
+                inR[i] *= c_comp * gr;
+                break;
+            case ProcessorType::Channel:
+                if (c_comp <= 4.f) {
+                    inL[i] *= gr;
+                    inR[i] *= gr;
+                }
+                else {
+                    inL[i] *= (c_comp / 4.0) * gr;
+                    inR[i] *= (c_comp / 4.0) * gr;
+                }
+                break;
+            }
+
+            xm0 = inL[i];
+            xm1 = inR[i];
+
+            switch (type) {
+            case ProcessorType::Channel:
+                inL[i] *= c_comp;
+                inR[i] *= c_comp;
+                break;
+            case ProcessorType::Guitar:
+            case ProcessorType::Bass:
+                auto bpL = hp[0].processSample(inL[i]);
+                bpL = lp[0].processSample(bpL);
+                auto bpR = hp[1].processSample(inR[i]);
+                bpR = lp[1].processSample(bpR);
+
+                inL[i] += bpL * comp;
+                inR[i] += bpR * comp;
+                inL[i] *= jmin(jmax(3.0, c_comp), 1.0);
+                inR[i] *= jmin(jmax(3.0, c_comp), 1.0);
+                break;
+            }
+        }
+    }
+
+    // if we do default SIMD stuff here, it should process L&R unlinked. How to link L&R?
+    inline void processSIMD(chowdsp::AudioBlock<T>& block, T comp)
+    {
+        auto in = block.getChannelPointer(0);
+
+        T c_comp = jmap(comp, (T)1.0, (T)6.0);
+
+        switch (type)
+        {
+        case ProcessorType::Channel:{
+            auto thresh_scale = c_comp / 2.0;
+            threshold = xsimd::pow((T)10.0, (-18.0 * thresh_scale) / 20.0);
+            }
+            break;
+        case ProcessorType::Guitar:
+        case ProcessorType::Bass:
+            threshold = xsimd::pow(10.0, -36.0 / 20.0);
+            break;
+        }
+
+        for (int i = 0; i < block.getNumSamples(); ++i)
+        {
+            auto abs = xsimd::abs(xm0);
+
+            abs = sc_hp.processSample(abs);
+            abs = sc_lp.processSample(abs);
+
+            auto gr = compressSIMD(abs);
+
+            switch (type) {
+            case ProcessorType::Guitar:
+            case ProcessorType::Bass:
+                in[i] *= c_comp * gr;
+                break;
+            case ProcessorType::Channel:
+                xsimd::batch_bool<double> range{c_comp <= 4.0};
+                if (xsimd::any(range))
+                {
+                    in[i] *= gr;
+                }
+                else {
+                    in[i] *= (c_comp / 4.0) * gr;
+                }
+                break;
+            }
+
+            xm0 = in[i];
+
+            switch (type) {
+            case ProcessorType::Channel:
+                in[i] *= c_comp;
+                break;
+            case ProcessorType::Guitar:
+            case ProcessorType::Bass:
+                auto bp = hp[0].processSample(in[i]);
+                bp = lp[0].processSample(bp);
+
+                in[i] += bp * comp;
+                in[i] *= xsimd::min(xsimd::max((T)3.0, c_comp), (T)1.0);
+                break;
+            }
+        }
     }
 
     /*returns gain reduction multiplier*/
-    inline float compress(float x)
+    inline T compress(T x)
     {     
-        if (x < 1.175494351e-38f)
-            x = 1.175494351e-38f;
+        if (x < 1.175494351e-38)
+            x = 1.175494351e-38;
 
-        auto env = jmax(0.f, 8.685889638f * std::log10(x / threshold));
+        auto env = jmax(0.0, 8.685889638 * std::log10(x / threshold));
 
-        float att_time = jlimit(0.005f, 0.050f, (1.f / x) * 0.015f);
+        T att_time = jlimit(0.0050, 0.050, (1.0 / x) * 0.015);
 
-        float att = std::exp(-1.f / (att_time * lastSR));
-        float rel = std::exp(-1.f / (0.6f * lastGR * lastSR));
+        T att = std::exp(-1.0 / (att_time * lastSR));
+        T rel = std::exp(-1.0 / (0.6 * lastGR * lastSR));
 
         if (env > lastEnv)
         {
@@ -115,100 +263,75 @@ struct OptoComp
         else
         {
             env = env + rel * (lastEnv - env);
-            /*auto rel_env1 = env + rel * (lastEnv - env);
-            auto rel_env2 = env + rel2 * (lastEnv - env);
-
-            env = (rel_env1 * t_env) + (rel_env2 * (1.f-t_env));*/
-            /*this method is working well, but it's difficult to get it to change w/
-            the full desired range of rel time. let's try using one envelope w/ a time const
-            determined by last GR*/
         }
 
         lastEnv = env;
         
-        auto gr_db = 10.f * (-env); /*using tanh here makes a nice log curve*/
-        auto gr = std::pow(10.f, gr_db / 20.f);
+        auto gr_db = 10.0 * -env; /*using tanh here makes a nice log curve (but also fux w the att/rel curves)*/
+        auto gr = std::pow(10.0, gr_db / 20.0);
         lastGR = gr;
+
+        grSource.measureGR(gr);
 
         return gr;
     }
 
-    void process(AudioBuffer<float>& buffer, float comp)
+    /*returns gain reduction multiplier*/
+    inline T compressSIMD(T x)
     {
-        auto inL = buffer.getWritePointer(0);
-        auto inR = buffer.getWritePointer(1);
+        xsimd::batch_bool<double> under{x < 1.175494351e-38};
+        x = xsimd::select(under, (T)1.175494351e-38, x);
 
-        auto c_comp = jmap(comp, 1.f, 6.f);
+        auto env = 8.685889638 * xsimd::log10(x / threshold);
+        env = xsimd::max((T)0.0, env);
 
-        switch (type)
-        {
-        case Channel:{
-            auto thresh_scale = c_comp / 3.f;
-            threshold = std::pow(10.f, (-18.f * thresh_scale) / 20.f);
-            }
-            break;
-        case Guitar:
-        case Bass:
-            threshold = std::pow(10.f, -36.f / 20.f);
-            break;
-        }
+        // T att_time = jlimit((T)0.005, (T)0.05, (1.0 / x) * 0.015);
+        T att_time = xsimd::min(xsimd::max((T)0.05, (1.0 / x) * 0.015), (T)0.005);
 
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
-        {
-            auto abs0 = std::abs(xm0);
-            auto abs1 = std::abs(xm1);
+        T att = xsimd::exp(-1.0 / (att_time * lastSR));
+        T rel = xsimd::exp(-1.0 / (0.6 * lastGR * lastSR));
 
-            float max = jmax(abs0, abs1);
-            max = sc_hp.processSample(max);
-            max = sc_lp.processSample(max);
+        xsimd::batch_bool<double> inc{env > lastEnv};
 
-            auto gr = compress(max);
+        env = xsimd::select(inc, env + att * (lastEnv - env), env + rel * (lastEnv - env));
 
-            switch (type) {
-            case Guitar:
-            case Bass:
-                inL[i] *= c_comp * gr;
-                inR[i] *= c_comp * gr;
-                break;
-            case Channel:
-                if (c_comp <= 4.f) {
-                    inL[i] *= gr;
-                    inR[i] *= gr;
-                }
-                else {
-                    inL[i] *= (c_comp / 4.f) * gr;
-                    inR[i] *= (c_comp / 4.f) * gr;
-                }
-                break;
-            }
+        // if (env > lastEnv)
+        // {
+        //     env = env + att * (lastEnv - env);
+        // }
+        // else
+        // {
+        //     env = env + rel * (lastEnv - env);
+        // }
 
-            xm0 = inL[i];
-            xm1 = inR[i];
+        lastEnv = env;
+        
+        auto gr_db = 10.0 * -env; /*using tanh here makes a nice log curve (but also fux w the att/rel curves)*/
+        auto gr = xsimd::pow((T)10.0, gr_db / 20.0);
+        lastGR = gr;
 
-            switch (type)
-            {
-            case Guitar:
-            case Bass:
-                auto bpL = hp[0].processSample(inL[i]);
-                // bpL = lp[0].processSample(bpL);
-                auto bpR = hp[1].processSample(inR[i]);
-                // bpR = lp[1].processSample(bpR);
+        float grf;
+        gr.store_aligned(&grf);
+        grSource.measureGR(grf);
 
-                inL[i] += bpL * comp;
-                inR[i] += bpR * comp;
-                break;
-            }
-        }
+        return gr;
     }
 
-private:
-    float lastSR = 44100.f;
+    T lastSR = 44100.0;
 
-    float threshold = std::pow(10.f, -18.f / 20.f);
-    float lastEnv = 0.f, lastGR = 0.f;
-    float xm0 = 0.f, xm1 = 0.f;
+#if USE_SIMD
+    T threshold = xsimd::pow(10.0, -18.0 / 20.0);
+#else
+    T threshold = std::pow(10.0, -18.0 / 20.0);
+#endif
+    
+    T lastEnv = 0.0, lastGR = 0.0;
+    T xm0 = 0.0, xm1 = 0.0;
 
-    dsp::IIR::Filter<float> sc_hp, sc_lp, lp[2], hp[2];
+    dsp::IIR::Filter<T> sc_hp, sc_lp, lp[2], hp[2];
+    dsp::IIR::Coefficients<double>::Ptr sc_hp_coeffs, sc_lp_coeffs, lp_coeffs, hp_coeffs;
 
-    Type type;
+    ProcessorType type;
+
+    VolumeMeterSource& grSource;
 };

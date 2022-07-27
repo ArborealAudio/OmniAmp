@@ -145,9 +145,10 @@
 //    //IdealVoltageSourceT<float, decltype(S1)> Vs{ S1 };
 //};
 
+template <typename T>
 struct ToneStackNodal
 {
-    ToneStackNodal(float c1, float c2, float c3, float r1, float r2, float r3, float r4) :
+    ToneStackNodal(T c1, T c2, T c3, T r1, T r2, T r3, T r4) :
         C1(c1), C2(c2), C3(c3), R1(r1), R2(r2), R3(r3), R4(r4)
     {}
 
@@ -159,25 +160,25 @@ struct ToneStackNodal
 
     void reset()
     {
-        z1[0] = 0.0, z2[0] = 0.0, z3[0] = 0.0;
-        z1[1] = 0.0, z2[1] = 0.0, z3[1] = 0.0;
-        x1[0] = 0.0, x2[0] = 0.0, x3[0] = 0.0;
-        x1[1] = 0.0, x2[1] = 0.0, x3[1] = 0.0;
+        z1[0] = z2[0] = z3[0],
+        z1[1] = z2[1] = z3[1],
+        x1[0] = x2[0] = x3[0],
+        x1[1] = x2[1] = x3[1] = 0.0;
     }
 
-    void setBass(float b)
+    void setBass(T b)
     {
         bass = b;
         setCoeffs();
     }
 
-    void setMid(float m)
+    void setMid(T m)
     {
         mid = m;
         setCoeffs();
     }
 
-    void setTreble(float t)
+    void setTreble(T t)
     {
         treble = t;
         setCoeffs();
@@ -191,7 +192,7 @@ struct ToneStackNodal
 
         b3 = bass * mid * (C1 * C2 * C3 * R1 * R2 * R3 + C1 * C2 * C3 * R2 * R3 * R4) - mid * mid * (C1 * C2 * C3 * R1 * R3 * R3 + C1 * C2 * C3 * R3 * R3 * R4) + mid * (C1 * C2 * C3 * R1 * R3 * R3 + C1 * C2 * C3 * R3 * R3 * R4) + treble * (C1 * C2 * C3 * R1 * R3 * R4) - treble * mid * (C1 * C2 * C3 * R1 * R3 * R4) + treble * bass * (C1*C2*C3*R1*R2*R4);
 
-        a0 = 1.f;
+        a0 = 1.0;
 
         a1 = (C1 * R1 + C1 * R3 + C2 * R3 + C2 * R4 + C3 * R4) + mid * C3 * R3 + bass * (C1 * R2 + C2 * R2);
 
@@ -205,16 +206,16 @@ struct ToneStackNodal
     void discretize()
     {
         B0 = -b1 * c - b2 * c * c - b3 * c * c * c;
-        B1 = -b1 * c + b2 * c * c + 3.f * b3 * c * c * c;
-        B2 = b1 * c + b2 * c * c - 3.f * b3 * c * c * c;
+        B1 = -b1 * c + b2 * c * c + (T)3.0 * b3 * c * c * c;
+        B2 = b1 * c + b2 * c * c - (T)3.0 * b3 * c * c * c;
         B3 = b1 * c - b2 * c * c + b3 * c * c * c;
         A0 = -a0 - a1 * c - a2 * c * c - a3 * c * c * c;
-        A1 = -3.f * a0 - a1 * c + a2 * c * c + 3.f * a3 * c * c * c;
-        A2 = -3.f * a0 + a1 * c + a2 * c * c - 3.f * a3 * c * c * c;
+        A1 = (T)-3.0 * a0 - a1 * c + a2 * c * c + (T)3.0 * a3 * c * c * c;
+        A2 = (T)-3.0 * a0 + a1 * c + a2 * c * c - (T)3.0 * a3 * c * c * c;
         A3 = -a0 + a1 * c - a2 * c * c + a3 * c * c * c;
     }
 
-    inline float processSample(float x, int ch)
+    inline T processSample(T x, int ch)
     {
         auto y = (1.f / A0) * (B0 * x + B1 * x1[ch] + B2 * x2[ch] + B3 * x3[ch] - A1 * z1[ch] - A2 * z2[ch] - A3 * z3[ch]);
 
@@ -229,7 +230,7 @@ struct ToneStackNodal
         return y;
     }
 
-    void process(AudioBuffer<float>& buffer)
+    void process(AudioBuffer<T>& buffer)
     {
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
         {
@@ -242,11 +243,24 @@ struct ToneStackNodal
         }
     }
 
+    template <class Block>
+    void processBlock(Block& block)
+    {
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            for (int i = 0; i < block.getNumSamples(); ++i)
+            {
+                in[i] = processSample(in[i], ch);
+            }
+        }
+    }
+
 private:
-    float bass = 0.5, mid = 0.5, treble = 0.5, c = 0, b1 = 0, b2 = 0, b3 = 0, a0 = 0, a1 = 0, a2 = 0, a3 = 0,
-        B0 = 0, B1 = 0, B2 = 0, B3 = 0, A0 = 0, A1 = 0, A2 = 0, A3 = 0;
+    T bass = 0.5, mid = 0.5, treble = 0.5, c = 0, b1 = 0, b2 = 0, b3 = 0, a0 = 0, a1 = 0, a2 = 0, a3 = 0, B0 = 0, B1 = 0, B2 = 0, B3 = 0, A0 = 0, A1 = 0, A2 = 0, A3 = 0;
 
-    float z1[2]{ 1.f, 1.f }, z2[2]{ 1.f, 1.f }, z3[2]{ 1.f, 1.f }, x1[2]{ 1.f, 1.f }, x2[2]{ 1.f, 1.f }, x3[2]{ 1.f, 1.f };
+    T z1[2]{ 1.f, 1.f }, z2[2]{ 1.f, 1.f }, z3[2]{ 1.f, 1.f }, x1[2]{ 1.f, 1.f }, x2[2]{ 1.f, 1.f }, x3[2]{ 1.f, 1.f };
 
-    const float C1 = 0.25e-9f, C2 = 22e-9f, C3 = 22e-9f, R1 = 300e3f, R2 = 0.5e6f, R3 = 30e3f, R4 = 56e3f;
+    const T C1 = 0.25e-9f, C2 = 22e-9f, C3 = 22e-9f, R1 = 300e3f, R2 = 0.5e6f, R3 = 30e3f, R4 = 56e3f;
 };

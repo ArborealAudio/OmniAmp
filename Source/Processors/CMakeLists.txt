@@ -5,4 +5,9 @@ PRIVATE
     PreFilters.h
     Processors.h
     ToneStack.h
-    Tube.h)
+    Tube.h
+    Enhancer.h
+    Cab.h
+    DistPlus.h
+    SIMD.h
+    Room.h)
