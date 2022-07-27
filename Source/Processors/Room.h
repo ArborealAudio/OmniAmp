@@ -201,7 +201,7 @@ class Room
                 for (int ch = 0; ch < channels; ++ch)
                 {
                     auto mod = osc[ch].processSample(delaySamples[ch]);
-                    auto dtime = delaySamples[ch] - (0.3 * mod);
+                    auto dtime = delaySamples[ch] - (0.2 * mod);
                     auto d = delays[ch].popSample(0, dtime);
                     d = lp.processSample(ch, d);
                     d = hp.processSample(ch, d);
@@ -475,7 +475,7 @@ public:
 
     ReverbManager()
     {
-        rev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0, 2.0);
+        rev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0, 5.0);
     }
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -502,7 +502,7 @@ public:
         case ReverbType::Off:
             return;
         case ReverbType::Room:
-            newRev = std::make_shared<Room>(30.0, 0.65, 0.5, 0.23, 1.0);
+            newRev = std::make_shared<Room>(30.0, 0.65, 0.5, 0.23, 3.0);
             break;
         case ReverbType::Hall:
             newRev = std::make_shared<Room>(75.0, 2.0, 0.5, 1.0, 5.0);
