@@ -212,8 +212,8 @@ struct AVTriode
         // f1 = (std::abs(f1) - 2.0) * f1 * (1.0 / gp) * y_m[0];
         // auto f2 = (1.0 / gn) * ((x * gn) / (1.0 + std::abs(x))) * (1.0 - y_m[ch]);
 
-        // auto y = sc_hp.processSample(ch, f1 + f2);
-        auto y = (f1 + f2);
+        auto y = sc_hp.processSample(ch, f1 + f2);
+        // auto y = (f1 + f2);
         y_m[ch] = y;
 
         return y;
