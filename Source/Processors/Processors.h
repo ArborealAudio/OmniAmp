@@ -165,19 +165,19 @@ struct Guitar : Processor
 
         gtrPre.processBlock(processBlock, *hiGain);
 
-        triode[1].processBlock(processBlock, 0.5, 1.0);
-        triode[2].processBlock(processBlock, 0.5, 1.0);
+        triode[1].processBlock(processBlock, 0.7, 1.2);
+        triode[2].processBlock(processBlock, 0.7, 1.2);
 
         toneStack->processBlock(processBlock);
 
         if (*hiGain)
-            triode[3].processBlock(processBlock, 0.5, 1.0);
+            triode[3].processBlock(processBlock, 1.0, 2.0);
 
         processBlock.multiplyBy(out_raw * 6.0);
 
         pentode.processBlockClassB(processBlock, 0.6, 0.6);
 
-    #if USE_SIMD
+#if USE_SIMD
         simd.deinterleaveBlock(processBlock);
     #endif
     }
@@ -222,6 +222,9 @@ struct Bass : Processor
         auto&& processBlock = block;
     #endif
 
+        if (*dist > 0.f)
+            mxr.processBlock(processBlock);
+
         triode[0].processBlock(processBlock, 0.5, 1.0);
 
         processBlock.multiplyBy(gain_raw);
@@ -236,13 +239,13 @@ struct Bass : Processor
 
         toneStack->processBlock(processBlock);
 
-        processBlock.multiplyBy(out_raw);
+        processBlock.multiplyBy(out_raw * 6.0);
 
         if (!*hiGain)
-            pentode.processBlockClassB(processBlock, 1.f, 1.f);
+            pentode.processBlockClassB(processBlock, 0.6, 0.6);
         else
-            pentode.processBlockClassB(processBlock, 1.5f, 1.5f);
-        
+            pentode.processBlockClassB(processBlock, 0.7, 0.7);
+
     #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
     #endif
