@@ -3,18 +3,21 @@
 #pragma once
 #include "gin_gui/gin_gui.h"
 
+enum KnobType
+{
+    Regular,
+    LF,
+    HF,
+    Simple
+};
+
 struct KnobLookAndFeel : LookAndFeel_V4
 {
-    enum Type
-    {
-        Regular,
-        LF,
-        HF
-    };
+    KnobType type;
 
-    Type type;
+    String label;
 
-    KnobLookAndFeel(Type newType) : type(newType) {}
+    KnobLookAndFeel(KnobType newType) : type(newType) {}
     ~KnobLookAndFeel(){}
 
     void drawRotarySlider(Graphics& g, int x, int y, int width, int height, float sliderPos,
@@ -23,6 +26,9 @@ struct KnobLookAndFeel : LookAndFeel_V4
         switch (type)
         {
         case Regular: {
+            width *= 0.75;
+            height *= 0.75;
+
             auto radius = (float)jmin(width / 2, height / 2) - 4.f;
             auto centerX = (float)slider.getLocalBounds().getCentreX();
             auto centerY = (float)slider.getLocalBounds().getCentreY();
@@ -31,7 +37,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            Image shadow{Image::PixelFormat::ARGB, width + 3, height + 3, true};
+            Image shadow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Graphics sg(shadow);
             sg.setColour(Colours::black);
             sg.fillEllipse(rx, ry, rw, rw);
@@ -57,6 +63,12 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
             g.setColour(Colours::grey);
             g.fillPath(p);
+
+            g.setColour(Colours::black);
+            if (slider.isMouseOverOrDragging())
+                g.drawText(String(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
+            else
+                g.drawText(label, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             break;
             }
         case LF: {
@@ -71,7 +83,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle * 0.8 + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            Image glow{Image::PixelFormat::ARGB, width + 20, height + 20, true};
+            Image glow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Graphics gg(glow);
             gg.setColour(Colours::whitesmoke);
             auto fac = 1.f + (5.f * sliderPos);
@@ -89,7 +101,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto ellipseWidth = radius * 0.25f;
             p.addEllipse(rx, -radius * 0.9, ellipseWidth, ellipseWidth);
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
-            g.setColour(Colour(0xff968875));
+            g.setColour(Colour(0xffaa8875));
             g.fillPath(p);
             break;
             }
@@ -105,7 +117,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle * 0.8 + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            Image glow{Image::PixelFormat::ARGB, width + 20, height + 20, true};
+            Image glow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Graphics gg(glow);
             gg.setColour(Colours::wheat);
             auto fac = 1.f + (5.f * sliderPos);
@@ -123,8 +135,38 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto ellipseWidth = radius * 0.25f;
             p.addEllipse(rx, -radius * 0.9, ellipseWidth, ellipseWidth);
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
-            g.setColour(Colour(0xff968875));
+            g.setColour(Colour(0xffaa8875));
             g.fillPath(p);
+            break;
+            }
+        case Simple: {
+            width *= 0.75;
+            height *= 0.75;
+
+            auto radius = (float)jmin(width / 2, height / 2) - 4.f;
+            auto centerX = (float)slider.getLocalBounds().getCentreX();
+            auto centerY = (float)slider.getLocalBounds().getCentreY();
+            auto rx = centerX - radius;
+            auto ry = centerY - radius;
+            auto rw = radius * 2.f;
+            auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+
+            g.setColour(Colours::antiquewhite);
+            g.drawEllipse(rx, ry, rw, rw, 3.f);
+
+            Path p;
+            auto pointerLength = radius * 0.8f;
+            auto pointerThickness = 2.5f;
+            p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
+            p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
+
+            g.setColour(Colours::antiquewhite);
+            g.fillPath(p);
+
+            if (slider.isMouseOverOrDragging())
+                g.drawText(String(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
+            else
+                g.drawText(label, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             break;
             }
         }
@@ -133,18 +175,11 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
 struct Knob : Slider
 {
-    enum Type
-    {
-        Regular,
-        LF,
-        HF
-    };
-
-    Knob(Type t) : lnf((KnobLookAndFeel::Type)t)
+    Knob(KnobType t) : lnf(t)
     {
         setLookAndFeel(&lnf);
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
-        setPopupDisplayEnabled(true, true, this);
+        // setPopupDisplayEnabled(true, true, this);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
         setPaintingIsUnclipped(true);
     }
@@ -153,6 +188,15 @@ struct Knob : Slider
         setLookAndFeel(nullptr);
     }
 
+    void setLabel(String newLabel)
+    {
+        label = newLabel;
+        lnf.label = label;
+    }
+
+    String getLabel() { return label; }
+
 private:
     KnobLookAndFeel lnf;
+    String label;
 };

@@ -6,68 +6,29 @@ struct AmpControls : Component
 {
     AmpControls(AudioProcessorValueTreeState& a) : apvts(a)
     {
-        addAndMakeVisible(comp);
+        for (auto& k : getKnobs())
+            addAndMakeVisible(k);
+
         compAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "comp", comp);
-        comp.setBounds(20, (getHeight() / 2), 70, 70);
-        
-        addAndMakeVisible(compText);
-        compText.setText("Comp");
-        compText.setJustification(Justification::centred);
-        compText.setBoundingBox(Parallelogram(comp.getBounds().translated(0, 45).toFloat()));
+        comp.setLabel("Opto");
 
-        addAndMakeVisible(dist);
         distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "dist", dist);
-        dist.setBounds(100, (getHeight() / 2), 70, 70);
+        dist.setLabel("Pedal");
 
-        addAndMakeVisible(distText);
-        distText.setText("Dist");
-        distText.setJustification(Justification::centred);
-        distText.setBoundingBox(Parallelogram(dist.getBounds().translated(0, 45).toFloat()));
-
-        addAndMakeVisible(inGain);
         inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "inputGain", inGain);
-        inGain.setBounds(180, (getHeight() / 2), 70, 70);
+        inGain.setLabel("Preamp");
 
-        addAndMakeVisible(preampText);
-        preampText.setText("Preamp");
-        preampText.setJustification(Justification::centred);
-        preampText.setBoundingBox(Parallelogram(inGain.getBounds().translated(0, 45).toFloat()));
-
-        addAndMakeVisible(bass);
         bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "bass", bass);
-        bass.setBounds(260, (getHeight() / 2), 70, 70);
+        bass.setLabel("Bass");
 
-        addAndMakeVisible(bassText);
-        bassText.setText("Bass");
-        bassText.setJustification(Justification::centred);
-        bassText.setBoundingBox(Parallelogram(bass.getBounds().translated(0, 45).toFloat()));
-
-        addAndMakeVisible(mid);
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "mid", mid);
-        mid.setBounds(340, (getHeight() / 2), 70, 70);
+        mid.setLabel("Mid");
 
-        addAndMakeVisible(midText);
-        midText.setText("Mid");
-        midText.setJustification(Justification::centred);
-        midText.setBoundingBox(Parallelogram(mid.getBounds().translated(0, 45).toFloat()));
-
-        addAndMakeVisible(treble);
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "treble", treble);
-        treble.setBounds(420, (getHeight() / 2), 70, 70);
+        treble.setLabel("Treble");
 
-        addAndMakeVisible(trebText);
-        trebText.setText("Treble");
-        trebText.setJustification(Justification::centred);
-        trebText.setBoundingBox(Parallelogram(treble.getBounds().translated(0, 45).toFloat()));
-
-        addAndMakeVisible(outGain);
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "outputGain", outGain);
-        outGain.setBounds(500, (getHeight() / 2), 70, 70);
-
-        addAndMakeVisible(powerampText);
-        powerampText.setText("Power Amp");
-        powerampText.setJustification(Justification::centred);
-        powerampText.setBoundingBox(Parallelogram(outGain.getBounds().translated(0, 45).toFloat()));
+        outGain.setLabel("Power Amp");
 
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hiGain", hiGain);
@@ -77,7 +38,6 @@ struct AmpControls : Component
         hiGain.setColour(TextButton::textColourOffId, Colours::white);
         hiGain.setColour(TextButton::textColourOnId, Colours::black);
         hiGain.setClickingTogglesState(true);
-        hiGain.setBounds(inGain.getX(), inGain.getBottom() + 30, 70, 25);
     }
 
     void paint(Graphics& g) override
@@ -86,14 +46,37 @@ struct AmpControls : Component
         g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
     }
 
+    void resized() override
+    {
+        auto mb = getLocalBounds().removeFromTop(getHeight() * 0.7);
+        auto w = mb.getWidth() / 7;
+
+        for (auto& k : getKnobs())
+            k->setBounds(mb.removeFromLeft(w));
+
+        hiGain.setBounds(inGain.getX(), inGain.getBottom() + 10, inGain.getWidth(), getHeight() * 0.3 - 10);
+    }
+
 private:
     AudioProcessorValueTreeState& apvts;
 
-    Knob comp{Knob::Type::Regular}, dist{Knob::Type::Regular}, inGain{Knob::Type::Regular}, outGain{Knob::Type::Regular}, bass{Knob::Type::Regular}, mid{Knob::Type::Regular}, treble{Knob::Type::Regular};
+    Knob comp{KnobType::Regular}, dist{KnobType::Regular}, inGain{KnobType::Regular}, outGain{KnobType::Regular}, bass{KnobType::Regular}, mid{KnobType::Regular}, treble{KnobType::Regular};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> compAttach, distAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
 
     TextButton hiGain;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach;
 
-    DrawableText compText, distText, preampText, bassText, midText, trebText, powerampText;
+    std::vector<Knob*> getKnobs()
+    {
+        return
+        {
+            &comp,
+            &dist,
+            &inGain,
+            &bass,
+            &mid,
+            &treble,
+            &outGain
+        };
+    }
 };

@@ -106,16 +106,17 @@ private:
 
 class ReverbComponent : public Component
 {
-    Knob reverbAmount;
+    Knob reverbAmount {KnobType::Simple};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> amtAttach;
 
     ReverbButton reverb;
 
 public:
-    ReverbComponent(AudioProcessorValueTreeState& v) : reverbAmount(Knob::Type::Regular)
+    ReverbComponent(AudioProcessorValueTreeState& v)
     {
         addAndMakeVisible(reverbAmount);
         amtAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "roomAmt", reverbAmount);
+        reverbAmount.setLabel("Amount");
 
         addAndMakeVisible(reverb);
         reverb.setOn(*v.getRawParameterValue("reverbType"));
