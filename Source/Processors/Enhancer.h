@@ -3,6 +3,27 @@
 #pragma once
 #include "dsp_filters/dsp_filters.h"
 
+struct EnhancerSaturation
+{
+    // higher values of k = harder clipping
+    // lower values can de-amplify the signal a bit
+    template <class Block>
+    static void process(Block& block, double gp, double gn, double k)
+    {
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+            {
+                if (in[i] >= 0.0)
+                    in[i] = (1.0 / gp) * (in[i] * gp) / std::pow((1.0 + gp * std::pow(std::abs(in[i] * gp), k)), 1.0 / k);
+                else
+                    in[i] = (1.0 / gn) * (in[i] * gn) / std::pow((1.0 + gn * std::pow(std::abs(in[i] * gn), k)), 1.0 / k);
+            }
+        }
+    }
+};
+
 template <typename T>
 struct HFEnhancer
 {
@@ -47,9 +68,10 @@ private:
         hp1.process(block.getNumSamples(), 0, inL);
         hp1.process(block.getNumSamples(), 1, inR);
 
-        block.multiplyBy(jmap(enhance, (T)1.f, (T)4.f));
+        block.multiplyBy(jmap(enhance, 1.0, 4.0));
 
-        tube.processBlock(block, 1.0, 0.5);
+        EnhancerSaturation::process(block, 1.0, 3.0, 1.0);
+        block.multiplyBy(2.0);
 
         hp2.process(block.getNumSamples(), 0, inL);
         hp2.process(block.getNumSamples(), 1, inR);
@@ -148,25 +170,6 @@ struct LFEnhancer
     }
 
 private:
-
-    void checkForInvalidSamples (const dsp::AudioBlock<double>& blockToCheck)
-    {
-        auto numChans = blockToCheck.getNumChannels();
-        auto numSamps = blockToCheck.getNumSamples();
-
-        for (auto c = 0; c < numChans; ++c)
-        {
-            for (auto s = 0; s < numSamps; ++s)
-            {
-                auto sample = blockToCheck.getSample (c, s);
-                jassert (!std::isnan (sample));
-                // Probably also this ones
-                jassert (sample <= 100.0f);
-                jassert (sample >= -100.0f);
-            }
-        }
-    }
-
     void process(dsp::AudioBlock<T>& block, T enhance)
     {
         auto inL = block.getChannelPointer(0);
@@ -175,36 +178,15 @@ private:
         lp1.process(block.getNumSamples(), 0, inL);
         lp1.process(block.getNumSamples(), 1, inR);
 
-        checkForInvalidSamples(block);
+        block.multiplyBy(jmap(enhance, 1.0, 4.0));
 
-        block.multiplyBy(jmap(enhance, -1.0, -4.0));
-
-        tube.processBlock(block, 1.0, 3.0);
-
-        checkForInvalidSamples(block);
+        EnhancerSaturation::process(block, 1.0, 2.0, 4.0);
 
         lp2.process(block.getNumSamples(), 0, inL);
         lp2.process(block.getNumSamples(), 1, inR);
 
-        checkForInvalidSamples(block);
-
         block.multiplyBy(enhance);
     }
-
-    // void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
-    // {
-    //     auto in = block.getChannelPointer(0);
-
-    //     lp1.process(block.getNumSamples(), 0, in);
-
-    //     block.multiplyBy(jmap(enhance, -1.0, -4.0));
-
-    //     tube.processBlock(block, 1.0, 3.0);
-
-    //     lp2.process(block.getNumSamples(), 0, in);
-
-    //     block.multiplyBy(enhance);
-    // }
 
     Mode type;
 
