@@ -87,8 +87,6 @@ void GammaAudioProcessorEditor::paint (juce::Graphics& g)
   // g.fillAll(Colour(0xff968875));
   g.setColour(Colour(0xffaa8875));
   g.fillRect(getLocalBounds().withTrimmedBottom(getHeight() / 3)); // make this adapt to size!!
-
-  grMeter.paint(g);
 }
 
 void GammaAudioProcessorEditor::resized()
