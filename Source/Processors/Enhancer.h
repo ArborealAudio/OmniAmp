@@ -30,21 +30,12 @@ struct HFEnhancer
     {
         wetBlock.copyFrom(block);
 
-        process(wetBlock, enhance);
+        auto subBlock = wetBlock.getSubBlock(0, block.getNumSamples());
 
-        block.add(wetBlock);
+        process(subBlock, enhance);
+
+        block.add(subBlock);
     }
-
-    // void processBlock(chowdsp::AudioBlock<vec>& block, const double enhance)
-    // {
-    //     int size = (int)block.getNumChannels() * (int)block.getNumSamples();
-
-    //     wetBlock.copyFrom(block);
-
-    //     process(wetBlock, enhance);
-
-    //     block.add(wetBlock);
-    // }
 
 private:
 
@@ -65,21 +56,6 @@ private:
 
         block.multiplyBy(enhance);
     }
-
-    // void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
-    // {
-    //     auto in = block.getChannelPointer(0);
-
-    //     hp1.process(block.getNumSamples(), 0, in);
-
-    //     block.multiplyBy(jmap(enhance, 1.0, 4.0));
-
-    //     tube.processBlock(block, 1.0, 0.5);
-
-    //     hp2.process(block.getNumSamples(), 0, in);
-
-    //     block.multiplyBy(enhance);
-    // }
 
     Dsp::SimpleFilter<Dsp::Bessel::HighPass<4>, 2> hp1, hp2;
 
@@ -164,12 +140,32 @@ struct LFEnhancer
     {
         wetBlock.copyFrom(block);
 
-        process(wetBlock, enhance);
+        auto subBlock = wetBlock.getSubBlock(0, block.getNumSamples());
 
-        block.add(wetBlock);
+        process(subBlock, enhance);
+
+        block.add(subBlock);
     }
 
 private:
+
+    void checkForInvalidSamples (const dsp::AudioBlock<double>& blockToCheck)
+    {
+        auto numChans = blockToCheck.getNumChannels();
+        auto numSamps = blockToCheck.getNumSamples();
+
+        for (auto c = 0; c < numChans; ++c)
+        {
+            for (auto s = 0; s < numSamps; ++s)
+            {
+                auto sample = blockToCheck.getSample (c, s);
+                jassert (!std::isnan (sample));
+                // Probably also this ones
+                jassert (sample <= 100.0f);
+                jassert (sample >= -100.0f);
+            }
+        }
+    }
 
     void process(dsp::AudioBlock<T>& block, T enhance)
     {
@@ -179,12 +175,18 @@ private:
         lp1.process(block.getNumSamples(), 0, inL);
         lp1.process(block.getNumSamples(), 1, inR);
 
+        checkForInvalidSamples(block);
+
         block.multiplyBy(jmap(enhance, -1.0, -4.0));
 
         tube.processBlock(block, 1.0, 3.0);
 
+        checkForInvalidSamples(block);
+
         lp2.process(block.getNumSamples(), 0, inL);
         lp2.process(block.getNumSamples(), 1, inR);
+
+        checkForInvalidSamples(block);
 
         block.multiplyBy(enhance);
     }
