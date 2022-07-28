@@ -16,13 +16,11 @@
 #endif
 
 #include <JuceHeader.h>
-#include "../modules/chowdsp_utils/modules/dsp/chowdsp_math/chowdsp_math.h"
 #include "../modules/chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
 #include "../modules/chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
 #include "../modules/chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
 #include "Processors/Processors.h"
 #include "UI/SineWave.hpp"
-#include "VolumeMeter/VolumeMeter.h"
 
 //==============================================================================
 /**
@@ -44,6 +42,7 @@ public:
    #endif
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlock (juce::AudioBuffer<double>&, juce::MidiBuffer&) override;
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -69,6 +68,8 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     void parameterChanged(const String& parameterID, float newValue) override;
+
+    bool supportsDoublePrecisionProcessing() const override { return true; }
 
     AudioProcessorValueTreeState apvts;
 
@@ -110,7 +111,7 @@ private:
     Processors::Guitar guitar;
     Processors::Bass bass;
     Processors::Channel channel;
-    dsp::Oversampling<double> oversample{2, 0, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
+    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
 
     AudioBuffer<double> doubleBuffer;
 
@@ -122,7 +123,7 @@ private:
     Processors::FDNCab<vec> cab;
   #else
     Processors::FDNCab<double> cab;
-#endif
+  #endif
 
     Processors::ReverbManager reverb;
 
@@ -136,6 +137,42 @@ private:
     };
 
     Mode currentMode = Mode::Channel;
+
+    void checkForInvalidSamples (const dsp::AudioBlock<double>& blockToCheck)
+    {
+        auto numChans = blockToCheck.getNumChannels();
+        auto numSamps = blockToCheck.getNumSamples();
+
+        for (auto c = 0; c < numChans; ++c)
+        {
+            for (auto s = 0; s < numSamps; ++s)
+            {
+                auto sample = blockToCheck.getSample (c, s);
+                jassert (!std::isnan (sample));
+                // Probably also this ones
+                jassert (sample <= 100.0f);
+                jassert (sample >= -100.0f);
+            }
+        }
+    }
+
+    void checkForInvalidSamples (const chowdsp::AudioBlock<vec>& blockToCheck)
+    {
+        auto numChans = blockToCheck.getNumChannels();
+        auto numSamps = blockToCheck.getNumSamples();
+
+        for (auto c = 0; c < numChans; ++c)
+        {
+            for (auto s = 0; s < numSamps; ++s)
+            {
+                auto sample = blockToCheck.getSample (c, s);
+                jassert (!xsimd::any(xsimd::isnan (sample)));
+                // Probably also this ones
+                jassert (xsimd::any(sample <= 100.0f));
+                jassert (xsimd::any(sample >= -100.0f));
+            }
+        }
+    }
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessor)

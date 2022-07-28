@@ -21,17 +21,37 @@
   
   - 2X12:
     
-    - 1 FDN, dTime of 411, fdbk of 0.06
+    - 1 delay, dTime of 411, fdbk of 0.06
     
     - HP 90 Q 5
     
     - LP1 3500 Q .7
     
     - LP2 5000 Q 1.5
+    
+    - These aren't really doing anything...need a better way of getting diffusion and complex comb filtering.
+  
+  - 2x12 V2
+    
+    - 4 delays, evens are AP
+    
+    - dTime 0 = 40
+    
+    - dTime 1 = 57
+    
+    - dTime 2 = 73
+    
+    - dTime 3 = 79
+    
+    - Reduce HP reso to 0.7
+    
+    - LP 1 6500 Q 0.7
+    
+    - LP2 5067 Q 1.5
   
   - 4x12:
     
-    - 4 FDNs
+    - 6 delays (2 were nested, then took em out and just used 3?)
     
     - dTime0 = 377
     
@@ -53,9 +73,47 @@
     
     - BP 1700 Q 2
   
-  - MAKE THE BASS CAB!!
+  - 4x12 V2
+    
+    - 4 delays
+    
+    - dTime0 = 57
+    
+    - dTime1 = 24
+    
+    - dTime2 = 40
+    
+    - dTime3 = 79
+    
+    - HP 70 Q 1.0
+    
+    - LP1 5011 Q 0.7
+    
+    - LP2 4500 Q 1.29
+    
+    - Lowshelf 232
   
-  - Might look into nested allpasses to smooth out the sound
+  - 6x10
+    
+    - 4 Delays after all
+    
+    - dTime0 = 40
+    
+    - dTime1 71
+    
+    - dTime2 53
+    
+    - dTime3 15
+    
+    - HP 80 Q 2
+    
+    - LP1 6033 Q 1.21
+    
+    - LP2 3193 Q 1.5
+    
+    - LS 307
+  
+  - MAKE THE BASS CAB!!
   
   - Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube
 
@@ -72,6 +130,8 @@
 - Add sag???
 
 - Identify potentially unstable process. Something--and it could just be audio discontinuities, is causing a sharp increase in volume at times. Could be some hysteretic NaN-ism... Seems to appear when using any processor, unclear what is causing tho
+
+- Write your own SIMD fork of the Audio Block out of respect for chowdsp license
 
 # NOTES
 
