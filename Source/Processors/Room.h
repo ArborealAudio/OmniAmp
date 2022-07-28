@@ -114,8 +114,8 @@ class Room
 
                 MixMatrix<channels>::processHadamardMatrix(vec.data());
 
-                for (auto ch = 0; ch < channels; ++ch)
-                    block.getChannelPointer(ch)[i] = vec[ch];
+                for (auto ch = 0; ch < channels; ++ch) {
+                    block.getChannelPointer(ch)[i] = vec[ch];}
             }
 
             shuffleChannels(block);
@@ -257,7 +257,7 @@ class Room
 			coeffs[0] = 1;
 			coeffs[1] = 0;
 			for (int i = 1; i < hChannels; ++i) {
-				double phase = M_PI*i/channels;
+				double phase = M_PI * i / channels;
 				coeffs[2*i] = std::cos(phase);
 				coeffs[2*i + 1] = std::sin(phase);
 			}
@@ -274,7 +274,7 @@ class Room
                     output[i + 1][j] = input[1][j] * coeffs[i] - input[0][j] * coeffs[i + 1];
                 }
             }
-		}
+        }
 
 		void multiToStereo(const Sample** input, Sample** output, int numSamples) const
         {
@@ -347,6 +347,7 @@ class Room
                 for (auto& lp : usLP[ch])
                     out[ch][i] = lp.processSample(out[ch][i]);
             }
+
         }
 
         FloatVectorOperations::multiply(out[0], 2.0, outBuf.getNumSamples());
@@ -389,7 +390,7 @@ public:
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        usBuf.setSize(2, spec.maximumBlockSize * 2.0);
+        usBuf.setSize(spec.numChannels, spec.maximumBlockSize * 2.0);
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
         dsBuf.setSize(spec.numChannels, spec.maximumBlockSize);
@@ -398,7 +399,6 @@ public:
             d.prepare(spec);
 
         feedback.prepare(spec);
-
 
         auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(9500.0, spec.sampleRate * 2.0, 8);
 
@@ -429,9 +429,12 @@ public:
 
     void process(AudioBuffer<double>& buf, float amt)
     {
+        dsBuf.clear();
+        splitBuf.clear();
+
         downsampleBuffer(buf);
 
-        upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), dsBuf.getNumSamples());
+        upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), splitBuf.getNumSamples());
 
         dsp::AudioBlock<double> block(splitBuf);
 
