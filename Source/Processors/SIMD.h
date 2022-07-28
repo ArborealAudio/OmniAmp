@@ -52,7 +52,7 @@ public:
         zero = RegBlock(zeroData, vec::size, numSamples);
         zero.clear();
 
-        auto numVecChannels = chowdsp::Math::ceiling_divide((size_t)numChannels, vec::size);
+        auto numVecChannels = (numChannels + vec::size - 1) / vec::size;
 
         channelPointers.resize(numVecChannels * vec::size);
     }
@@ -72,7 +72,7 @@ public:
             interleaveSamples (&inout[ch], simdBlockData, static_cast<int> (n), static_cast<int> (vec::size));
         }
 
-        return interleaved;
+        return interleaved.getSubBlock(0, block.getNumSamples());
     }
 
     void deinterleaveBlock(SIMDBlock& block)
