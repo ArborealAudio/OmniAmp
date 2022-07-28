@@ -91,7 +91,8 @@ private:
 
     std::atomic<bool> newBuf;
 
-    void splitBuffers(const AudioBuffer<float>& buf)
+    template <typename T>
+    void splitBuffers(const AudioBuffer<T>& buf)
     {
         for (auto& b : band)
         {
