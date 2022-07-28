@@ -80,26 +80,23 @@ struct OptoComp
             l.reset();
     }
 
-    template <class Block>
-    void processBlock(Block& block, T comp)
+    void processBlock(dsp::AudioBlock<double>& block, T comp)
     {
-        if constexpr (std::is_same_v<T, double>)
-        {
-            if (comp == 0.0) {
-                grSource.measureGR(1.0);
-                return;
-            }
-            process(block, comp);
+        if (comp == 0.0) {
+            grSource.measureGR(1.0);
+            return;
         }
-        else
-        {
-            xsimd::batch_bool<double> zero{comp == 0.0};
-            if (xsimd::any(zero)) {
-                grSource.measureGR(1.0);
-                return;
-            }
-            processSIMD(block, comp);
+        process(block, comp);
+    }
+
+    void processBlock(chowdsp::AudioBlock<vec>& block, T comp)
+    {
+        xsimd::batch_bool<double> zero{comp == 0.0};
+        if (xsimd::any(comp == 0.0)) {
+            grSource.measureGR(1.0);
+            return;
         }
+        processSIMD(block, comp);
     }
 
     VolumeMeterSource& getGRSource() { return grSource; }
