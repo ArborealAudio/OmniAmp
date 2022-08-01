@@ -46,19 +46,20 @@ public:
 
     SIMD() = default;
 
+    // use the actual number of input channels, not num channels in a SIMD block
     void setInterleavedBlockSize(int numChannels, int numSamples)
     {
-        interleaved = SIMDBlock(interleavedData, numChannels, numSamples);
+        int numVecChannels = (numChannels + vec::size - 1) / vec::size;
+
+        interleaved = SIMDBlock(interleavedData, numVecChannels, numSamples);
         zero = RegBlock(zeroData, vec::size, numSamples);
         zero.clear();
-
-        auto numVecChannels = (numChannels + vec::size - 1) / vec::size;
 
         channelPointers.resize(numVecChannels * vec::size);
     }
 
     SIMDBlock interleaveBlock(const RegBlock& block)
-    {
+    {        
         auto n = block.getNumSamples();
         auto numChannels = channelPointers.size();
         auto* inout = channelPointers.data();
