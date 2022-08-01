@@ -42,10 +42,7 @@ juce_add_modules(
     "$ENV{HOME}/modules/Gin/modules/gin"
     "$ENV{HOME}/modules/Gin/modules/gin_gui"
     "modules/DSPFilters/modules/dsp_filters"
-    "$ENV{HOME}/modules/Arbor_modules/modules/VolumeMeter"
-    "$ENV{HOME}/modules/Arbor_modules/modules/SVTFilter"
-    "$ENV{HOME}/modules/Arbor_modules/modules/Delay"
-    "$ENV{HOME}/modules/Arbor_modules/modules/ReleasePool")
+    "$ENV{HOME}/modules/Arbor_modules")
 
 target_compile_definitions(Gamma
     PUBLIC
@@ -77,10 +74,7 @@ target_link_libraries(Gamma
         chowdsp_wdf
         chowdsp_simd
         chowdsp_dsp_data_structures
-        VolumeMeter
-        SVTFilter
-        Delay
-        ReleasePool
+        Arbor_modules
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
