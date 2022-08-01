@@ -42,7 +42,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
     hfEnhance.setBounds(getLocalBounds().getCentreX() + 250, 100, 100, 100);
 
-    grMeter.setMeterType(VolumeMeterComponent::Type::Reduction);
+    grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
     grMeter.setBounds(72, 200, 32, 100);
     addAndMakeVisible(grMeter);
 

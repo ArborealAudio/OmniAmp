@@ -38,7 +38,7 @@ private:
 
     strix::SineWaveComponent wave;
 
-    VolumeMeterComponent grMeter;
+    strix::VolumeMeterComponent grMeter;
 
     CabsComponent cabComponent;
 
