@@ -8,7 +8,11 @@
     
     - OR: in Channel mode, apply a frequency-weighted auto-gain. Bandpass each gain value to get a rough EL gain compensation
 
+- Get EQ params working properly btw amp & channel modes
+
 - Comp behavior is currently not-ideal. Just gets louder for first 50% and then real GR kicks in after that. Adding too much gain in the early parts of the knob.
+  
+  - Should probably switch the way threshold lowering vs boost kicks in. Mostly lower threshold at first 50% with little gain, then start pushing the volume harder into the threshold
 
 - Advanced options including stereo/mono switch, stereo/MS linking for compressor
 
@@ -113,8 +117,6 @@
     
     - LS 307
   
-  - MAKE THE BASS CAB!!
-  
   - Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
@@ -129,7 +131,7 @@
 
 - Add sag???
 
-- Identify potentially unstable process. Something--and it could just be audio discontinuities, is causing a sharp increase in volume at times. Could be some hysteretic NaN-ism... Seems to appear when using any processor, unclear what is causing tho
+- NaNs mostly eradicated. Now to build support for mono->stereo / mono
 
 - Write your own SIMD fork of the Audio Block out of respect for chowdsp license
 

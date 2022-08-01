@@ -21,7 +21,7 @@ GammaAudioProcessor::GammaAudioProcessor()
                      #endif
                        ), apvts(*this, nullptr, "Parameters", createParams()),
                         guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
-                        cab(apvts, currentCab)
+                        cab(apvts, currentCab), cab_m(apvts, currentCab)
 #endif
 {
     gain = apvts.getRawParameterValue("inputGain");
@@ -117,6 +117,7 @@ void GammaAudioProcessor::changeProgramName (int index, const juce::String& newN
 void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     oversample.initProcessing(samplesPerBlock);
+    setLatencySamples(oversample.getLatencyInSamples());
 
     lastSampleRate = sampleRate * oversample.getOversamplingFactor();
 
@@ -127,21 +128,23 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     bass.prepare(osSpec);
     channel.prepare(osSpec);
 
-    lfEnhancer.setType((Processors::LFEnhancer<double>::Mode)currentMode);
+    lfEnhancer.setMode((Processors::ProcessorType)currentMode);
     lfEnhancer.prepare(osSpec);
     hfEnhancer.prepare(osSpec);
 
     cab.prepare(spec);
+    cab_m.prepare(spec);
     cab.setCabType((Processors::CabType)apvts.getRawParameterValue("cabType")->load());
+    cab_m.setCabType((Processors::CabType)apvts.getRawParameterValue("cabType")->load());
 
     reverb.prepare(spec);
     reverb.changeRoomType((Processors::ReverbType)apvts.getRawParameterValue("reverbType")->load());
 
     audioSource.prepare(spec);
 
-    doubleBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
+    doubleBuffer.setSize(2, samplesPerBlock);
 
-    simd.setInterleavedBlockSize(1, samplesPerBlock);
+    simd.setInterleavedBlockSize(spec.numChannels, samplesPerBlock);
 }
 
 void GammaAudioProcessor::releaseResources()
@@ -152,27 +155,16 @@ void GammaAudioProcessor::releaseResources()
     hfEnhancer.reset();
     lfEnhancer.reset();
     cab.reset();
+    cab_m.reset();
     reverb.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool GammaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
-    return true;
-  #else
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
-
-   #if ! JucePlugin_IsSynth
-    if (layouts.getMainOutputChannels() > 2 || layouts.getMainInputChannels() > 2)
-        return false;
-   #endif
-
-    return true;
-  #endif
+    return (layouts.getMainOutputChannels() <= 2 &&
+            layouts.getMainInputChannels() <= 2 &&
+            layouts.getMainInputChannels() <= layouts.getMainOutputChannels());
 }
 #endif
 
@@ -180,23 +172,26 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
 {
     if (parameterID.contains("mode")) {
         currentMode = (Mode)newValue;
-        lfEnhancer.setType((Processors::LFEnhancer<double>::Mode)newValue);
+        lfEnhancer.setMode((Processors::ProcessorType)currentMode);
         lfEnhancer.updateFilters();
     }
     else if (parameterID.contains("bass"))
     {
         guitar.setToneControl(0, newValue);
         bass.setToneControl(0, newValue);
+        channel.setFilters(0, newValue);
     }
     else if (parameterID.contains("mid"))
     {
         guitar.setToneControl(1, newValue);
         bass.setToneControl(1, newValue);
+        channel.setFilters(1, newValue);
     }
     else if (parameterID.contains("treble"))
     {
         guitar.setToneControl(2, newValue);
         bass.setToneControl(2, newValue);
+        channel.setFilters(2, newValue);
     }
     else if (parameterID.contains("dist"))
     {
@@ -204,8 +199,10 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
         bass.setDistParam(newValue);
         channel.setDistParam(newValue);
     }
-    else if (parameterID.contains("cabType"))
+    else if (parameterID.contains("cabType")) {
         cab.setCabType((Processors::CabType)newValue);
+        cab_m.setCabType((Processors::CabType)newValue);
+    }
     else if (parameterID.contains("reverbType"))
         reverb.changeRoomType((Processors::ReverbType)newValue);
 }
@@ -219,57 +216,43 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    // auto L = doubleBuffer.getWritePointer(0);
+    // for (auto i = 0; i < buffer.getNumSamples(); ++i)
+    //     L[i] = static_cast<double>(buffer.getSample(0, i));
+
+    // if (totalNumInputChannels > 1 && totalNumOutputChannels > 1)
+    // {
+    //     auto R = doubleBuffer.getWritePointer(1);
+    //     for (auto i = 0; i < buffer.getNumSamples(); ++i)
+    //         R[i] = static_cast<double>(buffer.getSample(1, i));
+    // }
+
     doubleBuffer.makeCopyOf(buffer, true);
 
-    dsp::AudioBlock<double> block(doubleBuffer);
+    if (totalNumInputChannels > 1)
+        processDoubleBufferStereo(doubleBuffer);
+    else
+        processDoubleBufferMono(doubleBuffer);
 
-    auto osBlock = oversample.processSamplesUp(block);
+    auto L = doubleBuffer.getReadPointer(0);
+    auto outL = buffer.getWritePointer(0);
+    for (auto i = 0; i < buffer.getNumSamples(); ++i)
+        outL[i] = static_cast<float>(L[i]);
 
-    switch (currentMode)
+    if (totalNumOutputChannels > 1)
     {
-    case Guitar:
-        guitar.processBlock(osBlock);
-        break;
-    case Bass:
-        bass.processBlock(osBlock);
-        break;
-    case Channel:
-        channel.processBlock(osBlock);
-        break;
+        auto R = doubleBuffer.getReadPointer(1);
+        auto outR = buffer.getWritePointer(1);
+        if (totalNumInputChannels < totalNumOutputChannels) {
+            for (auto i = 0; i < buffer.getNumSamples(); ++i)
+                outR[i] = static_cast<float>(L[i]);
+        }
+        else {
+            for (auto i = 0; i < buffer.getNumSamples(); ++i)
+                outR[i] = static_cast<float>(R[i]);
+        }
     }
-
-    checkForInvalidSamples(osBlock);
-
-    if (*lfEnhance)
-        lfEnhancer.processBlock(osBlock, (double)*lfEnhance);
-
-    if (*hfEnhance)
-        hfEnhancer.processBlock(osBlock, (double)*hfEnhance);
-
-    oversample.processSamplesDown(block);
-
-    setLatencySamples(oversample.getLatencyInSamples());
-
-#if USE_SIMD
-    auto simdBlock = simd.interleaveBlock(block);
-    auto&& processBlock = simdBlock;
-#else
-    auto &&processBlock = block;
-#endif
-    checkForInvalidSamples(processBlock);
-
-    if (*apvts.getRawParameterValue("cabOn"))
-        cab.processBlock(processBlock);
-
-    checkForInvalidSamples(processBlock);
-#if USE_SIMD
-    simd.deinterleaveBlock(processBlock);
-#endif
-
-    if (*apvts.getRawParameterValue("reverbType"))
-        reverb.process(doubleBuffer, *apvts.getRawParameterValue("roomAmt"));
-
-    buffer.makeCopyOf(doubleBuffer, true);
+    // buffer.makeCopyOf(doubleBuffer, true);
 
     audioSource.getBufferRMS(buffer);
 }
@@ -283,49 +266,13 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<double>& buffer, juce:
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    dsp::AudioBlock<double> block(buffer);
-
-    auto osBlock = oversample.processSamplesUp(block);
-
-    switch (currentMode)
-    {
-    case Guitar:
-        guitar.processBlock(osBlock);
-        break;
-    case Bass:
-        bass.processBlock(osBlock);
-        break;
-    case Channel:
-        channel.processBlock(osBlock);
-        break;
-    }
-
-    if (*lfEnhance)
-        lfEnhancer.processBlock(osBlock, (double)*lfEnhance);
-
-    if (*hfEnhance)
-        hfEnhancer.processBlock(osBlock, (double)*hfEnhance);
-
-    oversample.processSamplesDown(block);
-
-    setLatencySamples(oversample.getLatencyInSamples());
-
-#if USE_SIMD
-    auto simdBlock = simd.interleaveBlock(block);
-    auto&& processBlock = simdBlock;
-#else
-    auto &&processBlock = block;
-#endif
-
-    if (*apvts.getRawParameterValue("cabOn"))
-        cab.processBlock(processBlock);
-
-#if USE_SIMD
-    simd.deinterleaveBlock(processBlock);
-#endif
-
-    if (*apvts.getRawParameterValue("reverbType"))
-        reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
+    if (totalNumInputChannels > 1)
+        processDoubleBufferStereo(buffer);
+    else
+        processDoubleBufferMono(buffer);
+    
+    if (totalNumInputChannels < totalNumOutputChannels)
+        buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
 
     audioSource.getBufferRMS(buffer);
 }

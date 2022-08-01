@@ -77,7 +77,7 @@ public:
 
     double lastSampleRate = 0.0;
 
-    VolumeMeterSource& getActiveGRSource()
+    strix::VolumeMeterSource& getActiveGRSource()
     {
       switch(currentMode)
       {
@@ -106,7 +106,7 @@ private:
             {0.5e-9f, 22e-9f, 20e-9f, 270e3f, 1e6f, 125e3f, 33e3f}
     } };*/
 
-    VolumeMeterSource meterSource;
+    strix::VolumeMeterSource meterSource;
 
     Processors::Guitar guitar;
     Processors::Bass bass;
@@ -115,15 +115,16 @@ private:
 
     AudioBuffer<double> doubleBuffer;
 
-    Processors::HFEnhancer<double> hfEnhancer;
-    Processors::LFEnhancer<double> lfEnhancer;
+    Processors::Enhancer hfEnhancer {Processors::Enhancer::Type::HF};
+    Processors::Enhancer lfEnhancer {Processors::Enhancer::Type::LF};
 
     Processors::CabType currentCab = Processors::CabType::small;
-  #if USE_SIMD
+#if USE_SIMD
     Processors::FDNCab<vec> cab;
-  #else
+#else
     Processors::FDNCab<double> cab;
-  #endif
+#endif
+    Processors::FDNCab<double> cab_m;
 
     Processors::ReverbManager reverb;
 
@@ -131,47 +132,96 @@ private:
 
     enum Mode
     {
-      Guitar,
-      Bass,
-      Channel
+        Guitar,
+        Bass,
+        Channel
     };
 
     Mode currentMode = Mode::Channel;
 
-    void checkForInvalidSamples (const dsp::AudioBlock<double>& blockToCheck)
+    // expects stereo in and out
+    void processDoubleBufferStereo(AudioBuffer<double>& buffer)
     {
-        auto numChans = blockToCheck.getNumChannels();
-        auto numSamps = blockToCheck.getNumSamples();
+        dsp::AudioBlock<double> block(buffer);
 
-        for (auto c = 0; c < numChans; ++c)
+        auto osBlock = oversample.processSamplesUp(block);
+
+        switch (currentMode)
         {
-            for (auto s = 0; s < numSamps; ++s)
-            {
-                auto sample = blockToCheck.getSample (c, s);
-                jassert (!std::isnan (sample));
-                // Probably also this ones
-                jassert (sample <= 100.0f);
-                jassert (sample >= -100.0f);
-            }
+        case Guitar:
+            guitar.processBlock(osBlock);
+            break;
+        case Bass:
+            bass.processBlock(osBlock);
+            break;
+        case Channel:
+            channel.processBlock(osBlock);
+            break;
         }
+
+        if (*lfEnhance)
+            lfEnhancer.processBlock(osBlock, (double)*lfEnhance, false);
+
+        if (*hfEnhance)
+            hfEnhancer.processBlock(osBlock, (double)*hfEnhance, false);
+
+        oversample.processSamplesDown(block);
+
+        setLatencySamples(oversample.getLatencyInSamples());
+
+    #if USE_SIMD
+        auto simdBlock = simd.interleaveBlock(block);
+        auto &&processBlock = simdBlock;
+    #else
+        auto &&processBlock = block;
+    #endif
+
+        if (*apvts.getRawParameterValue("cabOn"))
+            cab.processBlock(processBlock);
+
+    #if USE_SIMD
+        simd.deinterleaveBlock(processBlock);
+    #endif
+
+        if (*apvts.getRawParameterValue("reverbType"))
+            reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
     }
 
-    void checkForInvalidSamples (const chowdsp::AudioBlock<vec>& blockToCheck)
+    // expects one input channel and up to two output channels
+    void processDoubleBufferMono(AudioBuffer<double>& buffer)
     {
-        auto numChans = blockToCheck.getNumChannels();
-        auto numSamps = blockToCheck.getNumSamples();
+        dsp::AudioBlock<double> block(buffer);
 
-        for (auto c = 0; c < numChans; ++c)
+        auto osBlock = oversample.processSamplesUp(block);
+
+        switch (currentMode)
         {
-            for (auto s = 0; s < numSamps; ++s)
-            {
-                auto sample = blockToCheck.getSample (c, s);
-                jassert (!xsimd::any(xsimd::isnan (sample)));
-                // Probably also this ones
-                jassert (xsimd::any(sample <= 100.0f));
-                jassert (xsimd::any(sample >= -100.0f));
-            }
+        case Guitar:
+            guitar.processBlock(osBlock);
+            break;
+        case Bass:
+            bass.processBlock(osBlock);
+            break;
+        case Channel:
+            channel.processBlock(osBlock);
+            break;
         }
+
+        if (*lfEnhance > 0.f)
+            lfEnhancer.processBlock(osBlock, *lfEnhance, true);
+
+        if (*hfEnhance > 0.f)
+            hfEnhancer.processBlock(osBlock, *hfEnhance, true);
+
+        oversample.processSamplesDown(block);
+
+        setLatencySamples(oversample.getLatencyInSamples());
+
+        // if (*apvts.getRawParameterValue("cabOn"))
+        //     cab_m.processBlock(block);
+
+        // if (*apvts.getRawParameterValue("reverbType"))
+        //     reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
     }
 
     //==============================================================================
