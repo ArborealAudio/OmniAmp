@@ -13,7 +13,7 @@
 template <typename T>
 struct OptoComp
 {
-    OptoComp(ProcessorType t, VolumeMeterSource& s) : type(t), grSource(s) {}
+    OptoComp(ProcessorType t, strix::VolumeMeterSource& s) : type(t), grSource(s) {}
 
     void prepare(const dsp::ProcessSpec& spec)
     {
@@ -80,48 +80,46 @@ struct OptoComp
             l.reset();
     }
 
+    void setThreshold(double newComp)
+    {
+        double c_comp = jmap(newComp, 1.0, 6.0);
+
+        switch (type)
+        {
+        case ProcessorType::Guitar:
+        case ProcessorType::Bass:
+            threshold.store(std::pow(10.0, -36.0 / 20.0));
+            break;
+        case ProcessorType::Channel:{
+            auto thresh_scale = c_comp / 2.0;
+            threshold.store(std::pow(10.0, (-18.0 * thresh_scale) / 20.0));
+            break;
+            }
+        }
+    }
+
     void processBlock(dsp::AudioBlock<double>& block, T comp)
     {
         if (comp == 0.0) {
             grSource.measureGR(1.0);
             return;
         }
-        process(block, comp);
+        if (block.getNumChannels() > 1)
+            processStereo(block, comp);
+        else
+            processMono(block, comp);
     }
 
-    void processBlock(chowdsp::AudioBlock<vec>& block, T comp)
-    {
-        xsimd::batch_bool<double> zero{comp == 0.0};
-        if (xsimd::any(comp == 0.0)) {
-            grSource.measureGR(1.0);
-            return;
-        }
-        processSIMD(block, comp);
-    }
-
-    VolumeMeterSource& getGRSource() { return grSource; }
+    strix::VolumeMeterSource& getGRSource() { return grSource; }
 
 private:
 
-    inline void process(dsp::AudioBlock<T>& block, T comp)
+    inline void processStereo(dsp::AudioBlock<T>& block, T comp)
     {
         auto inL = block.getChannelPointer(0);
         auto inR = block.getChannelPointer(1);
 
         T c_comp = jmap(comp, (T)1.0, (T)6.0);
-
-        switch (type)
-        {
-        case ProcessorType::Channel:{
-            auto thresh_scale = c_comp / 2.0;
-            threshold = std::pow(10.0, (-18.0 * thresh_scale) / 20.0);
-            }
-            break;
-        case ProcessorType::Guitar:
-        case ProcessorType::Bass:
-            threshold = std::pow(10.0, -36.0 / 20.0);
-            break;
-        }
 
         for (int i = 0; i < block.getNumSamples(); ++i)
         {
@@ -176,69 +174,117 @@ private:
         }
     }
 
-    // if we do default SIMD stuff here, it should process L&R unlinked. How to link L&R?
-    inline void processSIMD(chowdsp::AudioBlock<T>& block, T comp)
+    inline void processMono(dsp::AudioBlock<T>& block, T comp)
     {
-        auto in = block.getChannelPointer(0);
+        auto inL = block.getChannelPointer(0);
 
         T c_comp = jmap(comp, (T)1.0, (T)6.0);
 
-        switch (type)
-        {
-        case ProcessorType::Channel:{
-            auto thresh_scale = c_comp / 2.0;
-            threshold = xsimd::pow((T)10.0, (-18.0 * thresh_scale) / 20.0);
-            }
-            break;
-        case ProcessorType::Guitar:
-        case ProcessorType::Bass:
-            threshold = xsimd::pow(10.0, -36.0 / 20.0);
-            break;
-        }
-
         for (int i = 0; i < block.getNumSamples(); ++i)
         {
-            auto abs = xsimd::abs(xm0);
+            auto abs0 = std::abs(xm0);
 
-            abs = sc_hp.processSample(abs);
-            abs = sc_lp.processSample(abs);
+            abs0 = sc_hp.processSample(abs0);
+            abs0 = sc_lp.processSample(abs0);
 
-            auto gr = compressSIMD(abs);
+            auto gr = compress(abs0);
 
             switch (type) {
             case ProcessorType::Guitar:
             case ProcessorType::Bass:
-                in[i] *= c_comp * gr;
+                inL[i] *= c_comp * gr;
                 break;
             case ProcessorType::Channel:
-                xsimd::batch_bool<double> range{c_comp <= 4.0};
-                if (xsimd::any(range))
-                {
-                    in[i] *= gr;
+                if (c_comp <= 4.f) {
+                    inL[i] *= gr;
                 }
                 else {
-                    in[i] *= (c_comp / 4.0) * gr;
+                    inL[i] *= (c_comp / 4.0) * gr;
                 }
                 break;
             }
 
-            xm0 = in[i];
+            xm0 = inL[i];
 
             switch (type) {
             case ProcessorType::Channel:
-                in[i] *= c_comp;
+                inL[i] *= c_comp;
                 break;
             case ProcessorType::Guitar:
             case ProcessorType::Bass:
-                auto bp = hp[0].processSample(in[i]);
-                bp = lp[0].processSample(bp);
+                auto bpL = hp[0].processSample(inL[i]);
+                bpL = lp[0].processSample(bpL);
 
-                in[i] += bp * comp;
-                in[i] *= xsimd::min(xsimd::max((T)3.0, c_comp), (T)1.0);
+                inL[i] += bpL * comp;
+                inL[i] *= jmin(jmax(3.0, c_comp), 1.0);
                 break;
             }
         }
     }
+
+    // if we do default SIMD stuff here, it should process L&R unlinked. How to link L&R?
+    // inline void processSIMD(chowdsp::AudioBlock<T>& block, T comp)
+    // {
+    //     auto in = block.getChannelPointer(0);
+
+    //     T c_comp = jmap(comp, (T)1.0, (T)6.0);
+
+    //     switch (type)
+    //     {
+    //     case ProcessorType::Channel:{
+    //         auto thresh_scale = c_comp / 2.0;
+    //         threshold = xsimd::pow((T)10.0, (-18.0 * thresh_scale) / 20.0);
+    //         }
+    //         break;
+    //     case ProcessorType::Guitar:
+    //     case ProcessorType::Bass:
+    //         threshold = xsimd::pow(10.0, -36.0 / 20.0);
+    //         break;
+    //     }
+
+    //     for (int i = 0; i < block.getNumSamples(); ++i)
+    //     {
+    //         auto abs = xsimd::abs(xm0);
+
+    //         abs = sc_hp.processSample(abs);
+    //         abs = sc_lp.processSample(abs);
+
+    //         auto gr = compressSIMD(abs);
+
+    //         switch (type) {
+    //         case ProcessorType::Guitar:
+    //         case ProcessorType::Bass:
+    //             in[i] *= c_comp * gr;
+    //             break;
+    //         case ProcessorType::Channel:
+    //             xsimd::batch_bool<double> range{c_comp <= 4.0};
+    //             if (xsimd::any(range))
+    //             {
+    //                 in[i] *= gr;
+    //             }
+    //             else {
+    //                 in[i] *= (c_comp / 4.0) * gr;
+    //             }
+    //             break;
+    //         }
+
+    //         xm0 = in[i];
+
+    //         switch (type) {
+    //         case ProcessorType::Channel:
+    //             in[i] *= c_comp;
+    //             break;
+    //         case ProcessorType::Guitar:
+    //         case ProcessorType::Bass:
+    //             auto bp = hp[0].processSample(in[i]);
+    //             bp = lp[0].processSample(bp);
+
+    //             in[i] += bp * comp;
+    //             in[i] *= xsimd::min(xsimd::max((T)3.0, c_comp), (T)1.0);
+    //             break;
+    //         }
+    //     }
+    // }
 
     /*returns gain reduction multiplier*/
     inline T compress(T x)
@@ -246,7 +292,7 @@ private:
         if (x < 1.175494351e-38)
             x = 1.175494351e-38;
 
-        auto env = jmax(0.0, 8.685889638 * std::log10(x / threshold));
+        auto env = jmax(0.0, 8.685889638 * std::log10(x / threshold.load()));
 
         T att_time = jlimit(0.0050, 0.050, (1.0 / x) * 0.015);
 
@@ -316,11 +362,7 @@ private:
 
     T lastSR = 44100.0;
 
-#if USE_SIMD
-    T threshold = xsimd::pow(10.0, -18.0 / 20.0);
-#else
-    T threshold = std::pow(10.0, -18.0 / 20.0);
-#endif
+    std::atomic<float> threshold = std::pow(10.0, -18.0 / 20.0);
     
     T lastEnv = 0.0, lastGR = 0.0;
     T xm0 = 0.0, xm1 = 0.0;
@@ -330,5 +372,5 @@ private:
 
     ProcessorType type;
 
-    VolumeMeterSource& grSource;
+    strix::VolumeMeterSource& grSource;
 };
