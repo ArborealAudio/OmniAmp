@@ -117,7 +117,6 @@ void GammaAudioProcessor::changeProgramName (int index, const juce::String& newN
 void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     oversample.initProcessing(samplesPerBlock);
-    setLatencySamples(oversample.getLatencyInSamples());
 
     lastSampleRate = sampleRate * oversample.getOversamplingFactor();
 
