@@ -46,19 +46,15 @@ public:
         for (auto i = 0; i < block.getNumSamples(); ++i)
         {
             L[i] = processSample(L[i]);
-            R[i] = L[i];
         }
     }
 
     inline void processBlock(chowdsp::AudioBlock<vec>& block)
     {
-        auto L = block.getChannelPointer(0);
-        auto R = L;
-        if (block.getNumChannels() > 1)
-            R = block.getChannelPointer(1);
+        auto in = block.getChannelPointer(0);
 
         for (auto i = 0; i < block.getNumSamples(); ++i)
-            L[i] = processSample(L[i]);
+            in[i] = processSample(in[i]);
     }
 
 private:
