@@ -32,15 +32,25 @@ enum class ProcessorType
 #include "DistPlus.h"
 #include "Room.h"
 
-struct Processor
+struct Processor : AudioProcessorValueTreeState::Listener
 {
-    Processor(AudioProcessorValueTreeState& a, ProcessorType t, VolumeMeterSource& s) : apvts(a), comp(t, s)
+    Processor(AudioProcessorValueTreeState& a, ProcessorType t, strix::VolumeMeterSource& s) : apvts(a), comp(t, s)
     {
         inGain = apvts.getRawParameterValue("inputGain");
         outGain = apvts.getRawParameterValue("outputGain");
         p_comp = apvts.getRawParameterValue("comp");
         hiGain = apvts.getRawParameterValue("hiGain");
         dist = apvts.getRawParameterValue("dist");
+
+        apvts.addParameterListener("comp", this);
+    }
+
+    ~Processor() { apvts.removeParameterListener("comp", this); }
+
+    void parameterChanged(const String &parameterID, float newValue) override
+    {
+        if (parameterID.contains("comp"))
+            comp.setThreshold(newValue);
     }
 
     virtual void prepare(const dsp::ProcessSpec &spec) = 0;
@@ -83,7 +93,7 @@ struct Processor
         }
     }
 
-    virtual VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
+    virtual strix::VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
 
 protected:
     void defaultPrepare(const dsp::ProcessSpec& spec)
@@ -100,7 +110,7 @@ protected:
 
         pentode.prepare(spec);
 
-        simd.setInterleavedBlockSize(1, spec.maximumBlockSize);
+        simd.setInterleavedBlockSize(spec.numChannels, spec.maximumBlockSize);
     }
 
     AudioProcessorValueTreeState &apvts;
@@ -125,7 +135,7 @@ protected:
 
 struct Guitar : Processor
 {
-    Guitar(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Guitar, s)
+    Guitar(AudioProcessorValueTreeState& a, strix::VolumeMeterSource& s) : Processor(a, ProcessorType::Guitar, s)
     {
     #if USE_SIMD
         toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)0.5e6, (vec)20e3, (vec)65e3);
@@ -151,7 +161,6 @@ struct Guitar : Processor
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
-
         auto&& processBlock = simdBlock;
 #else
         auto&& processBlock = block;
@@ -177,7 +186,7 @@ struct Guitar : Processor
 
         pentode.processBlockClassB(processBlock, 0.6, 0.6);
 
-#if USE_SIMD
+    #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
     #endif
     }
@@ -185,14 +194,12 @@ struct Guitar : Processor
 private:
 #if USE_SIMD
     GuitarPreFilter<vec> gtrPre;
-#else
-    GuitarPreFilter<double> gtrPre;
 #endif
 };
 
 struct Bass : Processor
 {
-    Bass(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Bass, s)
+    Bass(AudioProcessorValueTreeState& a, strix::VolumeMeterSource& s) : Processor(a, ProcessorType::Bass, s)
     {
     #if USE_SIMD
         toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.5e-9, (vec)10e-9, (vec)10e-9, (vec)250e3, (vec)0.5e6, (vec)30e3, (vec)100e3);
@@ -254,7 +261,7 @@ struct Bass : Processor
 
 struct Channel : Processor
 {
-    Channel(AudioProcessorValueTreeState& a, VolumeMeterSource& s) : Processor(a, ProcessorType::Channel, s)
+    Channel(AudioProcessorValueTreeState& a, strix::VolumeMeterSource& s) : Processor(a, ProcessorType::Channel, s)
     {
         toneStack = nullptr;
         triode.resize(2);
@@ -263,6 +270,36 @@ struct Channel : Processor
     void prepare(const dsp::ProcessSpec& spec) override
     {
         defaultPrepare(spec);
+
+        low.prepare(spec);
+        low.setCutoffFreq(350.0);
+        low.setType(strix::FilterType::firstOrderLowpass);
+
+        mid.prepare(spec);
+        mid.setCutoffFreq(900.0);
+        mid.setType(strix::FilterType::bandpass);
+
+        hi.prepare(spec);
+        hi.setCutoffFreq(5000.0);
+        hi.setType(strix::FilterType::firstOrderHighpass);
+    }
+
+    void setFilters(int index, float newValue)
+    {
+        switch (index)
+        {
+        case 0:
+            low.setGain(newValue);
+            break;
+        case 1:
+            mid.setGain(newValue);
+            break;
+        case 2:
+            hi.setGain(newValue);
+            break;
+        default:
+            break;
+        }
     }
 
     template <typename T>
@@ -291,20 +328,45 @@ struct Channel : Processor
                 triode[1].processBlock(processBlock, inGain->load(), gain_raw);
         }
 
+        processFilters(processBlock);
+
         if (*outGain > 0.f) {
             processBlock.multiplyBy(out_raw * 6.f);
 
-            if (!*hiGain) {
+            if (!*hiGain)
                 pentode.processBlockClassB(processBlock, 0.4f, 0.4f);
-            }
-            else {
+            else
                 pentode.processBlockClassB(processBlock, 0.6f, 0.6f);
-            }
         }
         
     #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
     #endif
+    }
+
+private:
+#if USE_SIMD
+    strix::SVTFilter<vec> low, mid, hi;
+#else
+    strix::SVTFilter<double> low, mid, hi;
+#endif
+
+    template <class Block>
+    void processFilters(Block& block)
+    {
+        for (auto ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            for (auto i = 0; i < block.getNumSamples(); ++i)
+            {
+                auto l = low.processSample(ch, in[i]);
+                auto m = mid.processSample(ch, in[i]);
+                auto h = hi.processSample(ch, in[i]);
+
+                in[i] += + l + m + h;
+            }
+        }
     }
 };
 
