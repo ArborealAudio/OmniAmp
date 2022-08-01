@@ -114,11 +114,12 @@ class Room
 
                 MixMatrix<channels>::processHadamardMatrix(vec.data());
 
-                for (auto ch = 0; ch < channels; ++ch) {
-                    block.getChannelPointer(ch)[i] = vec[ch];}
+                for (auto ch = 0; ch < channels; ++ch)
+                    block.getChannelPointer(ch)[i] = vec[ch];
             }
-
-            shuffleChannels(block);
+            for (auto ch = 0; ch < channels; ++ch)
+                if (invert[ch])
+                    FloatVectorOperations::multiply(block.getChannelPointer(ch), -1.0, block.getNumSamples());
         }
 
     private:
@@ -288,10 +289,12 @@ class Room
                 }
             }
 		}
+
 		/// Scaling factor for the downmix, if channels are phase-aligned
 		static constexpr Sample scalingFactor1() {
 			return 2/Sample(channels);
 		}
+
 		/// Scaling factor for the downmix, if channels are independent
 		static Sample scalingFactor2() {
 			return std::sqrt(scalingFactor1());
@@ -400,7 +403,7 @@ public:
 
         feedback.prepare(spec);
 
-        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(9500.0, spec.sampleRate * 2.0, 8);
+        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(spec.sampleRate * 0.5, spec.sampleRate * 2.0, 8);
 
         for (auto& c : coeffs)
         {
@@ -425,6 +428,11 @@ public:
         for (auto& d : diff)
             d.reset();
         feedback.reset();
+
+        usBuf.clear();
+        splitBuf.clear();
+        erBuf.clear();
+        dsBuf.clear();
     }
 
     void process(AudioBuffer<double>& buf, float amt)
