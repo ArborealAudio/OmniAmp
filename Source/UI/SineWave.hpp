@@ -28,9 +28,10 @@ struct AudioSource
         }
 
         float freq = 50.f;
+        float nyq = spec.sampleRate * 0.5f;
         for (int i = 0; i < 5; ++i)
         {
-            freq = jlimit(50.f, 16000.f, freq * (float)(i+1));
+            freq = jlimit(50.f, nyq * 0.73f, freq * (float)(i+1));
             hp[i].prepare(spec);
             hp[i].setType(dsp::LinkwitzRileyFilterType::highpass);
             hp[i].setCutoffFrequency(freq);
@@ -102,13 +103,13 @@ private:
 
         for (int i = 0; i < 5; ++i)
         {
-            auto hpf = band[i + 1].getArrayOfWritePointers();
+            auto hpf = band[i + 1].getWritePointer(0);
             auto lpf = band[i].getWritePointer(0);
             for (auto j = 0; j < buf.getNumSamples(); ++j)
             {
-                auto mono = (hpf[0][j] + hpf[1][j]) / 2.f;
-                hpf[0][j] = hp[i].processSample(0, mono);
-                lpf[j] = lpf[j] - hpf[0][j];
+                auto mono = hpf[j];
+                hpf[j] = hp[i].processSample(0, mono);
+                lpf[j] = lpf[j] - hpf[j];
             }
         }
     }
