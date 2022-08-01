@@ -101,7 +101,7 @@ struct Enhancer
         if (wetBuffer.getNumChannels() > 1)
             wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), block.getNumSamples());
 
-        auto processBlock = dsp::AudioBlock<double>(wetBuffer);
+        auto processBlock = dsp::AudioBlock<double>(wetBuffer).getSubBlock(0, block.getNumSamples());
 
         switch (type)
         {
