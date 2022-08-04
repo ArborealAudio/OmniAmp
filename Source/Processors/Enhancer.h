@@ -31,8 +31,10 @@ struct Enhancer
         HF
     };
 
-    Enhancer(Type t) : type(t)
+    Enhancer(AudioProcessorValueTreeState& a, Type t) : type(t), apvts(a)
     {
+        lfAutoGain = apvts.getRawParameterValue("lfEnhanceAuto");
+        hfAutoGain = apvts.getRawParameterValue("hfEnhanceAuto");
     }
 
     void setMode(Processors::ProcessorType newMode)
@@ -98,7 +100,7 @@ struct Enhancer
     void processBlock(dsp::AudioBlock<double>& block, const double enhance, bool mono)
     {
         wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), block.getNumSamples());
-        if (wetBuffer.getNumChannels() > 1)
+        if (!mono)
             wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), block.getNumSamples());
 
         auto processBlock = dsp::AudioBlock<double>(wetBuffer).getSubBlock(0, block.getNumSamples());
@@ -132,19 +134,23 @@ private:
         hp1.process(block.getNumSamples(), 0, inL);
         if (block.getNumChannels() > 1)
             hp1.process(block.getNumSamples(), 1, inR);
-        // hp1.processBlock(block);
 
-        block.multiplyBy(jmap(enhance, 1.0, 4.0));
+        auto gain = jmap(enhance, 1.0, 4.0);
+        double autoGain = 1.0;
+
+        block.multiplyBy(gain);
 
         EnhancerSaturation::process(block, 1.0, 3.0, 1.0);
         block.multiplyBy(2.0);
 
+        if (*hfAutoGain)
+            autoGain *= 1.0 / (2.0 * gain);
+
         hp2.process(block.getNumSamples(), 0, inL);
         if (block.getNumChannels() > 1)
             hp2.process(block.getNumSamples(), 1, inR);
-        // hp2.processBlock(block);
 
-        block.multiplyBy(enhance);
+        block.multiplyBy(enhance * autoGain);
     }
 
     void processLF(dsp::AudioBlock<double>& block, double enhance)
@@ -159,7 +165,12 @@ private:
             lp1.process(block.getNumSamples(), 1, inR);
         // lp1.processBlock(block);
 
-        block.multiplyBy(jmap(enhance, 1.0, 4.0));
+        auto gain = jmap(enhance, 1.0, 4.0);
+        double autoGain = 1.0;
+
+        block.multiplyBy(gain);
+        if (*lfAutoGain)
+            autoGain *= 1.0 / gain;
 
         EnhancerSaturation::process(block, 1.0, 2.0, 4.0);
 
@@ -168,13 +179,16 @@ private:
             lp2.process(block.getNumSamples(), 1, inR);
         // lp2.processBlock(block);
 
-        block.multiplyBy(enhance);
+        block.multiplyBy(enhance * autoGain);
     }
 
     double SR = 44100.0;
 
     Type type;
     Processors::ProcessorType mode;
+
+    AudioProcessorValueTreeState &apvts;
+    std::atomic<float> *hfAutoGain, *lfAutoGain;
 
     Dsp::SimpleFilter<Dsp::Bessel::LowPass<4>, 2> lp1, lp2;
     Dsp::SimpleFilter<Dsp::Bessel::HighPass<4>, 2> hp1, hp2;
