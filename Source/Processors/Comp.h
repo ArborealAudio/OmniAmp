@@ -154,12 +154,8 @@ private:
             xm1 = inR[i];
 
             switch (type) {
-            case ProcessorType::Channel:
-                inL[i] *= c_comp;
-                inR[i] *= c_comp;
-                break;
             case ProcessorType::Guitar:
-            case ProcessorType::Bass:
+            case ProcessorType::Bass: {
                 auto bpL = hp[0].processSample(inL[i]);
                 bpL = lp[0].processSample(bpL);
                 auto bpR = hp[1].processSample(inR[i]);
@@ -167,8 +163,15 @@ private:
 
                 inL[i] += bpL * comp;
                 inR[i] += bpR * comp;
-                inL[i] *= jmin(jmax(3.0, c_comp), 1.0);
-                inR[i] *= jmin(jmax(3.0, c_comp), 1.0);
+                // inL[i] *= jmin(jmax(3.0, c_comp), 1.0);
+                // inR[i] *= jmin(jmax(3.0, c_comp), 1.0);
+                break;
+            }
+            case ProcessorType::Channel:
+                if (c_comp > 2.f) {
+                inL[i] *= c_comp / 2.f;
+                inR[i] *= c_comp / 2.f;
+                }
                 break;
             }
         }
