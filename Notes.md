@@ -8,11 +8,9 @@
     
     - OR: in Channel mode, apply a frequency-weighted auto-gain. Bandpass each gain value to get a rough EL gain compensation
 
-- Get EQ params working properly btw amp & channel modes
-
-- Comp behavior is currently not-ideal. Just gets louder for first 50% and then real GR kicks in after that. Adding too much gain in the early parts of the knob.
+- Working on comp behavior:
   
-  - Should probably switch the way threshold lowering vs boost kicks in. Mostly lower threshold at first 50% with little gain, then start pushing the volume harder into the threshold
+  - adjusted Channel so that only threshold lowers for the first 60%, then add up to 1.5 gain into the sidechain. Past 50%, add up to 2x makeup gain
 
 - Advanced options including stereo/mono switch, stereo/MS linking for compressor
 
@@ -120,6 +118,8 @@
   - Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
+  
+  - What would be the advantages to this? Mainly just getting the Cab to come on if you switch to one of the amps. 
 
 - Add triple option for enhancer placement:
   
@@ -131,9 +131,9 @@
 
 - Add sag???
 
-- NaNs mostly eradicated. Now to build support for mono->stereo / mono
+- Figure out mono processing for reverb
 
-- Write your own SIMD fork of the Audio Block out of respect for chowdsp license
+- 
 
 # NOTES
 

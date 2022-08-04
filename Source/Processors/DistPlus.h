@@ -49,7 +49,7 @@ public:
         }
     }
 
-    inline void processBlock(chowdsp::AudioBlock<vec>& block)
+    inline void processBlock(strix::AudioBlock<vec>& block)
     {
         auto in = block.getChannelPointer(0);
 

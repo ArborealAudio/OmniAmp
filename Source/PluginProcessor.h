@@ -16,8 +16,8 @@
 #endif
 
 #include <JuceHeader.h>
-#include "../modules/chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
-#include "../modules/chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
+// #include "../modules/chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
+// #include "../modules/chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
 #include "../modules/chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
 #include "Processors/Processors.h"
 #include "UI/SineWave.hpp"
@@ -97,6 +97,8 @@ private:
 
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
+    ValueTree gtrState, bassState, channelState;
+
     std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     /*std::array<ToneStackNodal, 3> toneStack
@@ -115,8 +117,8 @@ private:
 
     AudioBuffer<double> doubleBuffer;
 
-    Processors::Enhancer hfEnhancer {Processors::Enhancer::Type::HF};
-    Processors::Enhancer lfEnhancer {Processors::Enhancer::Type::LF};
+    Processors::Enhancer hfEnhancer {apvts, Processors::Enhancer::Type::HF};
+    Processors::Enhancer lfEnhancer {apvts, Processors::Enhancer::Type::LF};
 
     Processors::CabType currentCab = Processors::CabType::small;
 #if USE_SIMD
@@ -124,11 +126,10 @@ private:
 #else
     Processors::FDNCab<double> cab;
 #endif
-    Processors::FDNCab<double> cab_m;
 
     Processors::ReverbManager reverb;
 
-    SIMD<double, dsp::AudioBlock<double>, chowdsp::AudioBlock<vec>> simd;
+    strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
 
     enum Mode
     {
@@ -140,7 +141,7 @@ private:
     Mode currentMode = Mode::Channel;
 
     // expects stereo in and out
-    void processDoubleBufferStereo(AudioBuffer<double>& buffer)
+    void processDoubleBuffer(AudioBuffer<double>& buffer, bool mono)
     {
         dsp::AudioBlock<double> block(buffer);
 
@@ -160,10 +161,10 @@ private:
         }
 
         if (*lfEnhance)
-            lfEnhancer.processBlock(osBlock, (double)*lfEnhance, false);
+            lfEnhancer.processBlock(osBlock, (double)*lfEnhance, mono);
 
         if (*hfEnhance)
-            hfEnhancer.processBlock(osBlock, (double)*hfEnhance, false);
+            hfEnhancer.processBlock(osBlock, (double)*hfEnhance, mono);
 
         oversample.processSamplesDown(block);
 
@@ -182,43 +183,6 @@ private:
     #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
     #endif
-
-        if (*apvts.getRawParameterValue("reverbType"))
-            reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
-    }
-
-    // expects one input channel and up to two output channels
-    void processDoubleBufferMono(AudioBuffer<double>& buffer)
-    {
-        dsp::AudioBlock<double> block(buffer);
-
-        auto osBlock = oversample.processSamplesUp(block);
-
-        switch (currentMode)
-        {
-        case Guitar:
-            guitar.processBlock(osBlock);
-            break;
-        case Bass:
-            bass.processBlock(osBlock);
-            break;
-        case Channel:
-            channel.processBlock(osBlock);
-            break;
-        }
-
-        if (*lfEnhance > 0.f)
-            lfEnhancer.processBlock(osBlock, *lfEnhance, true);
-
-        if (*hfEnhance > 0.f)
-            hfEnhancer.processBlock(osBlock, *hfEnhance, true);
-
-        oversample.processSamplesDown(block);
-
-        setLatencySamples(oversample.getLatencyInSamples());
-
-        // if (*apvts.getRawParameterValue("cabOn"))
-        //     cab_m.processBlock(block);
 
         // if (*apvts.getRawParameterValue("reverbType"))
         //     reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));

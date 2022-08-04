@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(Gamma VERSION 0.2.1)
+project(Gamma VERSION 0.3)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,7 +36,6 @@ target_sources(Gamma
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
 add_subdirectory(modules/chowdsp_wdf)
-add_subdirectory(modules/chowdsp_utils)
 
 juce_add_modules(
     "$ENV{HOME}/modules/Gin/modules/gin"
@@ -72,8 +71,6 @@ target_link_libraries(Gamma
         gin_gui
         dsp_filters
         chowdsp_wdf
-        chowdsp_simd
-        chowdsp_dsp_data_structures
         Arbor_modules
     PUBLIC
         juce::juce_recommended_config_flags

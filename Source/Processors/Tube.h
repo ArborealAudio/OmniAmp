@@ -82,7 +82,7 @@ struct Tube
         }
     }
 
-    void processBlockClassB(chowdsp::AudioBlock<vec>& block, T gp, T gn)
+    void processBlockClassB(strix::AudioBlock<vec>& block, T gp, T gn)
     {
         auto in = block.getChannelPointer(0);
 
@@ -241,7 +241,7 @@ struct AVTriode
         }
     }
 
-    void processBlock(chowdsp::AudioBlock<vec>& block, T gp, T gn)
+    void processBlock(strix::AudioBlock<vec>& block, T gp, T gn)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {

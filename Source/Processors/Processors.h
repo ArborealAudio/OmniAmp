@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include "SIMD.h"
-
 namespace Processors
 {
 
@@ -37,7 +35,10 @@ struct Processor : AudioProcessorValueTreeState::Listener
     Processor(AudioProcessorValueTreeState& a, ProcessorType t, strix::VolumeMeterSource& s) : apvts(a), comp(t, s)
     {
         inGain = apvts.getRawParameterValue("inputGain");
+        inGainAuto = apvts.getRawParameterValue("inputAutoGain");
         outGain = apvts.getRawParameterValue("outputGain");
+        outGainAuto = apvts.getRawParameterValue("outputAutoGain");
+        eqAutoGain = apvts.getRawParameterValue("eqAutoGain");
         p_comp = apvts.getRawParameterValue("comp");
         hiGain = apvts.getRawParameterValue("hiGain");
         dist = apvts.getRawParameterValue("dist");
@@ -98,6 +99,8 @@ struct Processor : AudioProcessorValueTreeState::Listener
 protected:
     void defaultPrepare(const dsp::ProcessSpec& spec)
     {
+        SR = spec.sampleRate;
+
         comp.prepare(spec);
 
         mxr.prepare(spec.sampleRate);
@@ -128,9 +131,11 @@ protected:
     Tube<double> pentode;
 #endif
 
-    std::atomic<float>* inGain, *outGain, *hiGain, *p_comp, *dist;
+    std::atomic<float>* inGain, *inGainAuto, *outGain, *outGainAuto, *hiGain, *p_comp, *dist, *eqAutoGain;
 
-    SIMD<double, dsp::AudioBlock<double>, chowdsp::AudioBlock<vec>> simd;
+    strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
+
+    double SR = 44100.0;
 };
 
 struct Guitar : Processor
@@ -157,6 +162,8 @@ struct Guitar : Processor
         T gain_raw = jmap(inGain->load(), 1.f, 8.f);
         T out_raw = jmap(outGain->load(), 1.f, 8.f);
 
+        T autoGain = 1.0;
+
         comp.processBlock(block, *p_comp);
 
 #if USE_SIMD
@@ -177,6 +184,9 @@ struct Guitar : Processor
         triode[1].processBlock(processBlock, 0.7, 1.2);
         triode[2].processBlock(processBlock, 0.7, 1.2);
 
+        if (*inGainAuto)
+            autoGain *= 1.0 / gain_raw;
+
         toneStack->processBlock(processBlock);
 
         if (*hiGain)
@@ -186,7 +196,12 @@ struct Guitar : Processor
 
         pentode.processBlockClassB(processBlock, 0.6, 0.6);
 
-    #if USE_SIMD
+        if (*outGainAuto)
+            autoGain *= 1.0 / out_raw;
+
+        processBlock.multiplyBy(autoGain);
+
+#if USE_SIMD
         simd.deinterleaveBlock(processBlock);
     #endif
     }
@@ -220,6 +235,8 @@ struct Bass : Processor
         T gain_raw = jmap(inGain->load(), 1.f, 8.f);
         T out_raw = jmap(outGain->load(), 1.f, 8.f);
 
+        T autoGain = 1.0;
+
         comp.processBlock(block, *p_comp);
 
     #if USE_SIMD
@@ -235,8 +252,15 @@ struct Bass : Processor
         triode[0].processBlock(processBlock, 0.5, 1.0);
 
         processBlock.multiplyBy(gain_raw);
-        if (*hiGain)
+
+        if (*inGainAuto)
+            autoGain *= 1.0 / gain_raw;
+
+        if (*hiGain) {
             processBlock.multiplyBy(2.f);
+            if (*inGainAuto)
+                autoGain *= 0.5;
+        }
 
         triode[1].processBlock(processBlock, 0.5, 1.0);
         if (*hiGain) {
@@ -248,12 +272,17 @@ struct Bass : Processor
 
         processBlock.multiplyBy(out_raw * 6.0);
 
+        if (*outGainAuto)
+            autoGain *= 1.0 / out_raw;
+
         if (!*hiGain)
             pentode.processBlockClassB(processBlock, 0.6, 0.6);
         else
             pentode.processBlockClassB(processBlock, 0.7, 0.7);
 
-    #if USE_SIMD
+        processBlock.multiplyBy(autoGain);
+
+#if USE_SIMD
         simd.deinterleaveBlock(processBlock);
     #endif
     }
@@ -272,7 +301,7 @@ struct Channel : Processor
         defaultPrepare(spec);
 
         low.prepare(spec);
-        low.setCutoffFreq(350.0);
+        low.setCutoffFreq(150.0);
         low.setType(strix::FilterType::firstOrderLowpass);
 
         mid.prepare(spec);
@@ -280,22 +309,23 @@ struct Channel : Processor
         mid.setType(strix::FilterType::bandpass);
 
         hi.prepare(spec);
-        hi.setCutoffFreq(5000.0);
+        hi.setCutoffFreq(7000.0);
         hi.setType(strix::FilterType::firstOrderHighpass);
     }
 
     void setFilters(int index, float newValue)
     {
+        auto gain = jmap(newValue, -0.5f, 0.5f);
         switch (index)
         {
         case 0:
-            low.setGain(newValue);
+            low.setGain(gain);
             break;
         case 1:
-            mid.setGain(newValue);
+            mid.setGain(gain);
             break;
         case 2:
-            hi.setGain(newValue);
+            hi.setGain(gain);
             break;
         default:
             break;
@@ -307,7 +337,9 @@ struct Channel : Processor
     {
         T gain_raw = jmap(inGain->load(), 1.f, 4.f);
         T out_raw = jmap(outGain->load(), 1.f, 4.f);
-        
+
+        vec autoGain = 1.0;
+
         comp.processBlock(block, *p_comp);
 
     #if USE_SIMD
@@ -328,7 +360,13 @@ struct Channel : Processor
                 triode[1].processBlock(processBlock, inGain->load(), gain_raw);
         }
 
+        if (*inGainAuto)
+            autoGain *= 1.0 / gain_raw;
+
         processFilters(processBlock);
+
+        if (*eqAutoGain)
+            autoGain = setEQAutoGain(autoGain);
 
         if (*outGain > 0.f) {
             processBlock.multiplyBy(out_raw * 6.f);
@@ -338,7 +376,12 @@ struct Channel : Processor
             else
                 pentode.processBlockClassB(processBlock, 0.6f, 0.6f);
         }
-        
+
+        if (*outGainAuto)
+            autoGain *= 1.0 / out_raw;
+
+        processBlock.multiplyBy(xsimd::reduce_max(autoGain));
+
     #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
     #endif
@@ -367,6 +410,25 @@ private:
                 in[i] += + l + m + h;
             }
         }
+    }
+
+    // takes the current auto gain and multiplies it by freq-weighted eq gains
+    template <typename T>
+    T setEQAutoGain(T autoGain)
+    {
+        auto el_weight = [](T x)
+        { return 20.0 * x * (3.5 * x - 1.0) + 1.0; };
+
+        auto nyq = SR * 0.5;
+
+        if (xsimd::any(low.getGain() != 0.0))
+            autoGain *= 1.0 / (1.0 + low.getGain() * el_weight(low.getCutoffFreq() / nyq));
+        if (xsimd::any(mid.getGain() != 0.0))
+            autoGain *= 1.0 / (1.0 + mid.getGain() * el_weight(mid.getCutoffFreq() / nyq));
+        if (xsimd::any(hi.getGain() != 0.0))
+            autoGain *= 1.0 / (1.0 + hi.getGain() * el_weight(hi.getCutoffFreq() / nyq));
+
+        return autoGain;
     }
 };
 
