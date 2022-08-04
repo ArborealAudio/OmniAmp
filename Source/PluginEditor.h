@@ -44,7 +44,7 @@ private:
 
     ReverbComponent reverbComp;
 
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS || JUCE_LINUX
     OpenGLContext opengl;
 #endif
 

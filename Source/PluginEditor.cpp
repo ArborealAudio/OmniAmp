@@ -13,7 +13,7 @@
 GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource()), reverbComp(p.apvts), tooltip(this)
 {
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS || JUCE_LINUX
     opengl.attachTo(*this);
     opengl.setImageCacheSize((size_t)64 * 1024);
 #endif
@@ -37,10 +37,18 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     addAndMakeVisible(lfEnhance);
     lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "lfEnhance", lfEnhance);
     lfEnhance.setBounds(getLocalBounds().getCentreX() - 350, 100, 100, 100);
+    lfEnhance.onAltClick = [&](bool state)
+    {
+        p.apvts.getParameterAsValue("lfEnhanceAuto") = state;
+    };
 
     addAndMakeVisible(hfEnhance);
     hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
     hfEnhance.setBounds(getLocalBounds().getCentreX() + 250, 100, 100, 100);
+    hfEnhance.onAltClick = [&](bool state)
+    {
+        p.apvts.getParameterAsValue("hfEnhanceAuto") = state;
+    };
 
     grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
     grMeter.setBounds(72, 200, 32, 100);
@@ -76,7 +84,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 {
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS || JUCE_LINUX
     opengl.detach();
 #endif
 }
