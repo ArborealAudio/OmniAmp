@@ -90,10 +90,13 @@ struct KnobLookAndFeel : LookAndFeel_V4
             Image glow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Graphics gg(glow);
             gg.setColour(Colours::whitesmoke);
-            auto fac = 1.f + (5.f * sliderPos);
+            auto fac = 1.f + (15.f * sliderPos);
             gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
 
             gin::applyStackBlur(glow, 5);
+
+            g.setColour(Colour(BACKGROUND_COLOR));
+            g.fillEllipse(rx, ry, rw, rw);
 
             g.drawImageAt(glow, 0, 0);
 
@@ -105,13 +108,8 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto ellipseWidth = radius * 0.25f;
             p.addEllipse(rx, -radius * 0.9, ellipseWidth, ellipseWidth);
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
-            g.setColour(Colour(0xffaa8875));
+            g.setColour(Colour(BACKGROUND_COLOR));
             g.fillPath(p);
-
-            // if (autogain.load()) {
-            //     g.setColour(Colours::red.withLightness(0.8f));
-            //     g.drawText("Auto", rx, ry, rw, rw, Justification::centred);
-            // }
             break;
             }
         case HF: {
@@ -127,12 +125,16 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto angle = rotaryStartAngle * 0.8 + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
             Image glow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
+            
             Graphics gg(glow);
             gg.setColour(Colours::wheat);
-            auto fac = 1.f + (5.f * sliderPos);
+            auto fac = 1.f + (15.f * sliderPos);
             gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
 
             gin::applyStackBlur(glow, 5);
+
+            g.setColour(Colour(BACKGROUND_COLOR));
+            g.fillEllipse(rx, ry, rw, rw);
 
             g.drawImageAt(glow, 0, 0);
 
@@ -144,13 +146,8 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto ellipseWidth = radius * 0.25f;
             p.addEllipse(rx, -radius * 0.9, ellipseWidth, ellipseWidth);
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
-            g.setColour(Colour(0xffaa8875));
+            g.setColour(Colour(BACKGROUND_COLOR));
             g.fillPath(p);
-
-            // if (autogain.load()) {
-            //     g.setColour(Colours::red.withLightness(0.8f));
-            //     g.drawText("Auto", rx, ry, rw, rw, Justification::centred);
-            // }
             break;
             }
         case Simple: {
@@ -193,9 +190,7 @@ struct Knob : Slider
     {
         setLookAndFeel(&lnf);
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
-        // setPopupDisplayEnabled(true, true, this);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
-        setPaintingIsUnclipped(true);
     }
     ~Knob()
     {
