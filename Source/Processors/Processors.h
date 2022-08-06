@@ -412,6 +412,7 @@ private:
         }
     }
 
+#if USE_SIMD
     // takes the current auto gain and multiplies it by freq-weighted eq gains
     template <typename T>
     T setEQAutoGain(T autoGain)
@@ -419,7 +420,7 @@ private:
         auto el_weight = [](T x)
         { return 20.0 * x * (3.5 * x - 1.0) + 1.0; };
 
-        auto nyq = SR * 0.5;
+        T nyq = SR * 0.5;
 
         if (xsimd::any(low.getGain() != 0.0))
             autoGain *= 1.0 / (1.0 + low.getGain() * el_weight(low.getCutoffFreq() / nyq));
@@ -430,6 +431,24 @@ private:
 
         return autoGain;
     }
+#else
+    double setEQAutoGain(double autoGain)
+    {
+        auto el_weight = [](double x)
+        { return 20.0 * x * (3.5 * x - 1.0) + 1.0; };
+
+        auto nyq = SR * 0.5;
+
+        if (low.getGain() != 0.0)
+            autoGain *= 1.0 / (1.0 + low.getGain() * el_weight(low.getCutoffFreq() / nyq));
+        if (mid.getGain() != 0.0)
+            autoGain *= 1.0 / (1.0 + mid.getGain() * el_weight(mid.getCutoffFreq() / nyq));
+        if (hi.getGain() != 0.0)
+            autoGain *= 1.0 / (1.0 + hi.getGain() * el_weight(hi.getCutoffFreq() / nyq));
+
+        return autoGain;
+    }
+#endif
 };
 
 } // namespace Processors
