@@ -55,7 +55,9 @@ target_compile_definitions(Gamma
 juce_add_binary_data(BinaryData SOURCES
     "Resources/2x12.svg"
     "Resources/4x12.svg"
-    "Resources/8x10.svg")
+    "Resources/6x10.svg"
+    "Resources/amp_mesh_2.svg"
+    "Resources/logo.svg")
 
 # Need to build BinaryData with -fPIC flag on Linux
 set_target_properties(BinaryData PROPERTIES
