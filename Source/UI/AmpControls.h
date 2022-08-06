@@ -27,6 +27,8 @@ struct AmpControls : Component
         bass.setLabel("Bass");
         bass.onAltClick = [&](bool state)
         {
+            mid.autogain.store(state);
+            treble.autogain.store(state);
             apvts.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
@@ -35,6 +37,8 @@ struct AmpControls : Component
         mid.setLabel("Mid");
         mid.onAltClick = [&](bool state)
         {
+            bass.autogain.store(state);
+            treble.autogain.store(state);
             apvts.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
@@ -43,6 +47,8 @@ struct AmpControls : Component
         treble.setLabel("Treble");
         treble.onAltClick = [&](bool state)
         {
+            mid.autogain.store(state);
+            bass.autogain.store(state);
             apvts.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
@@ -57,12 +63,12 @@ struct AmpControls : Component
 
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hiGain", hiGain);
-        hiGain.setButtonText("Hi Gain");
+        hiGain.setButtonText("Boost");
     }
 
     void paint(Graphics& g) override
     {
-        g.setColour(Colours::beige.withAlpha(0.5f));
+        g.setColour(Colour(AMP_COLOR));
         g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
 
         auto paintAuto = [&](Rectangle<int> bounds)
@@ -93,13 +99,15 @@ struct AmpControls : Component
 
     void resized() override
     {
-        auto mb = getLocalBounds().removeFromTop(getHeight() * 0.7);
+        auto bounds = getLocalBounds();
+
+        auto mb = bounds.removeFromTop(bounds.getHeight() * 0.7f);
         auto w = mb.getWidth() / 7;
 
         for (auto& k : getKnobs())
             k->setBounds(mb.removeFromLeft(w));
 
-        hiGain.setBounds(inGain.getX(), inGain.getBottom() + 10, inGain.getWidth(), getHeight() * 0.3 - 10);
+        hiGain.setBounds(inGain.getX() + 15, inGain.getY() - 10, inGain.getWidth() - 15, (float)getHeight() * 0.3 - 15);
     }
 
 private:
