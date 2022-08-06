@@ -18,25 +18,34 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     opengl.setImageCacheSize((size_t)64 * 1024);
 #endif
 
-    setSize (800, 400);
+    mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
+    logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
+
+    setSize (800, 450);
+
+    auto bounds = getLocalBounds();
+    auto topSection = bounds.removeFromTop(50);
+    auto qtr = bounds.getWidth() / 4;
+
+    auto ampSection = bounds.removeFromBottom(200);
+    auto topLeftQtr = bounds.removeFromLeft(qtr);
+    auto topRightQtr = bounds.removeFromRight(qtr);
 
     addAndMakeVisible(wave);
-    wave.setSize(400, 200);
-    wave.setCentrePosition(getLocalBounds().getCentreX(), 100);
+    wave.setBounds(bounds.reduced(10));
     wave.setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(ampControls);
-    ampControls.setSize(585, 130);
-    ampControls.setCentrePosition(getLocalBounds().getCentreX(), getLocalBounds().getCentreY() + 65);
+    ampControls.setBounds(ampSection);
 
     addAndMakeVisible(mode);
     modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(p.apvts, "mode", mode);
     mode.setSize(100, 30);
-    mode.setCentrePosition(getLocalBounds().getCentreX(), 360);
+    mode.setCentrePosition(getLocalBounds().getCentreX(), 435);
 
     addAndMakeVisible(lfEnhance);
     lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "lfEnhance", lfEnhance);
-    lfEnhance.setBounds(getLocalBounds().getCentreX() - 350, 100, 100, 100);
+    lfEnhance.setBounds(topLeftQtr);
     lfEnhance.onAltClick = [&](bool state)
     {
         p.apvts.getParameterAsValue("lfEnhanceAuto") = state;
@@ -44,40 +53,40 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
 
     addAndMakeVisible(hfEnhance);
     hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
-    hfEnhance.setBounds(getLocalBounds().getCentreX() + 250, 100, 100, 100);
+    hfEnhance.setBounds(topRightQtr);
     hfEnhance.onAltClick = [&](bool state)
     {
         p.apvts.getParameterAsValue("hfEnhanceAuto") = state;
     };
 
     grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
-    grMeter.setBounds(72, 200, 32, 100);
+    grMeter.setBounds(ampSection.removeFromLeft(30));
     addAndMakeVisible(grMeter);
 
-    setSize(800, 600);
+    setSize(800, 650);
 
     auto bottomSection = getLocalBounds().removeFromBottom(200);
 
-    cabComponent.setBounds(bottomSection.removeFromLeft(getWidth() * 0.66));
+    cabComponent.setBounds(bottomSection.removeFromLeft(getWidth() * 0.66f));
     addAndMakeVisible(cabComponent);
 
     cabComponent.setState(*p.apvts.getRawParameterValue("cabOn") + *p.apvts.getRawParameterValue("cabType"));
 
     cabComponent.cabChanged = [&](bool state, int newType)
     {
-      auto type = p.apvts.getParameterAsValue("cabType");
-      auto on = p.apvts.getParameterAsValue("cabOn");
+        auto type = p.apvts.getParameterAsValue("cabType");
+        auto on = p.apvts.getParameterAsValue("cabOn");
 
-      type = newType;
-      on = state;
+        type = newType;
+        on = state;
     };
 
     reverbComp.setBounds(bottomSection);
     addAndMakeVisible(reverbComp);
 
     setResizable(true, true);
-    getConstrainer()->setMinimumSize(200, 150);
-    getConstrainer()->setFixedAspectRatio(1.333);
+    getConstrainer()->setMinimumSize(400, 325);
+    getConstrainer()->setFixedAspectRatio(1.231);
 
     setBufferedToImage(true);
 }
@@ -92,19 +101,26 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 //==============================================================================
 void GammaAudioProcessorEditor::paint (juce::Graphics& g)
 {
-  // g.fillAll(Colour(0xff968875));
-  g.setColour(Colour(0xffaa8875));
-  g.fillRect(getLocalBounds().withTrimmedBottom(getHeight() / 3)); // make this adapt to size!!
+    g.setColour(Colour(BACKGROUND_COLOR));
+    auto top = getLocalBounds().withTrimmedBottom(getHeight() / 3);
+    g.fillRect(top);
+
+    mesh->drawWithin(g, top.withTrimmedBottom(top.getHeight() / 2).toFloat(), RectanglePlacement::fillDestination, 1.f);
+
+    auto trimmedTop = top.removeFromTop(50);
+    g.setColour(Colour(TOP_TRIM));
+    g.fillRect(trimmedTop);
+    logo->drawWithin(g, Rectangle<float>(5.f, 5.f, 45.f, 45.f), RectanglePlacement::centred, 1.f);
 }
 
 void GammaAudioProcessorEditor::resized()
 {
-  auto children = getChildren();
-  children.removeLast();
-  auto scale = (float)getWidth() / 800.f;
+    auto children = getChildren();
+    children.removeLast();
+    auto scale = (float)getWidth() / 800.f;
 
-  for (auto& c : children)
-  {
+    for (auto& c : children)
+    {
     c->setTransform(AffineTransform::scale(scale));
-  }
+    }
 }

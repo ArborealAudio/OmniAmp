@@ -28,6 +28,8 @@ public:
 private:
     GammaAudioProcessor& audioProcessor;
 
+    std::unique_ptr<Drawable> logo, mesh;
+
     ChoiceMenu mode;
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach;
 
