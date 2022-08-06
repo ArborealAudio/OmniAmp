@@ -1,12 +1,6 @@
 # TO-DO
 
-- Working auto-gain processor, probably some distinct class whose gains are supplied by each individual processor
-  
-  - had an idea to make each processor have its own auto gain. Like you can alt-click it and a little A will show up above the knob, and that knob will compensate for added gain
-  
-  - How to handle the EQ section? Each EQ band could have an auto gain component, which gets a little complicated for the gtr tonestack bc it's all one filter and the exact db measurement isn't clear. So maybe not the EQ.
-    
-    - OR: in Channel mode, apply a frequency-weighted auto-gain. Bandpass each gain value to get a rough EL gain compensation
+- Get freq-weighted auto gain for Channel EQ working properly
 
 - Working on comp behavior:
   
@@ -133,8 +127,6 @@
 
 - Figure out mono processing for reverb
 
-- 
-
 # NOTES
 
-Using JUCE 7.0.1 (well, trying to, but created a local branch @ 7.0.0 with some fixes for IPP...TBD)
+Using JUCE 7.0.1
