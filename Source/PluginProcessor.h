@@ -184,8 +184,8 @@ private:
         simd.deinterleaveBlock(processBlock);
     #endif
 
-        // if (*apvts.getRawParameterValue("reverbType"))
-        //     reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
+        if (*apvts.getRawParameterValue("reverbType"))
+            reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
     }
 
     //==============================================================================

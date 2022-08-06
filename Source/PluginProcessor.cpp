@@ -251,17 +251,6 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // auto L = doubleBuffer.getWritePointer(0);
-    // for (auto i = 0; i < buffer.getNumSamples(); ++i)
-    //     L[i] = static_cast<double>(buffer.getSample(0, i));
-
-    // if (totalNumInputChannels > 1 && totalNumOutputChannels > 1)
-    // {
-    //     auto R = doubleBuffer.getWritePointer(1);
-    //     for (auto i = 0; i < buffer.getNumSamples(); ++i)
-    //         R[i] = static_cast<double>(buffer.getSample(1, i));
-    // }
-
     doubleBuffer.makeCopyOf(buffer, true);
 
     processDoubleBuffer(doubleBuffer, totalNumInputChannels < 2);
@@ -284,7 +273,6 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
                 outR[i] = static_cast<float>(R[i]);
         }
     }
-    // buffer.makeCopyOf(doubleBuffer, true);
 
     audioSource.getBufferRMS(buffer);
 }
