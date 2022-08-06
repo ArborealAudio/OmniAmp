@@ -53,7 +53,7 @@ class CabsComponent : public Component
 public:
     CabsComponent() : small(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize),
                       med(BinaryData::_4x12_svg, BinaryData::_4x12_svgSize),
-                      large(BinaryData::_8x10_svg, BinaryData::_8x10_svgSize)
+                      large(BinaryData::_6x10_svg, BinaryData::_6x10_svgSize)
     {
         small.setColor(Colours::olivedrab);
         med.setColor(Colours::cadetblue);
