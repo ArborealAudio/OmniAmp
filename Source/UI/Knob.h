@@ -68,11 +68,6 @@ struct KnobLookAndFeel : LookAndFeel_V4
                 g.drawText(String(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             else
                 g.drawText(*label, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
-
-            // if (autogain.load()) {
-            //     g.setColour(Colours::red.withLightness(0.8f));
-            //     g.drawText("Auto", rx, ry, rw, rw, Justification::centred);
-            // }
             break;
             }
         case LF: {
