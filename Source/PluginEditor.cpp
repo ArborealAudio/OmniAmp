@@ -27,7 +27,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     auto topSection = bounds.removeFromTop(50);
     auto qtr = bounds.getWidth() / 4;
 
-    auto ampSection = bounds.removeFromBottom(200);
+    auto ampSection = bounds.removeFromBottom(200).reduced(10);
     auto topLeftQtr = bounds.removeFromLeft(qtr);
     auto topRightQtr = bounds.removeFromRight(qtr);
 
@@ -60,7 +60,12 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     };
 
     grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
-    grMeter.setBounds(ampSection.removeFromLeft(30));
+    grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
+    grMeter.setMeterColor(Colours::oldlace);
+    grMeter.setBounds(ampSection.withTrimmedRight(ampSection.getWidth() * 0.66f)
+                          .withTrimmedTop(ampSection.getHeight() * 0.8f)
+                          .translated(10, -10));
+    grMeter.setStatePointer(p.apvts.getRawParameterValue("comp"));
     addAndMakeVisible(grMeter);
 
     setSize(800, 650);
@@ -110,7 +115,7 @@ void GammaAudioProcessorEditor::paint (juce::Graphics& g)
     auto trimmedTop = top.removeFromTop(50);
     g.setColour(Colour(TOP_TRIM));
     g.fillRect(trimmedTop);
-    logo->drawWithin(g, Rectangle<float>(5.f, 5.f, 45.f, 45.f), RectanglePlacement::centred, 1.f);
+    logo->drawWithin(g, trimmedTop.removeFromLeft(45).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
 }
 
 void GammaAudioProcessorEditor::resized()
