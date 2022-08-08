@@ -5,6 +5,7 @@
 - Working on comp behavior:
   
   - adjusted Channel so that only threshold lowers for the first 60%, then add up to 1.5 gain into the sidechain. Past 50%, add up to 2x makeup gain
+  - Get meter to display full 24dB (just need to get the label to read that high)
 
 - Advanced options including stereo/mono switch, stereo/MS linking for compressor
 
