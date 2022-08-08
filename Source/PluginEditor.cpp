@@ -112,10 +112,10 @@ void GammaAudioProcessorEditor::paint (juce::Graphics& g)
 
     mesh->drawWithin(g, top.withTrimmedBottom(top.getHeight() / 2).toFloat(), RectanglePlacement::fillDestination, 1.f);
 
-    auto trimmedTop = top.removeFromTop(50);
+    auto trimmedTop = top.removeFromTop(top.getHeight() / 10);
     g.setColour(Colour(TOP_TRIM));
     g.fillRect(trimmedTop);
-    logo->drawWithin(g, trimmedTop.removeFromLeft(45).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
+    logo->drawWithin(g, trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
 }
 
 void GammaAudioProcessorEditor::resized()
