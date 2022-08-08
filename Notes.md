@@ -2,6 +2,8 @@
 
 - Get freq-weighted auto gain for Channel EQ working properly
 
+- Figure out why CPU use increases when UI is closed
+
 - Working on comp behavior:
   
   - adjusted Channel so that only threshold lowers for the first 60%, then add up to 1.5 gain into the sidechain. Past 50%, add up to 2x makeup gain
@@ -126,7 +128,7 @@
 
 - Add sag???
 
-- Figure out mono processing for reverb
+- Figure out mono processing for reverb & potential optimizations as well. Adds quite a lot of CPU, at least on Windows
 
 # NOTES
 
