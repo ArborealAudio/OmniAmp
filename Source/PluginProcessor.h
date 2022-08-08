@@ -16,8 +16,6 @@
 #endif
 
 #include <JuceHeader.h>
-// #include "../modules/chowdsp_utils/modules/dsp/chowdsp_dsp_data_structures/chowdsp_dsp_data_structures.h"
-// #include "../modules/chowdsp_utils/modules/dsp/chowdsp_simd/chowdsp_simd.h"
 #include "../modules/chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
 #include "Processors/Processors.h"
 #include "UI/SineWave.hpp"
@@ -113,7 +111,7 @@ private:
     Processors::Guitar guitar;
     Processors::Bass bass;
     Processors::Channel channel;
-    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple};
+    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR};
 
     AudioBuffer<double> doubleBuffer;
 

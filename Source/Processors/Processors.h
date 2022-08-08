@@ -209,6 +209,8 @@ struct Guitar : Processor
 private:
 #if USE_SIMD
     GuitarPreFilter<vec> gtrPre;
+#else
+    GuitarPreFilter<double> gtrPre;
 #endif
 };
 
@@ -338,7 +340,11 @@ struct Channel : Processor
         T gain_raw = jmap(inGain->load(), 1.f, 4.f);
         T out_raw = jmap(outGain->load(), 1.f, 4.f);
 
+    #if USE_SIMD
         vec autoGain = 1.0;
+    #else
+        double autoGain = 1.0;
+    #endif
 
         comp.processBlock(block, *p_comp);
 
@@ -380,10 +386,12 @@ struct Channel : Processor
         if (*outGainAuto)
             autoGain *= 1.0 / out_raw;
 
+    #if USE_SIMD
         processBlock.multiplyBy(xsimd::reduce_max(autoGain));
 
-    #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
+    #else
+        processBlock.multiplyBy(autoGain);
     #endif
     }
 
