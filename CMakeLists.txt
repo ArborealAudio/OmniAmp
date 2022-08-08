@@ -59,7 +59,7 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/amp_mesh_2.svg"
     "Resources/logo.svg")
 
-# Need to build BinaryData with -fPIC flag on Linux
+# -fPIC flag mainly for Linux
 set_target_properties(BinaryData PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE)
 
@@ -72,8 +72,8 @@ target_link_libraries(Gamma
         gin
         gin_gui
         dsp_filters
-        chowdsp_wdf
         Arbor_modules
+        chowdsp_wdf
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
