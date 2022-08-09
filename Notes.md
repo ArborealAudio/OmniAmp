@@ -4,6 +4,8 @@
 
 - Figure out why CPU use increases when UI is closed
 
+- Setup a default font! The default on Linux is looking like a good option...
+
 - Working on comp behavior:
   
   - adjusted Channel so that only threshold lowers for the first 60%, then add up to 1.5 gain into the sidechain. Past 50%, add up to 2x makeup gain
