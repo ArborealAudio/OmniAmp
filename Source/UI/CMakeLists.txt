@@ -4,7 +4,6 @@ PRIVATE
     Knob.h
     ChoiceMenu.h
     Button.h
-    Background.h
     AmpControls.h
     SineWave.hpp
     Cabs.h
