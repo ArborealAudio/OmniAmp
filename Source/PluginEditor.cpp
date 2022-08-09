@@ -13,7 +13,7 @@
 GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource()), reverbComp(p.apvts), tooltip(this)
 {
-#if JUCE_WINDOWS || JUCE_LINUX
+#if JUCE_WINDOWS
     opengl.attachTo(*this);
     opengl.setImageCacheSize((size_t)64 * 1024);
 #endif
@@ -98,7 +98,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 {
-#if JUCE_WINDOWS || JUCE_LINUX
+#if JUCE_WINDOWS
     opengl.detach();
 #endif
 }
