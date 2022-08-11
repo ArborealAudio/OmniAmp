@@ -18,6 +18,7 @@
 #include <JuceHeader.h>
 #include "../modules/chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
 #include "Processors/Processors.h"
+#include "UI/UI.h"
 #include "UI/SineWave.hpp"
 
 //==============================================================================
