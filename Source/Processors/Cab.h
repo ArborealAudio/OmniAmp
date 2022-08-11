@@ -57,9 +57,7 @@ class FDNCab
                 dtime[3] = 15.f;
             }
 
-            hp.clear();
             lp.clear();
-            hp.resize(f_order);
             lp.resize(f_order);
         }
 
@@ -79,24 +77,12 @@ class FDNCab
                 delay[i].setDelay(dtime[i] * ratio);
             }
 
-            int i = 1;
-            for (auto &f : lp)
+            for (auto i = 0; i < lp.size(); ++i)
             {
-                f.prepare(spec);
-                f.setType(strix::FilterType::lowpass);
-                f.setCutoffFreq(5000.0 - (i * 50.0));
-                f.setResonance(0.7);
-                ++i;
-            }
-
-            i = 1;
-            for (auto &f : hp)
-            {
-                f.prepare(spec);
-                f.setType(strix::FilterType::highpass);
-                f.setCutoffFreq(100.0 - (20.0 * i));
-                f.setResonance(1.0);
-                ++i;
+                lp[i].prepare(spec);
+                lp[i].setType(strix::FilterType::lowpass);
+                lp[i].setCutoffFreq(5000.0 - (std::pow(2.0, i) * 50.0));
+                lp[i].setResonance(0.7);
             }
         }
 
@@ -105,8 +91,6 @@ class FDNCab
             for (auto& d : delay)
                 d.reset();
             for (auto& f : lp)
-                f.reset();
-            for (auto& f : hp)
                 f.reset();
         }
 
@@ -132,8 +116,6 @@ class FDNCab
 
                         auto f = d * fdbk + in[i];
 
-                        // f = hp[n].processSample(ch, f);
-
                         f = lp[n].processSample(ch, f);
 
                         delay[n].pushSample(ch, f);
@@ -155,7 +137,7 @@ class FDNCab
 
         T fdbk = 0.1f;
 
-        std::vector<strix::SVTFilter<T>> lp, hp;
+        std::vector<strix::SVTFilter<T>> lp;
 
         AudioProcessorValueTreeState &apvts;
     };
