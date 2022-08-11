@@ -11,27 +11,6 @@
 #pragma once
 
 template <typename T>
-struct Cab
-{
-    Cab() = default;
-
-    void prepare(const dsp::ProcessSpec& spec)
-    {
-        sc_lp.setType(dsp::StateVariableTPTFilterType::lowpass);
-        sc_lp.setCutoffFrequency(5000.f);
-        sc_lp.prepare(spec);
-    }
-
-    inline T processSample(T x, int ch)
-    {
-        return std::tanh(sc_lp.processSample(ch, x));
-    }
-
-private:
-    dsp::StateVariableTPTFilter<T> sc_lp;
-};
-
-template <typename T>
 struct Tube
 {
     Tube() = default;
@@ -51,6 +30,11 @@ struct Tube
             f.prepare(spec);
             f.coefficients = m_coeffs;
         }
+
+        sag.prepare(spec);
+        sag.setAttackTime(3.0);
+        sag.setReleaseTime(150.0);
+        sag.setLevelCalculationType(dsp::BallisticsFilterLevelCalculationType::RMS);
     }
 
     void reset()
@@ -59,6 +43,8 @@ struct Tube
             f.reset();
         for (auto& f : m_lp)
             f.reset();
+
+        sag.reset();
     }
 
     template <class Block>
@@ -110,8 +96,12 @@ private:
 
     inline void processSamplesClassB(T* in, int ch, size_t numSamples, T gp, T gn)
     {
-        for (int i = 0; i < numSamples; ++i)
+        for (size_t i = 0; i < numSamples; ++i)
         {
+            auto sV = sag.processSample(ch, in[i]);
+            if (sV > sagThresh)
+                in[i] -= (sV - sagThresh);
+
             in[i] -= 1.2f * processEnvelopeDetector(in[i], ch);
 
             in[i] = saturate(in[i], gp, gn);
@@ -171,13 +161,15 @@ private:
 
     std::array<dsp::IIR::Filter<T>, 2> sc_lp, m_lp;
 
+    dsp::BallisticsFilter<T> sag;
+    T sagThresh = 12.0;
+
     double lastSampleRate = 0.0;
 
     T r = 1.0 - (1.0 / 800.0);
 
     T x_1 = 0.0;
     T xm1[2]{ 0.0 }, ym1[2]{ 0.0 };
-
 };
 
 template <typename T>
@@ -213,7 +205,6 @@ struct AVTriode
         // auto f2 = (1.0 / gn) * ((x * gn) / (1.0 + std::abs(x))) * (1.0 - y_m[ch]);
 
         auto y = sc_hp.processSample(ch, f1 + f2);
-        // auto y = (f1 + f2);
         y_m[ch] = y;
 
         return y;
@@ -257,8 +248,6 @@ private:
     std::vector<T> y_m;
 
     strix::SVTFilter<T> sc_hp;
-
-    // Cab<T> cab;
 };
 
 struct DZTube
