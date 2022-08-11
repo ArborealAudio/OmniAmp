@@ -2,9 +2,9 @@
 
 - Get freq-weighted auto gain for Channel EQ working properly
 
-- Figure out why CPU use increases when UI is closed
-
-- Setup a default font! The default on Linux is looking like a good option...
+- Look into optimizing UI drawing
+  
+  - on resize, render each sinewave to an image. keep that on hand until next resize. move and scale each image per the rms levels
 
 - Working on comp behavior:
   
@@ -18,19 +18,6 @@
   - Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab
     
     - Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)
-    - Basic allpass topology is working ok but there could be more things to do to smooth out the sound. Is sounding a bit metallic and is sucking up a lot of midrange.
-  
-  - 2X12:
-    
-    - 1 delay, dTime of 411, fdbk of 0.06
-    
-    - HP 90 Q 5
-    
-    - LP1 3500 Q .7
-    
-    - LP2 5000 Q 1.5
-    
-    - These aren't really doing anything...need a better way of getting diffusion and complex comb filtering.
   
   - 2x12 V2
     
@@ -49,30 +36,6 @@
     - LP 1 6500 Q 0.7
     
     - LP2 5067 Q 1.5
-  
-  - 4x12:
-    
-    - 6 delays (2 were nested, then took em out and just used 3?)
-    
-    - dTime0 = 377
-    
-    - dTime1 = 365
-    
-    - dTime2 = 375
-    
-    - dTime3 = 63
-    
-    - dTime4 = 126
-    
-    - dTime5 = 185
-    
-    - HP 75 Hz Q 1.4
-    
-    - LP1 2821 Q 1.4
-    
-    - LP2 4581 Q 1.8
-    
-    - BP 1700 Q 2
   
   - 4x12 V2
     
@@ -129,6 +92,8 @@
   - Post cab & verb
 
 - Add sag???
+  
+  - Decent sag envelope for power amp
 
 - Figure out mono processing for reverb & potential optimizations as well. Adds quite a lot of CPU, at least on Windows
 
