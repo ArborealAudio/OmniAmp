@@ -15,9 +15,10 @@
 
 - Cabs, both the processing and UI features
   
-  - Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab
+  - ~~Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab~~
     
-    - Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)
+    - ~~Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)~~
+  - Ended up using parallel alternating comb & allpass filters
   
   - 2x12 V2
     
@@ -77,7 +78,7 @@
     
     - LS 307
   
-  - Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube
+  - ~~Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube~~ Who cares?
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
   

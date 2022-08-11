@@ -78,18 +78,18 @@ public:
 
     strix::VolumeMeterSource& getActiveGRSource()
     {
-      switch(currentMode)
-      {
+        switch(currentMode)
+        {
         case Guitar:
-          return guitar.getActiveGRSource();
-          break;
+            return guitar.getActiveGRSource();
+            break;
         case Bass:
-          return bass.getActiveGRSource();
-          break;
+            return bass.getActiveGRSource();
+            break;
         case Channel:
-          return channel.getActiveGRSource();
-          break;
-      }
+            return channel.getActiveGRSource();
+            break;
+        }
     }
 
 private:
