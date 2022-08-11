@@ -10,9 +10,7 @@ class Room
     {
         MixMatrix() = default;
 
-        /**
-         * Expects an array of N channels worth of samples
-        */
+        // Expects an array of N channels worth of samples
         static inline void processHadamardMatrix(double* ch)
         {
             recursive(ch);
@@ -23,9 +21,7 @@ class Room
                 ch[i] *= scale;
         }
 
-        /**
-         * Expects an array of N channels worth of samples
-        */
+        // Expects an array of N channels worth of samples
         static void processHouseholder(double* ch)
         {
             const double h_mult = -2.0 / (double)size;
@@ -254,10 +250,12 @@ class Room
 		static constexpr int hChannels = channels/2;
 		std::array<Sample, channels> coeffs;
 	public:
-		StereoMultiMixer() {
+		StereoMultiMixer()
+        {
 			coeffs[0] = 1;
 			coeffs[1] = 0;
-			for (int i = 1; i < hChannels; ++i) {
+			for (int i = 1; i < hChannels; ++i)
+            {
 				double phase = M_PI * i / channels;
 				coeffs[2*i] = std::cos(phase);
 				coeffs[2*i + 1] = std::sin(phase);
@@ -324,6 +322,10 @@ class Room
                 out[ch][n] = f;
                 // j += 2;
             }
+
+            // copy L->R if the input is mono
+            if (buf.getNumChannels() < dsBuf.getNumChannels())
+                FloatVectorOperations::copy(dsBuf.getWritePointer(1), dsBuf.getReadPointer(0), dsBuf.getNumSamples());
         }
     }
 
@@ -354,7 +356,8 @@ class Room
         }
 
         FloatVectorOperations::multiply(out[0], 2.0, outBuf.getNumSamples());
-        FloatVectorOperations::multiply(out[1], 2.0, outBuf.getNumSamples());
+        if (outBuf.getNumChannels() > 1)
+            FloatVectorOperations::multiply(out[1], 2.0, outBuf.getNumSamples());
     }
 
 public:
@@ -393,10 +396,10 @@ public:
 
     void prepare(const dsp::ProcessSpec& spec)
     {
-        usBuf.setSize(spec.numChannels, spec.maximumBlockSize * 2.0);
+        usBuf.setSize(2, spec.maximumBlockSize * 2.0);
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
-        dsBuf.setSize(spec.numChannels, spec.maximumBlockSize);
+        dsBuf.setSize(2, spec.maximumBlockSize);
 
         for (auto& d : diff)
             d.prepare(spec);
@@ -427,6 +430,7 @@ public:
     {
         for (auto& d : diff)
             d.reset();
+
         feedback.reset();
 
         usBuf.clear();
@@ -467,7 +471,8 @@ public:
         buf.applyGain(1.0 - amt);
 
         buf.addFrom(0, 0, usBuf.getReadPointer(0), buf.getNumSamples(), amt * upMix.scalingFactor1());
-        buf.addFrom(1, 0, usBuf.getReadPointer(1), buf.getNumSamples(), amt * upMix.scalingFactor1());
+        if (buf.getNumChannels() > 1)
+            buf.addFrom(1, 0, usBuf.getReadPointer(1), buf.getNumSamples(), amt * upMix.scalingFactor1());
     }
 };
 
