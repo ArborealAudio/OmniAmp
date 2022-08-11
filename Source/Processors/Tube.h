@@ -102,7 +102,7 @@ private:
             if (sV > sagThresh)
                 in[i] -= (sV - sagThresh);
 
-            in[i] -= 1.2f * processEnvelopeDetector(in[i], ch);
+            // in[i] -= 1.2f * processEnvelopeDetector(in[i], ch);
 
             in[i] = saturate(in[i], gp, gn);
 
@@ -118,7 +118,7 @@ private:
             if (sV > sagThresh)
                 in[i] -= (sV - sagThresh);
             
-            in[i] -= (T)1.2 * processEnvelopeDetectorSIMD(in[i], ch);
+            // in[i] -= (T)1.2 * processEnvelopeDetectorSIMD(in[i], ch);
 
             in[i] = saturateSIMD(in[i], gp, gn);
 
@@ -143,8 +143,8 @@ private:
     inline T saturateSIMD(T x, T gp, T gn)
     {
         xsimd::batch_bool<double> pos {x > 0.0};
-        return xsimd::select(pos, (((T)1.0 / gp) * xsimd::tanh(gp * x)),
-        (((T)1.0 / gn) * xsimd::tanh(gn * x)));
+        return xsimd::select(pos, ((1.0 / gp) * xsimd::tanh(gp * x)),
+        ((1.0 / gn) * xsimd::tanh(gn * x)));
     }
 
     inline T processEnvelopeDetector(T x, int ch)
@@ -158,7 +158,7 @@ private:
     {
         auto xr = xsimd::fabs(x);
 
-        return (T)0.251188 * sc_lp[ch].processSample(xr);
+        return 0.251188 * sc_lp[ch].processSample(xr);
     }
 
     dsp::IIR::Coefficients<double>::Ptr sc_coeffs, m_coeffs;
