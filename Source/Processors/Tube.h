@@ -114,6 +114,10 @@ private:
     {
         for (int i = 0; i < numSamples; ++i)
         {
+            auto sV = sag.processSample(ch, xsimd::reduce_max(in[i]));
+            if (sV > sagThresh)
+                in[i] -= (sV - sagThresh);
+            
             in[i] -= (T)1.2 * processEnvelopeDetectorSIMD(in[i], ch);
 
             in[i] = saturateSIMD(in[i], gp, gn);
@@ -161,8 +165,8 @@ private:
 
     std::array<dsp::IIR::Filter<T>, 2> sc_lp, m_lp;
 
-    dsp::BallisticsFilter<T> sag;
-    T sagThresh = 12.0;
+    dsp::BallisticsFilter<double> sag;
+    double sagThresh = 12.0;
 
     double lastSampleRate = 0.0;
 
