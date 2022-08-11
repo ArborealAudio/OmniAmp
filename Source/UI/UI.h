@@ -6,12 +6,13 @@
 #define BACKGROUND_COLOR 0xffaa8875
 #define AMP_COLOR 0xffcab4a0
 #define TOP_TRIM 0xff293236
+#define DEEP_BLUE 0xff194545
 
-static const Font getCustomFont()
+static const Typeface::Ptr getCustomFont()
 {
     static auto typeface = Typeface::createSystemTypefaceFor (BinaryData::LiberationSansRegular_ttf, BinaryData::LiberationSansRegular_ttfSize);
     
-    return Font (typeface);
+    return typeface;
 }
 
 #include "Button.h"

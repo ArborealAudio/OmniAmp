@@ -20,7 +20,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
     KnobLookAndFeel(KnobType newType) : type(newType)
     {
         label = std::make_unique<String>("");
-        setDefaultSansSerifTypeface(getCustomFont().getTypeface());
+        getDefaultLookAndFeel().setDefaultSansSerifTypeface(getCustomFont());
     }
 
     void drawRotarySlider(Graphics& g, int x, int y, int width, int height, float sliderPos,
