@@ -274,7 +274,8 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         }
     }
 
-    audioSource.getBufferRMS(buffer);
+    if(getActiveEditor() != nullptr)
+        audioSource.getBufferRMS(buffer);
 }
 
 void GammaAudioProcessor::processBlock (juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages)
@@ -291,7 +292,8 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<double>& buffer, juce:
     if (totalNumInputChannels < totalNumOutputChannels)
         buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
 
-    audioSource.getBufferRMS(buffer);
+    if(getActiveEditor() != nullptr)
+        audioSource.getBufferRMS(buffer);
 }
 
 //==============================================================================
