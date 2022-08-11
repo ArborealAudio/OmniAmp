@@ -27,12 +27,19 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     auto topSection = bounds.removeFromTop(50);
     auto qtr = bounds.getWidth() / 4;
 
-    auto ampSection = bounds.removeFromBottom(200).reduced(10);
+    auto ampSection = bounds.removeFromBottom(200).reduced(10, 0).translated(0, -2);
     auto topLeftQtr = bounds.removeFromLeft(qtr);
     auto topRightQtr = bounds.removeFromRight(qtr);
 
+    addAndMakeVisible(pluginTitle);
+    pluginTitle.setBounds(topSection.withTrimmedLeft(getWidth() / 3).withTrimmedRight(getWidth() / 3));
+    pluginTitle.setText("GAMMA", NotificationType::dontSendNotification);
+    pluginTitle.setFont(Font(getCustomFont()).withHeight(20.f).withExtraKerningFactor(0.5f));
+    pluginTitle.setColour(Label::textColourId, Colours::beige);
+    pluginTitle.setJustificationType(Justification::centred);
+
     addAndMakeVisible(wave);
-    wave.setBounds(bounds.reduced(10));
+    wave.setBounds(bounds.reduced(10).translated(0, -5));
     wave.setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(ampControls);
@@ -41,7 +48,12 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     addAndMakeVisible(mode);
     modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(p.apvts, "mode", mode);
     mode.setSize(100, 30);
-    mode.setCentrePosition(getLocalBounds().getCentreX(), 435);
+    mode.setCentrePosition(getLocalBounds().getCentreX(), 425);
+
+    addAndMakeVisible(hiGain);
+    hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "hiGain", hiGain);
+    hiGain.setButtonText("Boost");
+    hiGain.setBounds(mode.getRight() + 20, mode.getY(), 50, 30);
 
     addAndMakeVisible(lfEnhance);
     lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "lfEnhance", lfEnhance);
@@ -63,7 +75,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
     grMeter.setMeterColor(Colours::oldlace);
     grMeter.setBounds(ampSection.withTrimmedRight(ampSection.getWidth() * 0.66f)
-                          .withTrimmedTop(ampSection.getHeight() * 0.8f)
+                          .withTrimmedTop(ampSection.getHeight() * 0.82f)
                           .translated(10, -10));
     grMeter.setStatePointer(p.apvts.getRawParameterValue("comp"));
     addAndMakeVisible(grMeter);
@@ -106,16 +118,26 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 //==============================================================================
 void GammaAudioProcessorEditor::paint (juce::Graphics& g)
 {
+    g.fillAll(Colour(TOP_TRIM));
     g.setColour(Colour(BACKGROUND_COLOR));
     auto top = getLocalBounds().withTrimmedBottom(getHeight() / 3);
-    g.fillRect(top);
-
-    mesh->drawWithin(g, top.withTrimmedBottom(top.getHeight() / 2).toFloat(), RectanglePlacement::fillDestination, 1.f);
-
     auto trimmedTop = top.removeFromTop(top.getHeight() / 10);
-    g.setColour(Colour(TOP_TRIM));
-    g.fillRect(trimmedTop);
+
     logo->drawWithin(g, trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
+
+    auto topsection = top.withTrimmedBottom(top.getHeight() / 2).reduced(10, 0).translated(0, 2).toFloat();
+
+    g.fillRoundedRectangle(topsection, 5.f);
+    g.setColour(Colours::grey);
+    g.drawRoundedRectangle(topsection, 5.f, 2.f);
+
+    g.reduceClipRegion(topsection.toNearestInt());
+    mesh->drawWithin(g, topsection, RectanglePlacement::fillDestination, 1.f);
+
+    g.drawImage(blur, wave.getBoundsInParent().toFloat(), RectanglePlacement::doNotResize);
+
+    g.setColour(Colour(DEEP_BLUE));
+    g.drawRoundedRectangle(wave.getBoundsInParent().toFloat(), 5.f, 2.f);
 }
 
 void GammaAudioProcessorEditor::resized()
@@ -125,7 +147,13 @@ void GammaAudioProcessorEditor::resized()
     auto scale = (float)getWidth() / 800.f;
 
     for (auto& c : children)
-    {
-    c->setTransform(AffineTransform::scale(scale));
-    }
+        c->setTransform(AffineTransform::scale(scale));
+
+    blur.clear(blur.getBounds());
+    wave.setVisible(false);
+    blur = createComponentSnapshot(wave.getBoundsInParent());
+    wave.setVisible(true);
+
+    gin::applyContrast(blur, -35);
+    gin::applyStackBlur(blur, 10);
 }

@@ -9,10 +9,10 @@ struct ButtonLookAndFeel : LookAndFeel_V4
     void drawButtonBackground(Graphics& g, Button& button, const Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
     {
         g.setColour(Colours::grey);
-        g.drawRoundedRectangle(button.getLocalBounds().toFloat(), 10.f, 1.f);
+        g.drawRoundedRectangle(button.getLocalBounds().reduced(3).toFloat(), 10.f, 1.f);
         if (button.getToggleState()){
             g.setColour(Colours::white);
-            g.fillRoundedRectangle(button.getLocalBounds().toFloat(), 10.f);
+            g.fillRoundedRectangle(button.getLocalBounds().reduced(3).toFloat(), 10.f);
         }
     }
 

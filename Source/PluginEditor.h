@@ -9,7 +9,6 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "UI/UI.h"
 #include "PluginProcessor.h"
 
 //==============================================================================
@@ -29,11 +28,15 @@ private:
     GammaAudioProcessor& audioProcessor;
 
     std::unique_ptr<Drawable> logo, mesh;
+    Image blur;
 
     ChoiceMenu mode;
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach;
 
     AmpControls ampControls;
+
+    LightButton hiGain;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach;
 
     Knob hfEnhance{KnobType::HF}, lfEnhance{KnobType::LF};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
@@ -45,6 +48,8 @@ private:
     CabsComponent cabComponent;
 
     ReverbComponent reverbComp;
+
+    Label pluginTitle;
 
 #if JUCE_WINDOWS
     OpenGLContext opengl;

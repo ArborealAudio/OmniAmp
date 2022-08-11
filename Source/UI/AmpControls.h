@@ -60,16 +60,14 @@ struct AmpControls : Component
             apvts.getParameterAsValue("outputAutoGain") = state;
             repaint();
         };
-
-        addAndMakeVisible(hiGain);
-        hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hiGain", hiGain);
-        hiGain.setButtonText("Boost");
     }
 
     void paint(Graphics& g) override
     {
         g.setColour(Colour(AMP_COLOR));
-        g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
+        g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f);
+        g.setColour(Colours::grey);
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f, 2.f);
 
         auto paintAuto = [&](Rectangle<int> bounds)
         {
@@ -86,15 +84,15 @@ struct AmpControls : Component
         };
 
         if (inGain.autogain.load())
-            paintAuto(Rectangle<int>(inGain.getX(), inGain.getBottom() + 3, inGain.getWidth(), 10));
+            paintAuto(Rectangle<int>(inGain.getX(), inGain.getBottom(), inGain.getWidth(), 10));
 
         auto toneControls = bass.getBounds().getUnion(mid.getBounds()).getUnion(treble.getBounds());
         
         if (bass.autogain.load() || mid.autogain.load() || treble.autogain.load())
-            paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom() + 3, toneControls.getWidth(), 10));
+            paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom(), toneControls.getWidth(), 10));
         
         if (outGain.autogain.load())
-            paintAuto(Rectangle<int>(outGain.getX(), outGain.getBottom() + 3, outGain.getWidth(), 10));
+            paintAuto(Rectangle<int>(outGain.getX(), outGain.getBottom(), outGain.getWidth(), 10));
     }
 
     void resized() override
@@ -106,8 +104,6 @@ struct AmpControls : Component
 
         for (auto& k : getKnobs())
             k->setBounds(mb.removeFromLeft(w));
-
-        hiGain.setBounds(inGain.getX() + 15, inGain.getY() - 10, inGain.getWidth() - 15, (float)getHeight() * 0.3 - 15);
     }
 
 private:
@@ -115,9 +111,6 @@ private:
 
     Knob comp{KnobType::Regular}, dist{KnobType::Regular}, inGain{KnobType::Regular}, outGain{KnobType::Regular}, bass{KnobType::Regular}, mid{KnobType::Regular}, treble{KnobType::Regular};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> compAttach, distAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
-
-    LightButton hiGain;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach;
 
     std::vector<Knob*> getKnobs()
     {
