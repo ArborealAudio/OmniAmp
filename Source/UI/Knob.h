@@ -173,8 +173,15 @@ struct KnobLookAndFeel : LookAndFeel_V4
             g.setColour(Colours::antiquewhite);
             g.fillPath(p);
 
-            if (slider.isMouseOverOrDragging())
-                g.drawText(String(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
+            if (slider.isMouseOverOrDragging()) {
+                auto val = slider.getValue();
+                String text;
+                if (val < -95.f)
+                    text = "Off";
+                else
+                    text = String(val);
+                g.drawText(text, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
+            }
             else
                 g.drawText(*label, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             break;

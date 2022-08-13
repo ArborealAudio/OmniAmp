@@ -4,62 +4,69 @@
 
 struct AmpControls : Component
 {
-    AmpControls(AudioProcessorValueTreeState& a) : apvts(a)
+    AmpControls(AudioProcessorValueTreeState& a)
     {
         for (auto& k : getKnobs())
             addAndMakeVisible(k);
 
-        compAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "comp", comp);
+        compAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "comp", comp);
         comp.setLabel("Opto");
 
-        distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "dist", dist);
+        distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "dist", dist);
         dist.setLabel("Pedal");
 
-        inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "inputGain", inGain);
+        inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
         inGain.setLabel("Preamp");
         inGain.onAltClick = [&](bool state)
         {
-            apvts.getParameterAsValue("inputAutoGain") = state;
+            a.getParameterAsValue("preampAutoGain") = state;
             repaint();
         };
 
-        bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "bass", bass);
+        bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
         bass.setLabel("Bass");
         bass.onAltClick = [&](bool state)
         {
             mid.autogain.store(state);
             treble.autogain.store(state);
-            apvts.getParameterAsValue("eqAutoGain") = state;
+            a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
 
-        midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "mid", mid);
+        midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
         mid.onAltClick = [&](bool state)
         {
             bass.autogain.store(state);
             treble.autogain.store(state);
-            apvts.getParameterAsValue("eqAutoGain") = state;
+            a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
 
-        trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "treble", treble);
+        trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
         treble.onAltClick = [&](bool state)
         {
             mid.autogain.store(state);
             bass.autogain.store(state);
-            apvts.getParameterAsValue("eqAutoGain") = state;
+            a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
 
-        outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "outputGain", outGain);
+        outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
         outGain.onAltClick = [&](bool state)
         {
-            apvts.getParameterAsValue("outputAutoGain") = state;
+            a.getParameterAsValue("powerampAutoGain") = state;
             repaint();
         };
+
+        addAndMakeVisible(mode);
+        modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "mode", mode);
+
+        addAndMakeVisible(hiGain);
+        hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
+        hiGain.setButtonText("Boost");
     }
 
     void paint(Graphics& g) override
@@ -104,13 +111,23 @@ struct AmpControls : Component
 
         for (auto& k : getKnobs())
             k->setBounds(mb.removeFromLeft(w));
+
+        mode.setSize(100, 30);
+        mode.setCentrePosition(getLocalBounds().getCentreX(), getLocalBounds().getBottom() - 20);
+
+        hiGain.setBounds(mode.getRight() + 20, mode.getY(), 50, 30);
     }
 
 private:
-    AudioProcessorValueTreeState& apvts;
 
     Knob comp{KnobType::Regular}, dist{KnobType::Regular}, inGain{KnobType::Regular}, outGain{KnobType::Regular}, bass{KnobType::Regular}, mid{KnobType::Regular}, treble{KnobType::Regular};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> compAttach, distAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
+
+    ChoiceMenu mode;
+    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach;
+
+    LightButton hiGain;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach;
 
     std::vector<Knob*> getKnobs()
     {

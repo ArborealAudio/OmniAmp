@@ -11,7 +11,7 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource()), reverbComp(p.apvts), tooltip(this)
+    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource(), p.apvts.getRawParameterValue("comp")), reverbComp(p.apvts), tooltip(this)
 {
 #if JUCE_WINDOWS
     opengl.attachTo(*this);
@@ -32,28 +32,37 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     auto topRightQtr = bounds.removeFromRight(qtr);
 
     addAndMakeVisible(pluginTitle);
-    pluginTitle.setBounds(topSection.withTrimmedLeft(getWidth() / 3).withTrimmedRight(getWidth() / 3));
+    pluginTitle.setBounds(topSection.removeFromLeft(getWidth() * 0.66f).removeFromRight(getWidth() / 3));
     pluginTitle.setText("GAMMA", NotificationType::dontSendNotification);
     pluginTitle.setFont(Font(getCustomFont()).withHeight(20.f).withExtraKerningFactor(0.5f));
     pluginTitle.setColour(Label::textColourId, Colours::beige);
     pluginTitle.setJustificationType(Justification::centred);
 
+    auto topSectionThird = topSection.getWidth() / 3;
+
+    addAndMakeVisible(inGain);
+    inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
+    inGain.setBounds(topSection.removeFromLeft(topSectionThird));
+    inGain.setLabel("Input");
+
+    addAndMakeVisible(outGain);
+    outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
+    outGain.setBounds(topSection.removeFromLeft(topSectionThird));
+    outGain.setLabel("Output");
+
+    addAndMakeVisible(gate);
+    gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
+    gate.setBounds(topSection);
+    gate.setLabel("Noise Gate");
+
     addAndMakeVisible(wave);
     wave.setBounds(bounds.reduced(10).translated(0, -5));
     wave.setInterceptsMouseClicks(false, false);
 
+    blur = std::make_unique<Image>(Image::PixelFormat::ARGB, wave.getWidth(), wave.getHeight(), true);
+
     addAndMakeVisible(ampControls);
     ampControls.setBounds(ampSection);
-
-    addAndMakeVisible(mode);
-    modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(p.apvts, "mode", mode);
-    mode.setSize(100, 30);
-    mode.setCentrePosition(getLocalBounds().getCentreX(), 425);
-
-    addAndMakeVisible(hiGain);
-    hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "hiGain", hiGain);
-    hiGain.setButtonText("Boost");
-    hiGain.setBounds(mode.getRight() + 20, mode.getY(), 50, 30);
 
     addAndMakeVisible(lfEnhance);
     lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "lfEnhance", lfEnhance);
@@ -77,7 +86,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     grMeter.setBounds(ampSection.withTrimmedRight(ampSection.getWidth() * 0.66f)
                           .withTrimmedTop(ampSection.getHeight() * 0.82f)
                           .translated(10, -10));
-    grMeter.setStatePointer(p.apvts.getRawParameterValue("comp"));
     addAndMakeVisible(grMeter);
 
     setSize(800, 650);
@@ -99,6 +107,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     };
 
     reverbComp.setBounds(bottomSection);
+    
     addAndMakeVisible(reverbComp);
 
     setResizable(true, true);
@@ -134,7 +143,8 @@ void GammaAudioProcessorEditor::paint (juce::Graphics& g)
     g.reduceClipRegion(topsection.toNearestInt());
     mesh->drawWithin(g, topsection, RectanglePlacement::fillDestination, 1.f);
 
-    g.drawImage(blur, wave.getBoundsInParent().toFloat(), RectanglePlacement::doNotResize);
+    if (blur != nullptr)
+        g.drawImage(*blur, wave.getBoundsInParent().toFloat(), RectanglePlacement::doNotResize);
 
     g.setColour(Colour(DEEP_BLUE));
     g.drawRoundedRectangle(wave.getBoundsInParent().toFloat(), 5.f, 2.f);
@@ -149,11 +159,13 @@ void GammaAudioProcessorEditor::resized()
     for (auto& c : children)
         c->setTransform(AffineTransform::scale(scale));
 
-    blur.clear(blur.getBounds());
+    if (blur == nullptr)
+        return;
+    blur->clear(blur->getBounds());
     wave.setVisible(false);
-    blur = createComponentSnapshot(wave.getBoundsInParent());
+    blur = std::make_unique<Image>(createComponentSnapshot(wave.getBoundsInParent()));
     wave.setVisible(true);
 
-    gin::applyContrast(blur, -35);
-    gin::applyStackBlur(blur, 10);
+    gin::applyContrast(*blur, -35);
+    gin::applyStackBlur(*blur, 10);
 }
