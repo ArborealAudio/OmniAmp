@@ -30,11 +30,6 @@ struct Tube
             f.prepare(spec);
             f.coefficients = m_coeffs;
         }
-
-        sag.prepare(spec);
-        sag.setAttackTime(3.0);
-        sag.setReleaseTime(150.0);
-        sag.setLevelCalculationType(dsp::BallisticsFilterLevelCalculationType::RMS);
     }
 
     void reset()
@@ -43,8 +38,6 @@ struct Tube
             f.reset();
         for (auto& f : m_lp)
             f.reset();
-
-        sag.reset();
     }
 
     template <class Block>
@@ -98,11 +91,7 @@ private:
     {
         for (size_t i = 0; i < numSamples; ++i)
         {
-            auto sV = sag.processSample(ch, in[i]);
-            if (sV > sagThresh)
-                in[i] -= (sV - sagThresh);
-
-            // in[i] -= 1.2f * processEnvelopeDetector(in[i], ch);
+            in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
 
             in[i] = saturate(in[i], gp, gn);
 
@@ -113,12 +102,8 @@ private:
     inline void processSamplesClassBSIMD(T* in, int ch, size_t numSamples, T gp, T gn)
     {
         for (int i = 0; i < numSamples; ++i)
-        {
-            auto sV = sag.processSample(ch, xsimd::reduce_max(in[i]));
-            if (sV > sagThresh)
-                in[i] -= (sV - sagThresh);
-            
-            // in[i] -= (T)1.2 * processEnvelopeDetectorSIMD(in[i], ch);
+        {            
+            in[i] -= 1.2 * processEnvelopeDetectorSIMD(in[i], ch);
 
             in[i] = saturateSIMD(in[i], gp, gn);
 
@@ -164,9 +149,6 @@ private:
     dsp::IIR::Coefficients<double>::Ptr sc_coeffs, m_coeffs;
 
     std::array<dsp::IIR::Filter<T>, 2> sc_lp, m_lp;
-
-    dsp::BallisticsFilter<double> sag;
-    double sagThresh = 12.0;
 
     double lastSampleRate = 0.0;
 
