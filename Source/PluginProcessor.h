@@ -98,7 +98,7 @@ private:
 
     ValueTree gtrState, bassState, channelState;
 
-    std::atomic<float>* gain, *outGain, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
+    std::atomic<float>* inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -108,6 +108,8 @@ private:
     } };*/
 
     strix::VolumeMeterSource meterSource;
+
+    dsp::NoiseGate<double> gateProc;
 
     Processors::Guitar guitar;
     Processors::Bass bass;
@@ -142,7 +144,15 @@ private:
     // expects stereo in and out
     void processDoubleBuffer(AudioBuffer<double>& buffer, bool mono)
     {
+        auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
+        auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
+
         dsp::AudioBlock<double> block(buffer);
+
+        if (*gate < -95.0)
+            gateProc.process(dsp::ProcessContextReplacing<double>(block));
+
+        block.multiplyBy(inGain_raw);
 
         auto osBlock = oversample.processSamplesUp(block);
 
@@ -185,6 +195,8 @@ private:
 
         if (*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
+
+        buffer.applyGain(outGain_raw);
     }
 
     //==============================================================================

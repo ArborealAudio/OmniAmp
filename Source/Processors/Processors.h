@@ -34,10 +34,10 @@ struct Processor : AudioProcessorValueTreeState::Listener
 {
     Processor(AudioProcessorValueTreeState& a, ProcessorType t, strix::VolumeMeterSource& s) : apvts(a), comp(t, s)
     {
-        inGain = apvts.getRawParameterValue("inputGain");
-        inGainAuto = apvts.getRawParameterValue("inputAutoGain");
-        outGain = apvts.getRawParameterValue("outputGain");
-        outGainAuto = apvts.getRawParameterValue("outputAutoGain");
+        inGain = apvts.getRawParameterValue("preampGain");
+        inGainAuto = apvts.getRawParameterValue("preampAutoGain");
+        outGain = apvts.getRawParameterValue("powerampGain");
+        outGainAuto = apvts.getRawParameterValue("powerampAutoGain");
         eqAutoGain = apvts.getRawParameterValue("eqAutoGain");
         p_comp = apvts.getRawParameterValue("comp");
         hiGain = apvts.getRawParameterValue("hiGain");

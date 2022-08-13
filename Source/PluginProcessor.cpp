@@ -24,13 +24,15 @@ GammaAudioProcessor::GammaAudioProcessor()
                         cab(apvts, currentCab)
 #endif
 {
-    gain = apvts.getRawParameterValue("inputGain");
+    inGain = apvts.getRawParameterValue("inputGain");
     outGain = apvts.getRawParameterValue("outputGain");
+    gate = apvts.getRawParameterValue("gate");
     hiGain = apvts.getRawParameterValue("hiGain");
     autoGain = apvts.getRawParameterValue("autoGain");
     hfEnhance = apvts.getRawParameterValue("hfEnhance");
     lfEnhance = apvts.getRawParameterValue("lfEnhance");
 
+    apvts.addParameterListener("gate", this);
     apvts.addParameterListener("treble", this);
     apvts.addParameterListener("mid", this);
     apvts.addParameterListener("bass", this);
@@ -42,6 +44,7 @@ GammaAudioProcessor::GammaAudioProcessor()
 
 GammaAudioProcessor::~GammaAudioProcessor()
 {
+    apvts.removeParameterListener("gate", this);
     apvts.removeParameterListener("treble", this);
     apvts.removeParameterListener("mid", this);
     apvts.removeParameterListener("bass", this);
@@ -86,7 +89,7 @@ bool GammaAudioProcessor::isMidiEffect() const
 
 double GammaAudioProcessor::getTailLengthSeconds() const
 {
-    return 0.0;
+    return 1.0;
 }
 
 int GammaAudioProcessor::getNumPrograms()
@@ -122,6 +125,12 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     dsp::ProcessSpec osSpec{ lastSampleRate, static_cast<uint32>(samplesPerBlock * oversample.getOversamplingFactor()), (uint32)getTotalNumInputChannels() };
     dsp::ProcessSpec spec{ sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels() };
+
+    gateProc.prepare(spec);
+    gateProc.setAttack(100.0);
+    gateProc.setRelease(500.0);
+    gateProc.setRatio(4.0);
+    gateProc.setThreshold(*gate);
 
     guitar.prepare(osSpec);
     bass.prepare(osSpec);
@@ -178,38 +187,11 @@ bool GammaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 
 void GammaAudioProcessor::parameterChanged(const String& parameterID, float newValue)
 {
-    if (parameterID.contains("mode")) {
-        // switch(currentMode)
-        // {
-        // case Mode::Guitar:
-        //     gtrState = apvts.copyState();
-        //     break;
-        // case Mode::Bass:
-        //     bassState = apvts.copyState();
-        //     break;
-        // case Mode::Channel:
-        //     channelState = apvts.copyState();
-        //     break;
-        // default:
-        //     break;
-        // }
+    if (parameterID.contains("mode"))
+    {
         currentMode = (Mode)newValue;
         lfEnhancer.setMode((Processors::ProcessorType)currentMode);
         lfEnhancer.updateFilters();
-        // switch(currentMode)
-        // {
-        // case Mode::Guitar:
-        //     apvts.replaceState(gtrState);
-        //     break;
-        // case Mode::Bass:
-        //     apvts.replaceState(bassState);
-        //     break;
-        // case Mode::Channel:
-        //     apvts.replaceState(channelState);
-        //     break;
-        // default:
-        //     break;
-        // }
     }
     else if (parameterID.contains("bass"))
     {
@@ -240,6 +222,8 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
         cab.setCabType((Processors::CabType)newValue);
     else if (parameterID.contains("reverbType"))
         reverb.changeRoomType((Processors::ReverbType)newValue);
+    else if (parameterID.contains("gate"))
+        gateProc.setThreshold(*gate);
 }
 
 void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -334,10 +318,13 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
 {
     std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("inputGain", 1), "Input Gain", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("inputAutoGain", 1), "Input Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("outputGain", 1), "Output Gain", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("outputAutoGain", 1), "Output Auto Gain", false));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("inputGain", 1), "Input Gain", -12.f, 12.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("outputGain", 1), "Output Gain", -12.f, 12.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("gate", 1), "Gate Thresh", -96.f, 0.f, -96.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("preampAutoGain", 1), "Preamp Auto Gain", false));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("powerampGain", 1), "Power Amp Gain", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("powerampAutoGain", 1), "Power Amp Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("dist", 1), "Pedal Distortion", NormalisableRange<float>(0.f, 1.f, 0.001f, 3.f), 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hiGain", 1), "High Gain", false));
