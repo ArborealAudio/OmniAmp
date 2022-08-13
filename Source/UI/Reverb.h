@@ -127,6 +127,8 @@ public:
                 v.getParameterAsValue("reverbType") = 0;
             else
                 v.getParameterAsValue("reverbType") = isOn + index;
+
+            repaint();
         };
     }
 
