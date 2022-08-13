@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(JUCE CONFIG REQUIRED)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 
-juce_set_vst2_sdk_path("${VST2_SDK}")
+juce_set_vst2_sdk_path("$ENV{HOME}/vst2_sdk")
 
 set(JUCE_FORMATS AU VST3)
 
@@ -16,7 +16,7 @@ if(UNIX AND NOT APPLE)
     list(APPEND JUCE_FORMATS LV2)
 endif()
 
-if(TARGET juce_set_vst2_sdk)
+if(TARGET juce_vst2_sdk)
     list(APPEND JUCE_FORMATS VST)
 endif()
 
