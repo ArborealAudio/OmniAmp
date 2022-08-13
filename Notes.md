@@ -18,6 +18,7 @@
   - ~~Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab~~
     
     - ~~Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)~~
+  
   - Ended up using parallel alternating comb & allpass filters
   
   - 2x12 V2
@@ -95,8 +96,14 @@
 - Add sag???
   
   - Decent sag envelope for power amp
+  
+  - However, doesn't work w/ true mono bc of reduce_max call in the SIMD impl
 
-- Figure out mono processing for reverb & potential optimizations as well. Adds quite a lot of CPU, at least on Windows
+- Still need reverb optimizations. But also, it doesn't work in Garageband when monitoring the input. Figure out.
+  
+  - Buffer size issue. Probably getting NaNs from mismatched buffer sizes
+
+- Parameter smoothing
 
 # NOTES
 
