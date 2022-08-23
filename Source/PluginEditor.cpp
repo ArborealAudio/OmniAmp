@@ -11,7 +11,7 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.apvts), wave(p.audioSource), grMeter(p.getActiveGRSource(), p.apvts.getRawParameterValue("comp")), reverbComp(p.apvts), tooltip(this)
+    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.getActiveGRSource(), p.apvts), wave(p.audioSource), reverbComp(p.apvts), tooltip(this)
 {
 #if JUCE_WINDOWS
     opengl.attachTo(*this);
@@ -27,17 +27,19 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     auto topSection = bounds.removeFromTop(50);
     auto qtr = bounds.getWidth() / 4;
 
-    auto ampSection = bounds.removeFromBottom(200).reduced(10, 0).translated(0, -2);
+    auto ampSection = bounds.removeFromBottom(200).reduced(10, 2);
     auto topLeftQtr = bounds.removeFromLeft(qtr);
     auto topRightQtr = bounds.removeFromRight(qtr);
 
     addAndMakeVisible(pluginTitle);
-    pluginTitle.setBounds(topSection.removeFromLeft(getWidth() * 0.66f).removeFromRight(getWidth() / 3));
+    pluginTitle.setBounds(topSection.removeFromRight(getWidth() * 0.66f).removeFromLeft(getWidth() / 3));
     pluginTitle.setText("GAMMA", NotificationType::dontSendNotification);
     pluginTitle.setFont(Font(getCustomFont()).withHeight(20.f).withExtraKerningFactor(0.5f));
     pluginTitle.setColour(Label::textColourId, Colours::beige);
     pluginTitle.setJustificationType(Justification::centred);
 
+    topSection.removeFromLeft(getWidth() / 12);
+    topSection.translate(0, -5);
     auto topSectionThird = topSection.getWidth() / 3;
 
     addAndMakeVisible(inGain);
@@ -80,14 +82,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
         p.apvts.getParameterAsValue("hfEnhanceAuto") = state;
     };
 
-    grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
-    grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
-    grMeter.setMeterColor(Colours::oldlace);
-    grMeter.setBounds(ampSection.withTrimmedRight(ampSection.getWidth() * 0.66f)
-                          .withTrimmedTop(ampSection.getHeight() * 0.82f)
-                          .translated(10, -10));
-    addAndMakeVisible(grMeter);
-
     setSize(800, 650);
 
     auto bottomSection = getLocalBounds().removeFromBottom(200);
@@ -99,11 +93,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
 
     cabComponent.cabChanged = [&](bool state, int newType)
     {
-        auto type = p.apvts.getParameterAsValue("cabType");
-        auto on = p.apvts.getParameterAsValue("cabOn");
-
-        type = newType;
-        on = state;
+        p.apvts.getParameterAsValue("cabType") = newType;
+        p.apvts.getParameterAsValue("cabOn") = state;
     };
 
     reverbComp.setBounds(bottomSection);
@@ -134,7 +125,7 @@ void GammaAudioProcessorEditor::paint (juce::Graphics& g)
 
     logo->drawWithin(g, trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
 
-    auto topsection = top.withTrimmedBottom(top.getHeight() / 2).reduced(10, 0).translated(0, 2).toFloat();
+    auto topsection = top.withTrimmedBottom(top.getHeight() / 2).reduced(10, 0).translated(0, 5).toFloat();
 
     g.fillRoundedRectangle(topsection, 5.f);
     g.setColour(Colours::grey);

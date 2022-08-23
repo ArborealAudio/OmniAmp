@@ -40,8 +40,6 @@ private:
 
     strix::SineWaveComponent wave;
 
-    strix::VolumeMeterComponent grMeter;
-
     CabsComponent cabComponent;
 
     ReverbComponent reverbComp;

@@ -4,7 +4,7 @@
 
 struct AmpControls : Component
 {
-    AmpControls(AudioProcessorValueTreeState& a)
+    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) : grMeter(vs, a.getRawParameterValue("comp"))
     {
         for (auto& k : getKnobs())
             addAndMakeVisible(k);
@@ -67,6 +67,11 @@ struct AmpControls : Component
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
         hiGain.setButtonText("Boost");
+
+        grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
+        grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
+        grMeter.setMeterColor(Colours::oldlace);
+        addAndMakeVisible(grMeter);
     }
 
     void paint(Graphics& g) override
@@ -75,6 +80,8 @@ struct AmpControls : Component
         g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f);
         g.setColour(Colours::grey);
         g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f, 2.f);
+
+        g.fillRoundedRectangle(dist.getRight() - 1, 20, 2, dist.getHeight() - 20, 20.f);
 
         auto paintAuto = [&](Rectangle<int> bounds)
         {
@@ -91,15 +98,15 @@ struct AmpControls : Component
         };
 
         if (inGain.autogain.load())
-            paintAuto(Rectangle<int>(inGain.getX(), inGain.getBottom(), inGain.getWidth(), 10));
+            paintAuto(Rectangle<int>(inGain.getX(), inGain.getBottom() + 3, inGain.getWidth(), 10));
 
         auto toneControls = bass.getBounds().getUnion(mid.getBounds()).getUnion(treble.getBounds());
         
         if (bass.autogain.load() || mid.autogain.load() || treble.autogain.load())
-            paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom(), toneControls.getWidth(), 10));
+            paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom() + 3, toneControls.getWidth(), 10));
         
         if (outGain.autogain.load())
-            paintAuto(Rectangle<int>(outGain.getX(), outGain.getBottom(), outGain.getWidth(), 10));
+            paintAuto(Rectangle<int>(outGain.getX(), outGain.getBottom() + 3, outGain.getWidth(), 10));
     }
 
     void resized() override
@@ -112,10 +119,15 @@ struct AmpControls : Component
         for (auto& k : getKnobs())
             k->setBounds(mb.removeFromLeft(w));
 
-        mode.setSize(100, 30);
-        mode.setCentrePosition(getLocalBounds().getCentreX(), getLocalBounds().getBottom() - 20);
+        auto leftSide = bounds.removeFromLeft(w * 2);
 
-        hiGain.setBounds(mode.getRight() + 20, mode.getY(), 50, 30);
+        mode.setSize(100, 40);
+        mode.setCentrePosition(bounds.getCentreX(), bounds.getBottom() - 25);
+
+        hiGain.setSize(50, 30);
+        hiGain.setCentrePosition(inGain.getBounds().getCentreX(), mode.getBounds().getCentreY());
+
+        grMeter.setBounds(leftSide.reduced(10));
     }
 
 private:
@@ -128,6 +140,8 @@ private:
 
     LightButton hiGain;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach;
+
+    strix::VolumeMeterComponent grMeter;
 
     std::vector<Knob*> getKnobs()
     {
