@@ -155,6 +155,7 @@ void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     cab.prepare(spec);
     cab.setCabType((Processors::CabType)apvts.getRawParameterValue("cabType")->load());
 
+    reverb.setDownsampleRatio(2);
     reverb.prepare(spec);
     reverb.changeRoomType((Processors::ReverbType)apvts.getRawParameterValue("reverbType")->load());
 

@@ -149,7 +149,7 @@ private:
 
         dsp::AudioBlock<double> block(buffer);
 
-        if (*gate < -95.0)
+        if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
 
         block.multiplyBy(inGain_raw);

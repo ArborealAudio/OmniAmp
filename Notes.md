@@ -11,7 +11,7 @@
   - adjusted Channel so that only threshold lowers for the first 60%, then add up to 1.5 gain into the sidechain. Past 50%, add up to 2x makeup gain
   - Get meter to display full 24dB (just need to get the label to read that high)
 
-- Advanced options including stereo/mono switch, stereo/MS linking for compressor
+- [BACK-BURNER] Advanced options including stereo/mono switch, stereo/MS linking for compressor
 
 - Cabs, both the processing and UI features
   
@@ -93,15 +93,13 @@
   
   - Post cab & verb
 
-- Add sag???
-  
-  - Decent sag envelope for power amp
-  
-  - However, doesn't work w/ true mono bc of reduce_max call in the SIMD impl
-
 - Still need reverb optimizations. But also, it doesn't work in Garageband when monitoring the input. Figure out.
   
   - Buffer size issue. Probably getting NaNs from mismatched buffer sizes
+  - Seems to be the case, but also seems like an issue w/ the down/upsampling. Is that not properly working w/ smaller buf sizes, or is it elsewhere in the signal path?
+  - Tried putting in a control for DS ratio. Not really working currently, just causes more aliasing L.O.L.
+
+- What's going on with the bottom components/??
 
 - Parameter smoothing
 

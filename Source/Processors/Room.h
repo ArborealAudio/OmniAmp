@@ -244,7 +244,8 @@ class Room
     AudioBuffer<double> splitBuf, erBuf, dsBuf, usBuf;
 
     template<typename Sample>
-	class StereoMultiMixer {
+	class StereoMultiMixer
+    {
 		static_assert((channels/2)*2 == channels, "StereoMultiMixer must have an even number of channels");
 		static_assert(channels >= 2, "StereoMultiMixer must have an even number of channels");
 		static constexpr int hChannels = channels/2;
@@ -289,19 +290,17 @@ class Room
 		}
 
 		/// Scaling factor for the downmix, if channels are phase-aligned
-		static constexpr Sample scalingFactor1() {
-			return 2/Sample(channels);
-		}
+		static constexpr Sample scalingFactor1() { return 2/Sample(channels);}
 
 		/// Scaling factor for the downmix, if channels are independent
-		static Sample scalingFactor2() {
-			return std::sqrt(scalingFactor1());
-		}
+		static Sample scalingFactor2() { return std::sqrt(scalingFactor1()); }
 	};
 
     StereoMultiMixer<double> upMix;
 
     double erLevel = 1.0;
+
+    int ratio = 1;
 
     std::vector<dsp::IIR::Filter<double>> dsLP[2], usLP[2];
 
@@ -337,7 +336,7 @@ class Room
         for (auto ch = 0; ch < outBuf.getNumChannels(); ++ch)
         {
             // int j = 0;
-            for (auto i = 0; i < dsBuf.getNumSamples(); ++i)
+            for (auto i = 0; i < outBuf.getNumSamples() / 2; ++i)
             {
                 auto n = i * 2;
                 out[ch][n] = in[ch][i]; // copy every even sample
@@ -394,9 +393,12 @@ public:
         feedback.modFreq = modulation;
     }
 
+    /* call this before Prepare! sets a ratio to downsample the internal processing, defaults to 1 */
+    void setDownsampleRatio(int dsRatio) { ratio = dsRatio; }
+
     void prepare(const dsp::ProcessSpec& spec)
     {
-        usBuf.setSize(2, spec.maximumBlockSize * 2.0);
+        usBuf.setSize(2, spec.maximumBlockSize * (double)ratio);
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
         dsBuf.setSize(2, spec.maximumBlockSize);
@@ -410,11 +412,11 @@ public:
 
         for (auto& c : coeffs)
         {
-            dsLP[0].push_back(dsp::IIR::Filter<double>(c));
-            dsLP[1].push_back(dsp::IIR::Filter<double>(c));
+            dsLP[0].emplace_back(dsp::IIR::Filter<double>(c));
+            dsLP[1].emplace_back(dsp::IIR::Filter<double>(c));
 
-            usLP[0].push_back(dsp::IIR::Filter<double>(c));
-            usLP[1].push_back(dsp::IIR::Filter<double>(c));
+            usLP[0].emplace_back(dsp::IIR::Filter<double>(c));
+            usLP[1].emplace_back(dsp::IIR::Filter<double>(c));
         }
 
         for (auto& ch : dsLP)
@@ -433,6 +435,14 @@ public:
 
         feedback.reset();
 
+        for (auto& ch : dsLP)
+            for (auto& f : ch)
+                f.reset();
+        
+        for (auto& ch : usLP)
+            for (auto& f : ch)
+                f.reset();
+
         usBuf.clear();
         splitBuf.clear();
         erBuf.clear();
@@ -444,11 +454,17 @@ public:
         dsBuf.clear();
         splitBuf.clear();
 
+        auto numSamples = buf.getNumSamples();
+        auto hNumSamples = numSamples / ratio;
+
         downsampleBuffer(buf);
 
-        upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), splitBuf.getNumSamples());
+        upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), hNumSamples);
 
         dsp::AudioBlock<double> block(splitBuf);
+
+        if (splitBuf.getNumSamples() > hNumSamples)
+            block = block.getSubBlock(0, hNumSamples);
 
         erBuf.clear();
 
@@ -457,14 +473,14 @@ public:
             diff[i].process(block);
             auto r = i * 1.0 / diff.size();
             for (auto ch = 0; ch < channels; ++ch)
-                erBuf.addFrom(ch, 0, block.getChannelPointer(ch), erBuf.getNumSamples(), erLevel / std::pow(2.0, r));
+                erBuf.addFrom(ch, 0, block.getChannelPointer(ch), block.getNumSamples(), erLevel / std::pow(2.0, r));
         }
 
         feedback.process(block);
 
-        block.add(dsp::AudioBlock<double>(erBuf));
+        block.add(dsp::AudioBlock<double>(erBuf).getSubBlock(0, hNumSamples));
 
-        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), dsBuf.getArrayOfWritePointers(), dsBuf.getNumSamples());
+        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), dsBuf.getArrayOfWritePointers(), hNumSamples);
 
         upsampleBuffer(usBuf);
 
@@ -491,6 +507,8 @@ class ReverbManager
 
     dsp::ProcessSpec memSpec;
 
+    int ratio = 1;
+
 public:
 
     ReverbManager()
@@ -498,11 +516,17 @@ public:
         rev = std::make_shared<Room<8>>(75.0, 2.0, 0.5, 1.0, 5.0);
     }
 
+    void setDownsampleRatio(int dsRatio)
+    {
+        rev->setDownsampleRatio(dsRatio);
+        ratio = dsRatio;
+    }
+
     void prepare(const dsp::ProcessSpec& spec)
     {
         auto hSpec = spec;
-        hSpec.sampleRate /= 2.0;
-        hSpec.maximumBlockSize /= 2;
+        hSpec.sampleRate /= ratio;
+        hSpec.maximumBlockSize /= ratio;
         rev->prepare(hSpec);
 
         memSpec = hSpec;
@@ -529,6 +553,7 @@ public:
             break;
         }
 
+        newRev->setDownsampleRatio(ratio);
         newRev->prepare(memSpec);
 
         relPool.add(newRev);
