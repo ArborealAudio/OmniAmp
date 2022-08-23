@@ -11,7 +11,7 @@ class Room
         MixMatrix() = default;
 
         // Expects an array of N channels worth of samples
-        static inline void processHadamardMatrix(double* ch)
+        static inline void processHadamardMatrix(double *ch)
         {
             recursive(ch);
 
@@ -22,7 +22,7 @@ class Room
         }
 
         // Expects an array of N channels worth of samples
-        static void processHouseholder(double* ch)
+        static void processHouseholder(double *ch)
         {
             const double h_mult = -2.0 / (double)size;
 
@@ -36,7 +36,7 @@ class Room
                 ch[j] += sum;
         }
 
-        static inline void recursive(double* data)
+        static inline void recursive(double *data)
         {
             if (size <= 1)
                 return;
@@ -63,7 +63,7 @@ class Room
         /**
         @param delayRangeinS you guessed it, delay range in seconds
         */
-        Diffuser(float delayRangeinS) : delayRange(delayRangeinS)/*  : maxDelay(max), minDelay(min) */
+        Diffuser(float delayRangeinS) : delayRange(delayRangeinS) /*  : maxDelay(max), minDelay(min) */
         {
             delay.resize(channels);
             rand.setSeed((int64)0);
@@ -91,12 +91,12 @@ class Room
 
         void reset()
         {
-            for (auto& d : delay)
+            for (auto &d : delay)
                 d.reset();
         }
 
         // expects a block of N channels
-        void process(dsp::AudioBlock<double>& block)
+        void process(dsp::AudioBlock<double> &block)
         {
             for (auto i = 0; i < block.getNumSamples(); ++i)
             {
@@ -119,8 +119,7 @@ class Room
         }
 
     private:
-
-        void shuffleChannels(dsp::AudioBlock<double>& block)
+        void shuffleChannels(dsp::AudioBlock<double> &block)
         {
             for (int ch = 0; ch < channels; ++ch)
             {
@@ -150,7 +149,7 @@ class Room
     {
         MixedFeedback() = default;
 
-        void prepare(const dsp::ProcessSpec& spec)
+        void prepare(const dsp::ProcessSpec &spec)
         {
             double delaySamplesBase = delayMs * 0.001 * spec.sampleRate;
 
@@ -162,7 +161,7 @@ class Room
                 delays[ch].setMaximumDelayInSamples(delaySamples[ch] + 1);
 
                 osc[ch].initialise([](double x)
-                                    { return std::sin(x); });
+                                   { return std::sin(x); });
                 osc[ch].setFrequency(std::pow(modFreq, (double)ch / channels));
                 osc[ch].prepare(spec);
             }
@@ -181,16 +180,16 @@ class Room
 
         void reset()
         {
-            for (auto& d : delays)
+            for (auto &d : delays)
                 d.reset();
 
             lp.reset();
             hp.reset();
-            for (auto& o : osc)
+            for (auto &o : osc)
                 o.reset();
         }
 
-        void process(dsp::AudioBlock<double>& block)
+        void process(dsp::AudioBlock<double> &block)
         {
             for (int i = 0; i < block.getNumSamples(); ++i)
             {
@@ -243,58 +242,61 @@ class Room
 
     AudioBuffer<double> splitBuf, erBuf, dsBuf, usBuf;
 
-    template<typename Sample>
-	class StereoMultiMixer
+    template <typename Sample>
+    class StereoMultiMixer
     {
-		static_assert((channels/2)*2 == channels, "StereoMultiMixer must have an even number of channels");
-		static_assert(channels >= 2, "StereoMultiMixer must have an even number of channels");
-		static constexpr int hChannels = channels/2;
-		std::array<Sample, channels> coeffs;
-	public:
-		StereoMultiMixer()
+        static_assert((channels / 2) * 2 == channels, "StereoMultiMixer must have an even number of channels");
+        static_assert(channels >= 2, "StereoMultiMixer must have an even number of channels");
+        static constexpr int hChannels = channels / 2;
+        std::array<Sample, channels> coeffs;
+
+    public:
+        StereoMultiMixer()
         {
-			coeffs[0] = 1;
-			coeffs[1] = 0;
-			for (int i = 1; i < hChannels; ++i)
+            coeffs[0] = 1;
+            coeffs[1] = 0;
+            for (int i = 1; i < hChannels; ++i)
             {
-				double phase = M_PI * i / channels;
-				coeffs[2*i] = std::cos(phase);
-				coeffs[2*i + 1] = std::sin(phase);
-			}
-		}
-		
-		void stereoToMulti(const Sample** input, Sample** output, int numSamples) const
+                double phase = M_PI * i / channels;
+                coeffs[2 * i] = std::cos(phase);
+                coeffs[2 * i + 1] = std::sin(phase);
+            }
+        }
+
+        void stereoToMulti(const Sample **input, Sample **output, int numSamples) const
         {
             for (int j = 0; j < numSamples; ++j)
             {
                 output[0][j] = input[0][j];
                 output[1][j] = input[1][j];
-                for (int i = 2; i < channels; i += 2) {
+                for (int i = 2; i < channels; i += 2)
+                {
                     output[i][j] = input[0][j] * coeffs[i] + input[1][j] * coeffs[i + 1];
                     output[i + 1][j] = input[1][j] * coeffs[i] - input[0][j] * coeffs[i + 1];
                 }
             }
         }
 
-		void multiToStereo(const Sample** input, Sample** output, int numSamples) const
+        void multiToStereo(const Sample **input, Sample **output, int numSamples) const
         {
             for (int j = 0; j < numSamples; ++j)
             {
                 output[0][j] = input[0][j];
                 output[1][j] = input[1][j];
-                for (int i = 2; i < channels; i += 2) {
+                for (int i = 2; i < channels; i += 2)
+                {
                     output[0][j] += input[i][j] * coeffs[i] - input[i + 1][j] * coeffs[i + 1];
                     output[1][j] += input[i + 1][j] * coeffs[i] + input[i][j] * coeffs[i + 1];
                 }
             }
-		}
+        }
 
-		/// Scaling factor for the downmix, if channels are phase-aligned
-		static constexpr Sample scalingFactor1() { return 2/Sample(channels);}
+        /// Scaling factor for the downmix, if channels are phase-aligned
+        static constexpr Sample scalingFactor1() { return 2 / Sample(channels); }
 
-		/// Scaling factor for the downmix, if channels are independent
-		static Sample scalingFactor2() { return std::sqrt(scalingFactor1()); }
-	};
+        /// Scaling factor for the downmix, if channels are independent
+        static Sample scalingFactor2() { return std::sqrt(scalingFactor1()); }
+    };
 
     StereoMultiMixer<double> upMix;
 
@@ -304,7 +306,7 @@ class Room
 
     std::vector<dsp::IIR::Filter<double>> dsLP[2], usLP[2];
 
-    void downsampleBuffer(const AudioBuffer<double>& buf)
+    void downsampleBuffer(const AudioBuffer<double> &buf)
     {
         auto in = buf.getArrayOfReadPointers();
         auto out = dsBuf.getArrayOfWritePointers();
@@ -315,7 +317,7 @@ class Room
             for (auto i = 0; i < buf.getNumSamples(); ++i)
             {
                 auto f = in[ch][i];
-                for (auto& lp : dsLP[ch])
+                for (auto &lp : dsLP[ch])
                     f = lp.processSample(f);
                 auto n = i / 2;
                 out[ch][n] = f;
@@ -328,7 +330,7 @@ class Room
         }
     }
 
-    void upsampleBuffer(AudioBuffer<double>& outBuf)
+    void upsampleBuffer(AudioBuffer<double> &outBuf)
     {
         auto out = outBuf.getArrayOfWritePointers();
         auto in = dsBuf.getArrayOfReadPointers();
@@ -348,10 +350,9 @@ class Room
 
             for (auto i = 0; i < outBuf.getNumSamples(); ++i)
             {
-                for (auto& lp : usLP[ch])
+                for (auto &lp : usLP[ch])
                     out[ch][i] = lp.processSample(out[ch][i]);
             }
-
         }
 
         FloatVectorOperations::multiply(out[0], 2.0, outBuf.getNumSamples());
@@ -368,7 +369,7 @@ public:
      * @param dampening Set the level of dampening, as a fraction of Nyquist, in the feedback path
      * @param modulation Sets the max frequency of the modulation. Each delay line will have a mod rate that
      * logarithmically ranges from zero to this parameter
-    */
+     */
     Room(double roomSizeMs, double rt60, double erLevel, double dampening, double modulation) : erLevel(erLevel)
     {
         auto diffusion = (roomSizeMs * 0.001);
@@ -396,21 +397,21 @@ public:
     /* call this before Prepare! sets a ratio to downsample the internal processing, defaults to 1 */
     void setDownsampleRatio(int dsRatio) { ratio = dsRatio; }
 
-    void prepare(const dsp::ProcessSpec& spec)
+    void prepare(const dsp::ProcessSpec &spec)
     {
         usBuf.setSize(2, spec.maximumBlockSize * (double)ratio);
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
         dsBuf.setSize(2, spec.maximumBlockSize);
 
-        for (auto& d : diff)
+        for (auto &d : diff)
             d.prepare(spec);
 
         feedback.prepare(spec);
 
         auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(spec.sampleRate * 0.5, spec.sampleRate * 2.0, 8);
 
-        for (auto& c : coeffs)
+        for (auto &c : coeffs)
         {
             dsLP[0].emplace_back(dsp::IIR::Filter<double>(c));
             dsLP[1].emplace_back(dsp::IIR::Filter<double>(c));
@@ -419,28 +420,28 @@ public:
             usLP[1].emplace_back(dsp::IIR::Filter<double>(c));
         }
 
-        for (auto& ch : dsLP)
-            for (auto& f : ch)
+        for (auto &ch : dsLP)
+            for (auto &f : ch)
                 f.prepare(spec);
-        
-        for (auto& ch : usLP)
-            for (auto& f : ch)
+
+        for (auto &ch : usLP)
+            for (auto &f : ch)
                 f.prepare(spec);
     }
 
     void reset()
     {
-        for (auto& d : diff)
+        for (auto &d : diff)
             d.reset();
 
         feedback.reset();
 
-        for (auto& ch : dsLP)
-            for (auto& f : ch)
+        for (auto &ch : dsLP)
+            for (auto &f : ch)
                 f.reset();
-        
-        for (auto& ch : usLP)
-            for (auto& f : ch)
+
+        for (auto &ch : usLP)
+            for (auto &f : ch)
                 f.reset();
 
         usBuf.clear();
@@ -449,7 +450,7 @@ public:
         dsBuf.clear();
     }
 
-    void process(AudioBuffer<double>& buf, float amt)
+    void process(AudioBuffer<double> &buf, float amt)
     {
         dsBuf.clear();
         splitBuf.clear();
@@ -510,7 +511,6 @@ class ReverbManager
     int ratio = 1;
 
 public:
-
     ReverbManager()
     {
         rev = std::make_shared<Room<8>>(75.0, 2.0, 0.5, 1.0, 5.0);
@@ -522,7 +522,7 @@ public:
         ratio = dsRatio;
     }
 
-    void prepare(const dsp::ProcessSpec& spec)
+    void prepare(const dsp::ProcessSpec &spec)
     {
         auto hSpec = spec;
         hSpec.sampleRate /= ratio;
@@ -540,7 +540,7 @@ public:
     void changeRoomType(ReverbType newType)
     {
         std::shared_ptr<Room<8>> newRev;
-        
+
         switch (newType)
         {
         case ReverbType::Off:
@@ -560,7 +560,7 @@ public:
         std::atomic_store(&rev, newRev);
     }
 
-    void process(AudioBuffer<double>& buffer, float amt)
+    void process(AudioBuffer<double> &buffer, float amt)
     {
         std::shared_ptr<Room<8>> procRev = std::atomic_load(&rev);
 
