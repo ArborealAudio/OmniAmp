@@ -7,4 +7,4 @@ PRIVATE
     AmpControls.h
     SineWave.hpp
     CabComponent.h
-    Reverb.h)
+    ReverbComponent.h)
