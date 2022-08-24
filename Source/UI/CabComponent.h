@@ -1,4 +1,4 @@
-// Cabs.h
+// CabComponent.h
 
 #pragma once
 

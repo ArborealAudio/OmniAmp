@@ -6,5 +6,5 @@ PRIVATE
     Button.h
     AmpControls.h
     SineWave.hpp
-    Cabs.h
+    CabComponent.h
     Reverb.h)

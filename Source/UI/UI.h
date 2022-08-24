@@ -20,5 +20,5 @@ static const Typeface::Ptr getCustomFont()
 #include "Knob.h"
 #include "AmpControls.h"
 #include "SineWave.hpp"
-#include "Cabs.h"
+#include "CabComponent.h"
 #include "Reverb.h"
