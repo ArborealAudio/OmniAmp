@@ -306,7 +306,10 @@ class Room
 
     std::vector<dsp::IIR::Filter<double>> dsLP[2], usLP[2];
 
-    void downsampleBuffer(const AudioBuffer<double> &buf)
+    /**
+     * @param numSamples number of samples in the input buffer
+     */
+    void downsampleBuffer(const AudioBuffer<double> &buf, int numSamples)
     {
         auto in = buf.getArrayOfReadPointers();
         auto out = dsBuf.getArrayOfWritePointers();
@@ -314,23 +317,26 @@ class Room
         for (auto ch = 0; ch < buf.getNumChannels(); ++ch)
         {
             // int j = 0;
-            for (auto i = 0; i < buf.getNumSamples(); ++i)
+            for (auto i = 0; i < numSamples; ++i)
             {
                 auto f = in[ch][i];
                 for (auto &lp : dsLP[ch])
-                    f = lp.processSample(f);
-                auto n = i / 2;
+                    f = lp.processSample(f); // processes full SR
+                auto n = i / ratio;
                 out[ch][n] = f;
                 // j += 2;
             }
 
             // copy L->R if the input is mono
             if (buf.getNumChannels() < dsBuf.getNumChannels())
-                FloatVectorOperations::copy(dsBuf.getWritePointer(1), dsBuf.getReadPointer(0), dsBuf.getNumSamples());
+                FloatVectorOperations::copy(dsBuf.getWritePointer(1), dsBuf.getReadPointer(0), numSamples / ratio);
         }
     }
 
-    void upsampleBuffer(AudioBuffer<double> &outBuf)
+    /**
+     * @param numSamples number of samples in the output buffer
+     */
+    void upsampleBuffer(AudioBuffer<double> &outBuf, int numSamples)
     {
         auto out = outBuf.getArrayOfWritePointers();
         auto in = dsBuf.getArrayOfReadPointers();
@@ -338,20 +344,20 @@ class Room
         for (auto ch = 0; ch < outBuf.getNumChannels(); ++ch)
         {
             // int j = 0;
-            for (auto i = 0; i < outBuf.getNumSamples() / 2; ++i)
+            for (auto i = 0; i < numSamples / ratio; ++i)
             {
-                auto n = i * 2;
+                auto n = i * ratio;
                 out[ch][n] = in[ch][i]; // copy every even sample
                 // out[ch][j + 1] = in[ch][i] / 2.0;
                 // j += 2;
-                for (int j = n + 1; j < n + 2; ++j)
+                for (int j = n + 1; j < n + ratio; ++j)
                     out[ch][j] = 0.0;
             }
 
-            for (auto i = 0; i < outBuf.getNumSamples(); ++i)
+            for (auto i = 0; i < numSamples; ++i)
             {
                 for (auto &lp : usLP[ch])
-                    out[ch][i] = lp.processSample(out[ch][i]);
+                    out[ch][i] = lp.processSample(out[ch][i]); // processes @ full SR
             }
         }
 
@@ -397,9 +403,10 @@ public:
     /* call this before Prepare! sets a ratio to downsample the internal processing, defaults to 1 */
     void setDownsampleRatio(int dsRatio) { ratio = dsRatio; }
 
+    /* pass in the down-sampled specs */
     void prepare(const dsp::ProcessSpec &spec)
     {
-        usBuf.setSize(2, spec.maximumBlockSize * (double)ratio);
+        usBuf.setSize(2, spec.maximumBlockSize * ratio);
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
         dsBuf.setSize(2, spec.maximumBlockSize);
@@ -409,7 +416,7 @@ public:
 
         feedback.prepare(spec);
 
-        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(spec.sampleRate * 0.5, spec.sampleRate * 2.0, 8);
+        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(spec.sampleRate / (double)ratio, spec.sampleRate * (double)ratio, 8);
 
         for (auto &c : coeffs)
         {
@@ -420,13 +427,17 @@ public:
             usLP[1].emplace_back(dsp::IIR::Filter<double>(c));
         }
 
+        auto filterSpec = spec;
+        filterSpec.sampleRate *= (double)ratio;
+        filterSpec.maximumBlockSize *= ratio;
+
         for (auto &ch : dsLP)
             for (auto &f : ch)
-                f.prepare(spec);
+                f.prepare(filterSpec); // is this causing the aliasing?
 
         for (auto &ch : usLP)
             for (auto &f : ch)
-                f.prepare(spec);
+                f.prepare(filterSpec);
     }
 
     void reset()
@@ -458,7 +469,7 @@ public:
         auto numSamples = buf.getNumSamples();
         auto hNumSamples = numSamples / ratio;
 
-        downsampleBuffer(buf);
+        downsampleBuffer(buf, numSamples);
 
         upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), hNumSamples);
 
@@ -483,7 +494,7 @@ public:
 
         upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), dsBuf.getArrayOfWritePointers(), hNumSamples);
 
-        upsampleBuffer(usBuf);
+        upsampleBuffer(usBuf, numSamples);
 
         buf.applyGain(1.0 - amt);
 
