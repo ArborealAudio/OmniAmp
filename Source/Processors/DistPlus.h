@@ -36,7 +36,7 @@ public:
     }
     
     /*for reg doubles currently just one channel, copies L->R*/
-    inline void processBlock(dsp::AudioBlock<double>& block)
+    inline void processBlock(dsp::AudioBlock<T> &block)
     {
         auto L = block.getChannelPointer(0);
         auto R = L;
@@ -49,7 +49,7 @@ public:
         }
     }
 
-    inline void processBlock(strix::AudioBlock<vec>& block)
+    inline void processBlock(strix::AudioBlock<T> &block)
     {
         auto in = block.getChannelPointer(0);
 

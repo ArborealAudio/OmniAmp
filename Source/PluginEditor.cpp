@@ -10,8 +10,8 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), ampControls(p.getActiveGRSource(), p.apvts), wave(p.audioSource), reverbComp(p.apvts), tooltip(this)
+GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
+    : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.getActiveGRSource(), p.apvts), wave(p.audioSource), reverbComp(p.apvts), tooltip(this)
 {
 #if JUCE_WINDOWS
     opengl.attachTo(*this);
@@ -21,7 +21,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
 
-    setSize (800, 450);
+    setSize(800, 450);
 
     auto bounds = getLocalBounds();
     auto topSection = bounds.removeFromTop(50);
@@ -98,7 +98,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor (GammaAudioProcessor& p)
     };
 
     reverbComp.setBounds(bottomSection);
-    
+
     addAndMakeVisible(reverbComp);
 
     setResizable(true, true);
@@ -116,7 +116,7 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 }
 
 //==============================================================================
-void GammaAudioProcessorEditor::paint (juce::Graphics& g)
+void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
     g.fillAll(Colour(TOP_TRIM));
     g.setColour(Colour(BACKGROUND_COLOR));
@@ -147,7 +147,7 @@ void GammaAudioProcessorEditor::resized()
     children.removeLast();
     auto scale = (float)getWidth() / 800.f;
 
-    for (auto& c : children)
+    for (auto &c : children)
         c->setTransform(AffineTransform::scale(scale));
 
     if (blur == nullptr)

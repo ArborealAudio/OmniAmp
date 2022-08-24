@@ -12,16 +12,17 @@
 //==============================================================================
 GammaAudioProcessor::GammaAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       ), apvts(*this, nullptr, "Parameters", createParams()),
-                        guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
-                        cab(apvts, currentCab)
+    : AudioProcessor(BusesProperties()
+#if !JucePlugin_IsMidiEffect
+#if !JucePlugin_IsSynth
+                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+                         ),
+      apvts(*this, nullptr, "Parameters", createParams()),
+      guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
+      cab(apvts, currentCab)
 #endif
 {
     inGain = apvts.getRawParameterValue("inputGain");
@@ -62,29 +63,29 @@ const juce::String GammaAudioProcessor::getName() const
 
 bool GammaAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
+#if JucePlugin_WantsMidiInput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool GammaAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
+#if JucePlugin_ProducesMidiOutput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool GammaAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
+#if JucePlugin_IsMidiEffect
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 double GammaAudioProcessor::getTailLengthSeconds() const
@@ -94,8 +95,8 @@ double GammaAudioProcessor::getTailLengthSeconds() const
 
 int GammaAudioProcessor::getNumPrograms()
 {
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,
+              // so this should be at least 1, even if you're not really implementing programs.
 }
 
 int GammaAudioProcessor::getCurrentProgram()
@@ -103,28 +104,28 @@ int GammaAudioProcessor::getCurrentProgram()
     return 0;
 }
 
-void GammaAudioProcessor::setCurrentProgram (int index)
+void GammaAudioProcessor::setCurrentProgram(int index)
 {
 }
 
-const juce::String GammaAudioProcessor::getProgramName (int index)
+const juce::String GammaAudioProcessor::getProgramName(int index)
 {
     return "Default";
 }
 
-void GammaAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void GammaAudioProcessor::changeProgramName(int index, const juce::String &newName)
 {
 }
 
 //==============================================================================
-void GammaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     oversample.initProcessing(samplesPerBlock);
 
     lastSampleRate = sampleRate * oversample.getOversamplingFactor();
 
-    dsp::ProcessSpec osSpec{ lastSampleRate, static_cast<uint32>(samplesPerBlock * oversample.getOversamplingFactor()), (uint32)getTotalNumInputChannels() };
-    dsp::ProcessSpec spec{ sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels() };
+    dsp::ProcessSpec osSpec{lastSampleRate, static_cast<uint32>(samplesPerBlock * oversample.getOversamplingFactor()), (uint32)getTotalNumInputChannels()};
+    dsp::ProcessSpec spec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()};
 
     gateProc.prepare(spec);
     gateProc.setAttack(100.0);
@@ -178,7 +179,7 @@ void GammaAudioProcessor::releaseResources()
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool GammaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool GammaAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 {
     return (layouts.getMainOutputChannels() <= 2 &&
             layouts.getMainInputChannels() <= 2 &&
@@ -186,7 +187,7 @@ bool GammaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 }
 #endif
 
-void GammaAudioProcessor::parameterChanged(const String& parameterID, float newValue)
+void GammaAudioProcessor::parameterChanged(const String &parameterID, float newValue)
 {
     if (parameterID.contains("mode"))
     {
@@ -227,14 +228,14 @@ void GammaAudioProcessor::parameterChanged(const String& parameterID, float newV
         gateProc.setThreshold(*gate);
 }
 
-void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+        buffer.clear(i, 0, buffer.getNumSamples());
 
     doubleBuffer.makeCopyOf(buffer, true);
 
@@ -249,35 +250,37 @@ void GammaAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     {
         auto R = doubleBuffer.getReadPointer(1);
         auto outR = buffer.getWritePointer(1);
-        if (totalNumInputChannels < totalNumOutputChannels) {
+        if (totalNumInputChannels < totalNumOutputChannels)
+        {
             for (auto i = 0; i < buffer.getNumSamples(); ++i)
                 outR[i] = static_cast<float>(L[i]);
         }
-        else {
+        else
+        {
             for (auto i = 0; i < buffer.getNumSamples(); ++i)
                 outR[i] = static_cast<float>(R[i]);
         }
     }
 
-    if(getActiveEditor() != nullptr)
+    if (getActiveEditor() != nullptr)
         audioSource.getBufferRMS(buffer);
 }
 
-void GammaAudioProcessor::processBlock (juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages)
+void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::MidiBuffer &midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+        buffer.clear(i, 0, buffer.getNumSamples());
 
     processDoubleBuffer(buffer, totalNumInputChannels < 2);
-    
+
     if (totalNumInputChannels < totalNumOutputChannels)
         buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
 
-    if(getActiveEditor() != nullptr)
+    if (getActiveEditor() != nullptr)
         audioSource.getBufferRMS(buffer);
 }
 
@@ -287,21 +290,21 @@ bool GammaAudioProcessor::hasEditor() const
     return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor* GammaAudioProcessor::createEditor()
+juce::AudioProcessorEditor *GammaAudioProcessor::createEditor()
 {
-    return new GammaAudioProcessorEditor (*this);
+    return new GammaAudioProcessorEditor(*this);
     // return new GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
-void GammaAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void GammaAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
     auto state = apvts.copyState();
     auto xml = state.createXml();
     copyXmlToBinary(*xml, destData);
 }
 
-void GammaAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void GammaAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 {
     auto xml = getXmlFromBinary(data, sizeInBytes);
     if (xml != nullptr)
@@ -310,7 +313,7 @@ void GammaAudioProcessor::setStateInformation (const void* data, int sizeInBytes
 
 //==============================================================================
 // This creates new instances of the plugin..
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter()
 {
     return new GammaAudioProcessor();
 }
@@ -333,7 +336,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("treble", 1), "Treble", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("eqAutoGain", 1), "EQ Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{ "Guitar", "Bass", "Channel" }, 2));
+    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{"Guitar", "Bass", "Channel"}, 2));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hfEnhanceAuto", 1), "HF Enhancer Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
@@ -356,5 +359,5 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bpFreq", 1), "BPFreq", 20.f, 7500.f, 1700.f));
     // params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bpQ", 1), "BPQ", 0.1f, 10.f, 2.f));
 
-    return { params.begin(), params.end() };
+    return {params.begin(), params.end()};
 }

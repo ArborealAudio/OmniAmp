@@ -23,9 +23,9 @@
 
 //==============================================================================
 /**
-*/
-class GammaAudioProcessor  : public juce::AudioProcessor,
-    public AudioProcessorValueTreeState::Listener
+ */
+class GammaAudioProcessor : public juce::AudioProcessor,
+                            public AudioProcessorValueTreeState::Listener
 {
 public:
     //==============================================================================
@@ -33,18 +33,18 @@ public:
     ~GammaAudioProcessor() override;
 
     //==============================================================================
-    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
-   #ifndef JucePlugin_PreferredChannelConfigurations
-    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-   #endif
+#ifndef JucePlugin_PreferredChannelConfigurations
+    bool isBusesLayoutSupported(const BusesLayout &layouts) const override;
+#endif
 
-    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-    void processBlock (juce::AudioBuffer<double>&, juce::MidiBuffer&) override;
+    void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
+    void processBlock(juce::AudioBuffer<double> &, juce::MidiBuffer &) override;
 
     //==============================================================================
-    juce::AudioProcessorEditor* createEditor() override;
+    juce::AudioProcessorEditor *createEditor() override;
     bool hasEditor() const override;
 
     //==============================================================================
@@ -58,15 +58,15 @@ public:
     //==============================================================================
     int getNumPrograms() override;
     int getCurrentProgram() override;
-    void setCurrentProgram (int index) override;
-    const juce::String getProgramName (int index) override;
-    void changeProgramName (int index, const juce::String& newName) override;
+    void setCurrentProgram(int index) override;
+    const juce::String getProgramName(int index) override;
+    void changeProgramName(int index, const juce::String &newName) override;
 
     //==============================================================================
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+    void getStateInformation(juce::MemoryBlock &destData) override;
+    void setStateInformation(const void *data, int sizeInBytes) override;
 
-    void parameterChanged(const String& parameterID, float newValue) override;
+    void parameterChanged(const String &parameterID, float newValue) override;
 
     bool supportsDoublePrecisionProcessing() const override { return true; }
 
@@ -76,9 +76,9 @@ public:
 
     double lastSampleRate = 0.0;
 
-    strix::VolumeMeterSource& getActiveGRSource()
+    strix::VolumeMeterSource &getActiveGRSource()
     {
-        switch(currentMode)
+        switch (currentMode)
         {
         case Guitar:
             return guitar.getActiveGRSource();
@@ -93,12 +93,11 @@ public:
     }
 
 private:
-
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
     ValueTree gtrState, bassState, channelState;
 
-    std::atomic<float>* inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
+    std::atomic<float> *inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -118,8 +117,8 @@ private:
 
     AudioBuffer<double> doubleBuffer;
 
-    Processors::Enhancer hfEnhancer {apvts, Processors::Enhancer::Type::HF};
-    Processors::Enhancer lfEnhancer {apvts, Processors::Enhancer::Type::LF};
+    Processors::Enhancer hfEnhancer{apvts, Processors::Enhancer::Type::HF};
+    Processors::Enhancer lfEnhancer{apvts, Processors::Enhancer::Type::LF};
 
     Processors::CabType currentCab = Processors::CabType::small;
 #if USE_SIMD
@@ -142,7 +141,7 @@ private:
     Mode currentMode = Mode::Channel;
 
     // expects stereo in and out
-    void processDoubleBuffer(AudioBuffer<double>& buffer, bool mono)
+    void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)
     {
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
@@ -179,19 +178,19 @@ private:
 
         setLatencySamples(oversample.getLatencyInSamples());
 
-    #if USE_SIMD
+#if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
         auto &&processBlock = simdBlock;
-    #else
+#else
         auto &&processBlock = block;
-    #endif
+#endif
 
         if (*apvts.getRawParameterValue("cabOn"))
             cab.processBlock(processBlock);
 
-    #if USE_SIMD
+#if USE_SIMD
         simd.deinterleaveBlock(processBlock);
-    #endif
+#endif
 
         if (*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
@@ -200,5 +199,5 @@ private:
     }
 
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GammaAudioProcessor)
 };

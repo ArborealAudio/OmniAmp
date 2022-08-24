@@ -93,16 +93,12 @@
   
   - Post cab & verb
 
-- Still need reverb optimizations. But also, it doesn't work in Garageband when monitoring the input. Figure out.
-  
-  - Buffer size issue. Probably getting NaNs from mismatched buffer sizes
-  - Seems to be the case, but also seems like an issue w/ the down/upsampling. Is that not properly working w/ smaller buf sizes, or is it elsewhere in the signal path?
-  - Tried putting in a control for DS ratio. Not really working currently, just causes more aliasing L.O.L.
+- SIMD for reverb. Maybe cut channels in half and let SIMD do the rest?
 
-- What's going on with the bottom components/??
+- Pedal is no longer working
 
 - Parameter smoothing
 
 # NOTES
 
-Using JUCE 7.0.1
+Using JUCE 7.0.2

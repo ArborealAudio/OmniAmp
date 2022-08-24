@@ -172,7 +172,6 @@ struct Guitar : Processor
 #else
         auto&& processBlock = block;
 #endif
-
         if (*dist > 0.f)
             mxr.processBlock(processBlock);
 
@@ -241,7 +240,7 @@ struct Bass : Processor
 
         comp.processBlock(block, *p_comp);
 
-    #if USE_SIMD
+#if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
         auto&& processBlock = simdBlock;
     #else
@@ -258,14 +257,16 @@ struct Bass : Processor
         if (*inGainAuto)
             autoGain *= 1.0 / gain_raw;
 
-        if (*hiGain) {
+        if (*hiGain)
+        {
             processBlock.multiplyBy(2.f);
             if (*inGainAuto)
                 autoGain *= 0.5;
         }
 
         triode[1].processBlock(processBlock, 0.5, 1.0);
-        if (*hiGain) {
+        if (*hiGain)
+        {
             triode[2].processBlock(processBlock, 1.0, 2.0);
             triode[3].processBlock(processBlock, 1.0, 2.0);
         }
@@ -286,19 +287,19 @@ struct Bass : Processor
 
 #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
-    #endif
+#endif
     }
 };
 
 struct Channel : Processor
 {
-    Channel(AudioProcessorValueTreeState& a, strix::VolumeMeterSource& s) : Processor(a, ProcessorType::Channel, s)
+    Channel(AudioProcessorValueTreeState &a, strix::VolumeMeterSource &s) : Processor(a, ProcessorType::Channel, s)
     {
         toneStack = nullptr;
         triode.resize(2);
     }
 
-    void prepare(const dsp::ProcessSpec& spec) override
+    void prepare(const dsp::ProcessSpec &spec) override
     {
         defaultPrepare(spec);
 
@@ -335,20 +336,20 @@ struct Channel : Processor
     }
 
     template <typename T>
-    void processBlock(dsp::AudioBlock<T>& block)
+    void processBlock(dsp::AudioBlock<T> &block)
     {
         T gain_raw = jmap(inGain->load(), 1.f, 4.f);
         T out_raw = jmap(outGain->load(), 1.f, 4.f);
 
-    #if USE_SIMD
+#if USE_SIMD
         vec autoGain = 1.0;
-    #else
+#else
         double autoGain = 1.0;
-    #endif
+#endif
 
         comp.processBlock(block, *p_comp);
 
-    #if USE_SIMD
+#if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
         auto&& processBlock = simdBlock;
     #else
