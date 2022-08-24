@@ -4,9 +4,16 @@
 
 class CabsComponent : public Component
 {
-    struct Cab : Component
+    struct Cab : DrawableButton
     {
-        Cab(const void *svgData, size_t svgSize)
+        Cab(const String &buttonName, ButtonStyle buttonStyle)
+            : DrawableButton(buttonName, buttonStyle)
+        {
+            setEdgeIndent(10);
+            setClickingTogglesState(true);
+        }
+
+        void setDrawable(const void *svgData, size_t svgSize)
         {
             svg = Drawable::createFromImageData(svgData, svgSize);
         }
@@ -15,141 +22,89 @@ class CabsComponent : public Component
         {
             color = newColor.withAlpha(0.5f);
             svg->replaceColour(Colours::transparentBlack, Colours::grey);
+
+            setImages();
+        }
+
+        /* call after drawables and color have been set */
+        void setImages()
+        {
+            auto overSVG = svg->createCopy();
+            auto downSVG = svg->createCopy();
+
+            overSVG->replaceColour(Colours::black, Colours::white);
+            downSVG->replaceColour(Colours::grey, color);
+
+            auto overOnSVG = downSVG->createCopy();
+            overOnSVG->replaceColour(color, color.withMultipliedBrightness(1.5));
+
+            DrawableButton::setImages(svg.get(), overSVG.get(), nullptr, nullptr,
+                                      downSVG.get(), overOnSVG.get());
         }
 
         void paint(Graphics &g) override
         {
             g.setColour(Colours::grey);
-            g.drawRect(getBounds());
-
-            if (on)
-                svg->replaceColour(Colours::grey, color);
-            else
-                svg->replaceColour(color, Colours::grey);
-
-            svg->drawWithin(g, getBounds().reduced(15).toFloat(), RectanglePlacement::centred, 1.f);
-        }
-
-        bool isOn()
-        {
-            return on;
-        }
-
-        void setIsOn(bool isOn)
-        {
-            on = isOn;
+            g.drawRect(getLocalBounds());
         }
 
     private:
+        /* internal svg that is passed in */
         std::unique_ptr<Drawable> svg;
-
-        bool on = false;
 
         Colour color;
     };
 
-    Cab small, med, large;
+    std::array<Cab, 3> cab{{{Cab("2x12", DrawableButton::ButtonStyle::ImageFitted)},
+                            {Cab("4x12", DrawableButton::ButtonStyle::ImageFitted)},
+                            {Cab("6x10", DrawableButton::ButtonStyle::ImageFitted)}}};
 
 public:
-    CabsComponent() : small(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize),
-                      med(BinaryData::_4x12_svg, BinaryData::_4x12_svgSize),
-                      large(BinaryData::_6x10_svg, BinaryData::_6x10_svgSize)
+    CabsComponent()
     {
-        small.setColor(Colours::olivedrab);
-        med.setColor(Colours::cadetblue);
-        large.setColor(Colours::chocolate);
+        addAndMakeVisible(cab[0]);
+        cab[0].setDrawable(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize);
+        cab[0].setColor(Colours::olivedrab);
+        cab[0].onClick = [&]
+        { setState(cab[0].getToggleState() ? 1 : 0); };
+
+        addAndMakeVisible(cab[1]);
+        cab[1].setDrawable(BinaryData::_4x12_svg, BinaryData::_4x12_svgSize);
+        cab[1].setColor(Colours::cadetblue);
+        cab[1].onClick = [&]
+        { setState(cab[1].getToggleState() ? 2 : 0); };
+
+        addAndMakeVisible(cab[2]);
+        cab[2].setDrawable(BinaryData::_6x10_svg, BinaryData::_6x10_svgSize);
+        cab[2].setColor(Colours::chocolate);
+        cab[2].onClick = [&]
+        { setState(cab[2].getToggleState() ? 3 : 0); };
     }
 
-    void paint(Graphics &g) override
-    {
-        g.fillAll(Colours::oldlace);
-        small.paint(g);
-        med.paint(g);
-        large.paint(g);
-    }
+    void paint(Graphics &g) override { g.fillAll(Colours::beige); }
 
     // 0 = none on
     void setState(int state)
     {
-        switch (state)
-        {
-        case 0:
-            small.setIsOn(false);
-            med.setIsOn(false);
-            large.setIsOn(false);
-            break;
-        case 1:
-            small.setIsOn(true);
-            med.setIsOn(false);
-            large.setIsOn(false);
-            break;
-        case 2:
-            small.setIsOn(false);
-            med.setIsOn(true);
-            large.setIsOn(false);
-            break;
-        case 3:
-            small.setIsOn(false);
-            med.setIsOn(false);
-            large.setIsOn(true);
-            break;
-        };
-    }
+        bool on = false;
+        int index = 0;
 
-    bool hitTest(int x, int y) override
-    {
-        auto leftClick = ModifierKeys::currentModifiers.isLeftButtonDown();
+        for (int i = 0; i < 3; ++i)
+        {
+            if (i + 1 == state)
+            {
+                cab[i].setToggleState(true, NotificationType::dontSendNotification);
+                on = true;
+                index = i;
+            }
+            else
+            {
+                cab[i].setToggleState(false, NotificationType::dontSendNotification);
+            }
+        }
 
-        if (small.getBounds().contains(x, y) && leftClick)
-        {
-            if (small.isOn()) {
-                small.setIsOn(false);
-                cabChanged(false, 0);
-            }
-            else {
-                small.setIsOn(true);
-                med.setIsOn(false);
-                large.setIsOn(false);
-                if (cabChanged != nullptr)
-                    cabChanged(true, 0);
-            }
-            repaint();
-            return true;
-        }
-        else if (med.getBounds().contains(x, y) && leftClick)
-        {
-            if (med.isOn()) {
-                med.setIsOn(false);
-                cabChanged(false, 1);
-            }
-            else {
-                med.setIsOn(true);
-                small.setIsOn(false);
-                large.setIsOn(false);
-                if (cabChanged != nullptr)
-                    cabChanged(true, 1);
-            }
-            repaint();
-            return true;
-        }
-        else if (large.getBounds().contains(x, y) && leftClick)
-        {
-            if (large.isOn()) {
-                large.setIsOn(false);
-                cabChanged(false, 2);
-            }
-            else {
-                large.setIsOn(true);
-                small.setIsOn(false);
-                med.setIsOn(false);
-                if (cabChanged != nullptr)
-                    cabChanged(true, 2);
-            }
-            repaint();
-            return true;
-        }
-        else
-            return false;
+        if (cabChanged != nullptr)
+            cabChanged(on, index);
     }
 
     void resized() override
@@ -157,9 +112,13 @@ public:
         auto bounds = getLocalBounds();
         auto third = (float)bounds.getWidth() / 3.f;
 
-        small.setBounds(bounds.removeFromLeft(third));
-        med.setBounds(bounds.removeFromLeft(third));
-        large.setBounds(bounds);
+        for (int i = 0; i < 3; ++i)
+        {
+            if (i < 2)
+                cab[i].setBounds(bounds.removeFromLeft(third));
+            else
+                cab[i].setBounds(bounds);
+        }
     }
 
     std::function<void(bool, int)> cabChanged;
