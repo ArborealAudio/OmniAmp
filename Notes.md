@@ -13,6 +13,16 @@
 
 - [BACK-BURNER] Advanced options including stereo/mono switch, stereo/MS linking for compressor
 
+- Menu:
+  
+  - OpenGL on/off (windows/linux)
+  
+  - HQ on/off
+  
+  - Default window size
+  
+  - About
+
 - Cabs, both the processing and UI features
   
   - ~~Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab~~
@@ -79,7 +89,6 @@
     
     - LS 307
   
-  - ~~Consider how to load the tube stages w/ the cab response. Create some kind of method in the tubes that can accept a buffer of samples from the cab, to be used in modifying the feedback sample for the tube~~ Who cares?
 
 - Getting different defaults for different modes? Would need to make them separate States if so.
   
@@ -95,7 +104,7 @@
 
 - SIMD for reverb. Maybe cut channels in half and let SIMD do the rest?
 
-- Pedal is no longer working
+- ~~Pedal is no longer working~~ Had to backup chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
 
 - Parameter smoothing
 
