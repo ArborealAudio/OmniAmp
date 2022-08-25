@@ -2,7 +2,7 @@
 
 #pragma once
 
-template <int channels>
+template <int channels, typename Type>
 class Room
 {
     template <int size>
@@ -21,12 +21,36 @@ class Room
                 ch[i] *= scale;
         }
 
+        static inline void processHadamardMatrix(vec *ch)
+        {
+            recursive(ch);
+
+            auto scale = xsimd::sqrt(1.0 / (vec)size);
+
+            for (int i = 0; i < size; ++i)
+                ch[i] *= scale;
+        }
+
         // Expects an array of N channels worth of samples
         static void processHouseholder(double *ch)
         {
             const double h_mult = -2.0 / (double)size;
 
             double sum = 0.0;
+            for (int j = 0; j < size; ++j)
+                sum += ch[j];
+
+            sum *= h_mult;
+
+            for (int j = 0; j < size; ++j)
+                ch[j] += sum;
+        }
+
+        static void processHouseholder(vec *ch)
+        {
+            const vec h_mult = -2.0 / (vec)size;
+
+            vec sum = 0.0;
             for (int j = 0; j < size; ++j)
                 sum += ch[j];
 
@@ -53,8 +77,27 @@ class Room
                 data[i + hSize] = a - b;
             }
         }
+
+        static inline void recursive(vec *data)
+        {
+            if (size <= 1)
+                return;
+            const int hSize = size / 2;
+
+            MixMatrix<hSize>::recursive(data);
+            MixMatrix<hSize>::recursive(data + hSize);
+
+            for (int i = 0; i < hSize; ++i)
+            {
+                vec a = data[i];
+                vec b = data[i + hSize];
+                data[i] = a + b;
+                data[i + hSize] = a - b;
+            }
+        }
     };
 
+    template <typename T>
     struct Diffuser
     {
 
@@ -118,33 +161,42 @@ class Room
                     FloatVectorOperations::multiply(block.getChannelPointer(ch), -1.0, block.getNumSamples());
         }
 
-    private:
-        void shuffleChannels(dsp::AudioBlock<double> &block)
+        void process(strix::AudioBlock<vec> &block)
         {
-            for (int ch = 0; ch < channels; ++ch)
+            for (auto i = 0; i < block.getNumSamples(); ++i)
             {
-                auto in = block.getChannelPointer(ch);
-                auto out = in;
-                // if ((ch + 2) < channels)
-                //     out = block.getChannelPointer(ch + 2);
-                // else
-                //     out = block.getChannelPointer(channels - ch);
+                std::vector<T> vec;
 
-                // FloatVectorOperations::copy(out, in, block.getNumSamples());
+                for (auto ch = 0; ch < channels; ++ch)
+                {
+                    delay[ch].pushSample(0, block.getSample(ch, i));
+                    vec.push_back(delay[ch].popSample(0));
+                }
 
+                MixMatrix<channels>::processHadamardMatrix(vec.data());
+
+                for (auto ch = 0; ch < channels; ++ch)
+                    block.getChannelPointer(ch)[i] = vec[ch];
+            }
+            for (auto ch = 0; ch < channels; ++ch)
+            {
                 if (invert[ch])
-                    FloatVectorOperations::multiply(out, -1.0, block.getNumSamples());
+                {
+                    auto in = block.getChannelPointer(ch);
+                    for (int i = 0; i < block.getNumSamples(); ++i)
+                        in[i] *= -1.0;
+                }
             }
         }
 
-        std::vector<dsp::DelayLine<double>> delay;
+    private:
+        std::vector<dsp::DelayLine<T>> delay;
         std::vector<bool> invert;
-
-        // static constexpr size_t channels = channels;
 
         Random rand;
     };
 
+    template <typename T>
     struct MixedFeedback
     {
         MixedFeedback() = default;
@@ -218,6 +270,35 @@ class Room
             }
         }
 
+        void process(strix::AudioBlock<vec> &block)
+        {
+            for (int i = 0; i < block.getNumSamples(); ++i)
+            {
+                std::vector<vec> delayed;
+
+                for (int ch = 0; ch < channels; ++ch)
+                {
+                    auto mod = osc[ch].processSample(delaySamples[ch]);
+                    auto dtime = delaySamples[ch] - (0.2 * mod);
+                    auto d = delays[ch].popSample(0, dtime);
+                    d = lp.processSample(ch, d);
+                    d = hp.processSample(ch, d);
+                    delayed.push_back(d);
+                }
+
+                MixMatrix<channels>::processHouseholder(delayed.data());
+
+                for (int ch = 0; ch < channels; ++ch)
+                {
+                    auto in = block.getChannelPointer(ch)[i];
+                    auto sum = in + delayed[ch] * decayGain;
+                    delays[ch].pushSample(0, sum);
+
+                    block.setSample(ch, i, delayed[ch]);
+                }
+            }
+        }
+
         double delayMs = 150.0;
         double decayGain = 0.85;
 
@@ -230,15 +311,15 @@ class Room
         // static constexpr size_t channels = channels;
 
         std::array<int, channels> delaySamples;
-        std::array<dsp::DelayLine<double>, channels> delays;
-        strix::SVTFilter<double> lp, hp;
+        std::array<dsp::DelayLine<T>, channels> delays;
+        strix::SVTFilter<T> lp, hp;
 
-        std::array<dsp::Oscillator<double>, channels> osc;
+        std::array<dsp::Oscillator<T>, channels> osc;
     };
 
-    std::vector<Diffuser> diff;
+    std::vector<Diffuser<Type>> diff;
 
-    MixedFeedback feedback;
+    MixedFeedback<Type> feedback;
 
     AudioBuffer<double> splitBuf, erBuf, dsBuf, usBuf;
 
@@ -298,13 +379,13 @@ class Room
         static Sample scalingFactor2() { return std::sqrt(scalingFactor1()); }
     };
 
-    StereoMultiMixer<double> upMix;
+    StereoMultiMixer<Type> upMix;
 
     double erLevel = 1.0;
 
     int ratio = 1;
 
-    std::vector<dsp::IIR::Filter<double>> dsLP[2], usLP[2];
+    std::vector<dsp::IIR::Filter<Type>> dsLP[2], usLP[2];
 
     /**
      * @param numSamples number of samples in the input buffer
@@ -515,7 +596,7 @@ class ReverbManager
 {
     strix::ReleasePoolShared relPool;
 
-    std::shared_ptr<Room<8>> rev;
+    std::shared_ptr<Room<8, double>> rev;
 
     dsp::ProcessSpec memSpec;
 
@@ -524,7 +605,7 @@ class ReverbManager
 public:
     ReverbManager()
     {
-        rev = std::make_shared<Room<8>>(75.0, 2.0, 0.5, 1.0, 5.0);
+        rev = std::make_shared<Room<8, double>>(75.0, 2.0, 0.5, 1.0, 5.0);
     }
 
     void setDownsampleRatio(int dsRatio)
@@ -550,17 +631,17 @@ public:
 
     void changeRoomType(ReverbType newType)
     {
-        std::shared_ptr<Room<8>> newRev;
+        std::shared_ptr<Room<8, double>> newRev;
 
         switch (newType)
         {
         case ReverbType::Off:
             return;
         case ReverbType::Room:
-            newRev = std::make_shared<Room<8>>(30.0, 0.65, 0.5, 0.23, 3.0);
+            newRev = std::make_shared<Room<8, double>>(30.0, 0.65, 0.5, 0.23, 3.0);
             break;
         case ReverbType::Hall:
-            newRev = std::make_shared<Room<8>>(75.0, 2.0, 0.5, 1.0, 5.0);
+            newRev = std::make_shared<Room<8, double>>(75.0, 2.0, 0.5, 1.0, 5.0);
             break;
         }
 
@@ -573,7 +654,7 @@ public:
 
     void process(AudioBuffer<double> &buffer, float amt)
     {
-        std::shared_ptr<Room<8>> procRev = std::atomic_load(&rev);
+        std::shared_ptr<Room<8, double>> procRev = std::atomic_load(&rev);
 
         procRev->process(buffer, amt);
     }
