@@ -41,20 +41,26 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
             Image shadow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
+            Image highlight{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Graphics sg(shadow);
-            sg.setColour(Colours::black);
+            Graphics hg(highlight);
+            sg.setColour(Colours::black.withAlpha(0.5f));
+            hg.setColour(Colours::white.withAlpha(0.5f));
             sg.fillEllipse(rx, ry, rw, rw);
+            hg.fillEllipse(rx, ry, rw, rw);
 
-            gin::applyStackBlur(shadow, 5);
+            gin::applyStackBlur(shadow, 12);
+            gin::applyStackBlur(highlight, 12);
 
-            g.drawImageAt(shadow, x-3, y+3);
+            g.drawImageAt(shadow, x - 3, y + 3);
+            g.drawImageAt(highlight, x + 3, y - 3);
 
             g.setColour(Colours::antiquewhite);
             g.fillEllipse(rx, ry, rw, rw);
             g.setColour(Colours::grey);
             g.drawEllipse(rx, ry, rw, rw, 3.f);
 
-            ColourGradient gradient{Colours::grey.withAlpha(0.5f), (float)x + width, (float)y, Colour(0x00000000), (float)x + height, (float)y + height, false};
+            ColourGradient gradient{Colours::darkgrey.withAlpha(0.5f), (float)x, (float)y + height, Colour(0xe8e8e8).withAlpha(0.5f), (float)x + width, (float)y, false};
             g.setGradientFill(gradient);
             g.fillEllipse(rx, ry, rw, rw);
 
