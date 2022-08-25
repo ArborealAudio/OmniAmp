@@ -1,34 +1,21 @@
 # TO-DO
 
 - Get freq-weighted auto gain for Channel EQ working properly
-
 - Look into optimizing UI drawing
-  
   - on resize, render each sinewave to an image. keep that on hand until next resize. move and scale each image per the rms levels
-
 - Working on comp behavior:
-  
   - adjusted Channel so that only threshold lowers for the first 60%, then add up to 1.5 gain into the sidechain. Past 50%, add up to 2x makeup gain
-  - Get meter to display full 24dB (just need to get the label to read that high)
-
-- [BACK-BURNER] Advanced options including stereo/mono switch, stereo/MS linking for compressor
-
+  - Get meter to display full 24dB (just need to get the label to read that high
+- Channel EQ isn't working exactly right. Gain isn't symmetric in either direction and they're not adding/subtracting enough gain
 - Menu:
-  
   - OpenGL on/off (windows/linux)
-  
   - HQ on/off
-  
   - Default window size
-  
   - About
 
 - Cabs, both the processing and UI features
-  
   - ~~Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab~~
-    
     - ~~Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)~~
-  
   - Ended up using parallel alternating comb & allpass filters
   
   - 2x12 V2
@@ -89,24 +76,17 @@
     
     - LS 307
   
-
 - Getting different defaults for different modes? Would need to make them separate States if so.
-  
   - What would be the advantages to this? Mainly just getting the Cab to come on if you switch to one of the amps. 
-
 - Add triple option for enhancer placement:
-  
   - Pre
-  
   - FX Loop
-  
   - Post cab & verb
-
 - SIMD for reverb. Maybe cut channels in half and let SIMD do the rest?
-
-- ~~Pedal is no longer working~~ Had to backup chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
-
+- ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
+- Preset menu (start out with just the ability to save user presets)
 - Parameter smoothing
+- [BACK-BURNER] Advanced options including stereo/mono switch, stereo/MS linking for compressor
 
 # NOTES
 

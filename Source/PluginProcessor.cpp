@@ -324,12 +324,13 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
 
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("inputGain", 1), "Input Gain", -12.f, 12.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("outputGain", 1), "Output Gain", -12.f, 12.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("gate", 1), "Gate Thresh", -96.f, 0.f, -96.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("preampAutoGain", 1), "Preamp Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("powerampGain", 1), "Power Amp Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("powerampAutoGain", 1), "Power Amp Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("compLink", 1), "Compression Stereo Link", true));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("dist", 1), "Pedal Distortion", NormalisableRange<float>(0.f, 1.f, 0.001f, 3.f), 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hiGain", 1), "High Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bass", 1), "Bass", 0.f, 1.f, 0.5f));

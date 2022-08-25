@@ -40,6 +40,7 @@ struct Processor : AudioProcessorValueTreeState::Listener
         outGainAuto = apvts.getRawParameterValue("powerampAutoGain");
         eqAutoGain = apvts.getRawParameterValue("eqAutoGain");
         p_comp = apvts.getRawParameterValue("comp");
+        linked = apvts.getRawParameterValue("compLink");
         hiGain = apvts.getRawParameterValue("hiGain");
         dist = apvts.getRawParameterValue("dist");
 
@@ -131,7 +132,7 @@ protected:
     Tube<double> pentode;
 #endif
 
-    std::atomic<float>* inGain, *inGainAuto, *outGain, *outGainAuto, *hiGain, *p_comp, *dist, *eqAutoGain;
+    std::atomic<float> *inGain, *inGainAuto, *outGain, *outGainAuto, *hiGain, *p_comp, *linked, *dist, *eqAutoGain;
 
     strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
 
@@ -164,7 +165,7 @@ struct Guitar : Processor
 
         T autoGain = 1.0;
 
-        comp.processBlock(block, *p_comp);
+        comp.processBlock(block, *p_comp, *linked);
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -238,7 +239,7 @@ struct Bass : Processor
 
         T autoGain = 1.0;
 
-        comp.processBlock(block, *p_comp);
+        comp.processBlock(block, *p_comp, *linked);
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -347,7 +348,7 @@ struct Channel : Processor
         double autoGain = 1.0;
 #endif
 
-        comp.processBlock(block, *p_comp);
+        comp.processBlock(block, *p_comp, *linked);
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
