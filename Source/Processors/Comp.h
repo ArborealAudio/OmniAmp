@@ -97,11 +97,11 @@ struct OptoComp
         {
         case ProcessorType::Guitar:
         case ProcessorType::Bass:
-            threshold.store(std::pow(10.0, -36.0 / 20.0));
+            threshold.store(std::pow(10.0, -36.0 * 0.05)); /* static threshold at -36dB */
             break;
-        case ProcessorType::Channel:{
+        case ProcessorType::Channel: {
             auto thresh_scale = c_comp / 2.0;
-            threshold.store(std::pow(10.0, (-18.0 * thresh_scale) / 20.0));
+            threshold.store(std::pow(10.0, (-18.0 * thresh_scale) * 0.05)); /* start at -18dB and scale down 3x */
             break;
             }
         }
@@ -111,6 +111,7 @@ struct OptoComp
     {
         if (comp == 0.0) {
             grSource.measureGR(1.0);
+            reset();
             return;
         }
         if (block.getNumChannels() > 1 && linked)
@@ -190,29 +191,30 @@ private:
 
         lastEnv[ch] = env;
 
-        auto gr_db = 10.0 * -env; /*using tanh here makes a nice log curve (but also fux w the att/rel curves)*/
-        auto gr = std::pow(10.0, gr_db / 20.0);
+        auto gr_db = 10.0 * -env;
+        auto gr = std::pow(10.0, gr_db * 0.05);
         lastGR[ch] = gr;
 
-        grSource.measureGR(lastGR[0]); // this should average btw L&R if unlinked stereo
+        grSource.measureGR(lastGR[0]); // TODO: this should average btw L&R if unlinked stereo
 
         return gr;
     }
 
+    /* comp: 0-1, c_comp: 1-6 */
     inline void postComp(T &x, int ch, T gr, T comp, T c_comp)
     {
         switch (type)
         {
         case ProcessorType::Guitar:
         case ProcessorType::Bass:
-            x *= c_comp * gr;
+            x *= c_comp * gr; /* c_comp functions like a recursive input gain, amplifying the sidechain */
             break;
         case ProcessorType::Channel:
             if (c_comp <= 4.f)
                 x *= gr;
             else
                 x *= (c_comp / 4.0) * gr;
-            break;
+            break; /* if > 4, start applying recursive gain, maxing at 2 */
         }
 
         xm[ch] = x;
@@ -225,22 +227,21 @@ private:
             auto bp = hp[ch].processSample(x);
             bp = lp[ch].processSample(bp);
 
-            x += bp * comp;
+            x += bp * comp; /* use comp as gain for bp signal, this also kind of doubles as a filtered output gain */
             break;
         }
         case ProcessorType::Channel:
             if (c_comp > 2.f)
-                x *= c_comp / 2.f;
+                x *= c_comp / 2.f; /* if > 2, apply output gain, max 3 */
             break;
         }
     }
 
     T lastSR = 44100.0;
 
-    std::atomic<float> threshold = std::pow(10.0, -18.0 / 20.0);
+    std::atomic<float> threshold = std::pow(10.0, -18.0 * 0.05);
 
-    T lastEnv[2]{0.0}, lastGR[2]{0.0};
-    T xm[2]{0.0};
+    T lastEnv[2]{0.0}, lastGR[2]{0.0}, xm[2]{0.0};
 
     dsp::IIR::Filter<T> sc_hp[2], sc_lp[2], lp[2], hp[2];
     dsp::IIR::Coefficients<double>::Ptr sc_hp_coeffs, sc_lp_coeffs, lp_coeffs, hp_coeffs;
