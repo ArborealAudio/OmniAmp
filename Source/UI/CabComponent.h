@@ -79,6 +79,8 @@ public:
         cab[2].setColor(Colours::chocolate);
         cab[2].onClick = [&]
         { setState(cab[2].getToggleState() ? 3 : 0); };
+
+        setBufferedToImage(true);
     }
 
     void paint(Graphics &g) override { g.fillAll(Colours::beige); }

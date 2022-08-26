@@ -115,6 +115,8 @@ public:
             else
                 v.getParameterAsValue("reverbType") = 0;
         };
+
+        setBufferedToImage(true);
     }
 
     void paint(Graphics &g) override

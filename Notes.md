@@ -83,7 +83,7 @@
   - FX Loop
   - Post cab & verb
 - SIMD for reverb. Maybe cut channels in half and let SIMD do the rest?
-- ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
+- ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR (but it's working when pulling from upstream on Linux??)
 - Preset menu (start out with just the ability to save user presets)
 - Parameter smoothing
 - [BACK-BURNER] Advanced options including stereo/mono switch, stereo/MS linking for compressor

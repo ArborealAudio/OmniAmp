@@ -203,6 +203,8 @@ struct Knob : Slider
         setLookAndFeel(&lnf);
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
+
+        setBufferedToImage(true);
     }
     ~Knob()
     {
