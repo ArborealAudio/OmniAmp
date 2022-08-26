@@ -24,7 +24,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     setSize(800, 450);
 
     auto bounds = getLocalBounds();
-    auto topSection = bounds.removeFromTop(50);
+    auto topSection = bounds.removeFromTop(55);
     auto qtr = bounds.getWidth() / 4;
 
     auto ampSection = bounds.removeFromBottom(200).reduced(10, 2);
@@ -44,17 +44,17 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addAndMakeVisible(inGain);
     inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
-    inGain.setBounds(topSection.removeFromLeft(topSectionThird));
+    inGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
     inGain.setLabel("Input");
 
     addAndMakeVisible(outGain);
     outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
-    outGain.setBounds(topSection.removeFromLeft(topSectionThird));
+    outGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
     outGain.setLabel("Output");
 
     addAndMakeVisible(gate);
     gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
-    gate.setBounds(topSection);
+    gate.setBounds(topSection.reduced(5, 0));
     gate.setLabel("Noise Gate");
 
     addAndMakeVisible(wave);
@@ -121,22 +121,22 @@ void GammaAudioProcessorEditor::paint(juce::Graphics &g)
     auto top = getLocalBounds().withTrimmedBottom(getHeight() / 3);
     auto trimmedTop = top.removeFromTop(top.getHeight() / 10);
 
-     logo->drawWithin(g, trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
+    logo->drawWithin(g, trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
 
-    auto topsection = top.withTrimmedBottom(top.getHeight() / 2).reduced(10, 0).translated(0, 5).toFloat();
+    auto topsection = top.withTrimmedBottom(top.getHeight() / 2).reduced(10, 0).translated(0, 10).toFloat();
 
     g.fillRoundedRectangle(topsection, 5.f);
     g.setColour(Colours::grey);
     g.drawRoundedRectangle(topsection, 5.f, 2.f);
 
-     g.reduceClipRegion(topsection.toNearestInt());
-     mesh->drawWithin(g, topsection, RectanglePlacement::fillDestination, 1.f);
+    g.reduceClipRegion(topsection.toNearestInt());
+    mesh->drawWithin(g, topsection, RectanglePlacement::fillDestination, 1.f);
 
-     if (blur != nullptr)
-         g.drawImage(*blur, wave.getBoundsInParent().toFloat(), RectanglePlacement::doNotResize);
+    if (blur != nullptr)
+        g.drawImage(*blur, wave.getBoundsInParent().toFloat(), RectanglePlacement::doNotResize);
 
-     g.setColour(Colour(DEEP_BLUE));
-     g.drawRoundedRectangle(wave.getBoundsInParent().toFloat(), 5.f, 2.f);
+    g.setColour(Colour(DEEP_BLUE));
+    g.drawRoundedRectangle(wave.getBoundsInParent().toFloat(), 5.f, 2.f);
 }
 
 void GammaAudioProcessorEditor::resized()
