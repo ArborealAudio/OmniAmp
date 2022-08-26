@@ -161,13 +161,13 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
             auto radius = (float)jmin(width / 2, height / 2) - 4.f;
             auto centerX = (float)slider.getLocalBounds().getCentreX();
-            auto centerY = (float)slider.getLocalBounds().getCentreY();
+            auto centerY = (float)slider.getLocalBounds().getCentreY() - 5;
             auto rx = centerX - radius;
             auto ry = centerY - radius;
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            g.setColour(Colours::antiquewhite);
+            g.setColour(slider.isMouseOverOrDragging() ? Colours::goldenrod.withSaturation(0.45f) : Colours::antiquewhite);
             g.drawEllipse(rx, ry, rw, rw, 3.f);
 
             Path p;
@@ -176,7 +176,6 @@ struct KnobLookAndFeel : LookAndFeel_V4
             p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
 
-            g.setColour(Colours::antiquewhite);
             g.fillPath(p);
 
             if (slider.isMouseOverOrDragging()) {
@@ -186,10 +185,10 @@ struct KnobLookAndFeel : LookAndFeel_V4
                     text = "Off";
                 else
                     text = String(val);
-                g.drawText(text, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
+                g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(height * 0.3), Justification::centred, 1);
             }
             else
-                g.drawText(*label, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
+                g.drawFittedText(*label, slider.getLocalBounds().removeFromBottom(height * 0.3), Justification::centred, 1);
             break;
             }
         }
@@ -204,6 +203,7 @@ struct Knob : Slider
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
 
+        setPaintingIsUnclipped(true);
         setBufferedToImage(true);
     }
     ~Knob()

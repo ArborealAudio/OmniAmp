@@ -130,7 +130,9 @@ public:
     void resized() override
     {
         auto b = getLocalBounds().reduced(10);
-        reverbAmount.setBounds(b.removeFromBottom(b.getHeight() / 2));
+        auto bottom = b.removeFromBottom(b.getHeight() / 2);
+        reverbAmount.setSize(bottom.getHeight(), bottom.getHeight());
+        reverbAmount.setCentrePosition(bottom.getCentreX(), bottom.getCentreY());
 
         auto half = b.getWidth() / reverb.size();
         reverb[0].setBounds(b.removeFromLeft(half));
