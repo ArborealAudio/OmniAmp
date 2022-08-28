@@ -9,57 +9,81 @@ struct AmpControls : Component
         for (auto& k : getKnobs())
             addAndMakeVisible(k);
 
+        auto zeroToTen = [](float val)
+        {
+            return String(val * 10.0, 1);
+        };
+
+        auto percent = [](float val)
+        {
+            auto str = String(val * 100.0, 0);
+            str.append("%", 1);
+            return str;
+        };
+
         compAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "comp", comp);
         comp.setLabel("Opto");
+        comp.setValueToStringFunction(percent);
 
         distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "dist", dist);
         dist.setLabel("Pedal");
+        dist.setValueToStringFunction(zeroToTen);
 
         inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
         inGain.setLabel("Preamp");
+        inGain.autoGain.store(*a.getRawParameterValue("preampAutoGain"));
         inGain.onAltClick = [&](bool state)
         {
             a.getParameterAsValue("preampAutoGain") = state;
             repaint();
         };
+        inGain.setValueToStringFunction(zeroToTen);
 
         bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
         bass.setLabel("Bass");
+        bass.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         bass.onAltClick = [&](bool state)
         {
-            mid.autogain.store(state);
-            treble.autogain.store(state);
+            mid.autoGain.store(state);
+            treble.autoGain.store(state);
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
+        bass.setValueToStringFunction(zeroToTen);
 
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
+        mid.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         mid.onAltClick = [&](bool state)
         {
-            bass.autogain.store(state);
-            treble.autogain.store(state);
+            bass.autoGain.store(state);
+            treble.autoGain.store(state);
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
+        mid.setValueToStringFunction(zeroToTen);
 
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
+        treble.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         treble.onAltClick = [&](bool state)
         {
-            mid.autogain.store(state);
-            bass.autogain.store(state);
+            mid.autoGain.store(state);
+            bass.autoGain.store(state);
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
+        treble.setValueToStringFunction(zeroToTen);
 
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
+        outGain.autoGain.store(*a.getRawParameterValue("powerampAutoGain"));
         outGain.onAltClick = [&](bool state)
         {
             a.getParameterAsValue("powerampAutoGain") = state;
             repaint();
         };
+        outGain.setValueToStringFunction(zeroToTen);
 
         addAndMakeVisible(mode);
         modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "mode", mode);
@@ -97,15 +121,15 @@ struct AmpControls : Component
             g.strokePath(p, PathStrokeType(1.f));
         };
 
-        if (inGain.autogain.load())
+        if (inGain.autoGain.load())
             paintAuto(Rectangle<int>(inGain.getX(), inGain.getBottom() + 3, inGain.getWidth(), 10));
 
         auto toneControls = bass.getBounds().getUnion(mid.getBounds()).getUnion(treble.getBounds());
         
-        if (bass.autogain.load() || mid.autogain.load() || treble.autogain.load())
+        if (bass.autoGain.load() || mid.autoGain.load() || treble.autoGain.load())
             paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom() + 3, toneControls.getWidth(), 10));
         
-        if (outGain.autogain.load())
+        if (outGain.autoGain.load())
             paintAuto(Rectangle<int>(outGain.getX(), outGain.getBottom() + 3, outGain.getWidth(), 10));
     }
 

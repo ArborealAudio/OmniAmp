@@ -18,8 +18,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     opengl.setImageCacheSize((size_t)64 * 1024);
 #endif
 
-     mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
-     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
+    mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
+    logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
 
     setSize(800, 450);
 
@@ -46,16 +46,23 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
     inGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
     inGain.setLabel("Input");
+    inGain.setValueToStringFunction([](float val)
+                                     { auto str = String(val, 1); str.append("dB", 2); return str; });
 
     addAndMakeVisible(outGain);
     outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
     outGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
     outGain.setLabel("Output");
+    outGain.setValueToStringFunction([](float val)
+                                     { auto str = String(val, 1); str.append("dB", 2); return str; });
 
     addAndMakeVisible(gate);
     gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
     gate.setBounds(topSection.reduced(5, 0));
-    gate.setLabel("Noise Gate");
+    gate.setLabel("Gate");
+    gate.setValueToStringFunction([](float val)
+                                  { if (val < -95.f) return String("Off");
+                                    if (val >= -95.f) return String(val, 1); });
 
     addAndMakeVisible(wave);
     wave.setBounds(bounds.reduced(10).translated(0, -5));
@@ -69,6 +76,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(lfEnhance);
     lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "lfEnhance", lfEnhance);
     lfEnhance.setBounds(topLeftQtr);
+    lfEnhance.autoGain.store(*p.apvts.getRawParameterValue("lfEnhanceAuto"));
     lfEnhance.onAltClick = [&](bool state)
     {
         p.apvts.getParameterAsValue("lfEnhanceAuto") = state;
@@ -77,6 +85,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(hfEnhance);
     hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
     hfEnhance.setBounds(topRightQtr);
+    hfEnhance.autoGain.store(*p.apvts.getRawParameterValue("hfEnhanceAuto"));
     hfEnhance.onAltClick = [&](bool state)
     {
         p.apvts.getParameterAsValue("hfEnhanceAuto") = state;

@@ -17,6 +17,10 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
     std::unique_ptr<String> label;
 
+    std::function<String(float)> valueToString;
+
+    std::atomic<bool>* autoGain;
+
     KnobLookAndFeel(KnobType newType) : type(newType)
     {
         label = std::make_unique<String>("");
@@ -75,7 +79,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
             g.setColour(Colours::black);
             if (slider.isMouseOverOrDragging())
-                g.drawText(String(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
+                g.drawText(valueToString(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             else
                 g.drawText(*label, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             break;
@@ -115,6 +119,14 @@ struct KnobLookAndFeel : LookAndFeel_V4
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
             g.setColour(Colour(BACKGROUND_COLOR));
             g.fillPath(p);
+
+            if (autoGain->load()) {
+                g.setColour(Colour(BACKGROUND_COLOR));
+                auto bounds = Rectangle<float>(centerX - rw / 4, centerY - 10, rw * 0.5f, 20);
+                g.fillRoundedRectangle(bounds, 5.f);
+                g.setColour(Colours::white);
+                g.drawFittedText("Auto", bounds.toNearestInt(), Justification::centred, 1);
+            }
             break;
             }
         case HF: {
@@ -153,6 +165,14 @@ struct KnobLookAndFeel : LookAndFeel_V4
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
             g.setColour(Colour(BACKGROUND_COLOR));
             g.fillPath(p);
+
+            if (autoGain->load()) {
+                g.setColour(Colour(BACKGROUND_COLOR));
+                auto bounds = Rectangle<float>(centerX - rw / 4, centerY - 10, rw * 0.5f, 20);
+                g.fillRoundedRectangle(bounds, 5.f);
+                g.setColour(Colours::white);
+                g.drawFittedText("Auto", bounds.toNearestInt(), Justification::centred, 1);
+            }
             break;
             }
         case Simple: {
@@ -179,13 +199,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             g.fillPath(p);
 
             if (slider.isMouseOverOrDragging()) {
-                auto val = slider.getValue();
-                String text;
-                if (val < -95.f)
-                    text = "Off";
-                else
-                    text = String(val);
-                g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(height * 0.3), Justification::centred, 1);
+                g.drawFittedText(valueToString(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.3), Justification::centred, 1);
             }
             else
                 g.drawFittedText(*label, slider.getLocalBounds().removeFromBottom(height * 0.3), Justification::centred, 1);
@@ -197,16 +211,17 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
 struct Knob : Slider
 {
-    Knob(KnobType t) : lnf(t)
+    Knob(KnobType t) : lnf(t), autoGain(false)
     {
         setLookAndFeel(&lnf);
+        lnf.autoGain = &autoGain;
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
 
         setPaintingIsUnclipped(true);
         setBufferedToImage(true);
     }
-    ~Knob()
+    ~Knob() override
     {
         setLookAndFeel(nullptr);
     }
@@ -217,6 +232,11 @@ struct Knob : Slider
         lnf.label = std::make_unique<String>(label);
     }
 
+    void setValueToStringFunction(std::function<String(float)> func)
+    {
+        lnf.valueToString = func;
+    }
+
     void mouseDown(const MouseEvent& event) override
     {
         auto alt = event.mods.isAltDown();
@@ -224,9 +244,9 @@ struct Knob : Slider
 
         if (alt && leftClick)
         {
-            if (onAltClick != nullptr) {
-                autogain.store(autogain.load() ? false : true);
-                onAltClick(autogain.load());
+            if (onAltClick) {
+                autoGain.store(!autoGain.load());
+                onAltClick(autoGain.load());
             }
         }
         else
@@ -236,7 +256,8 @@ struct Knob : Slider
     String getLabel() { return label; }
 
     std::function<void(bool)> onAltClick;
-    std::atomic<bool> autogain = false;
+
+    std::atomic<bool> autoGain;
 
 private:
     KnobLookAndFeel lnf;

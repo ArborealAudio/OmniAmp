@@ -5,7 +5,6 @@
 	- on resize, render each sinewave to an image. keep that on hand until next resize. move and scale each image per the rms levels
 - Working on comp behavior:
 	- adjusted Channel so that only threshold lowers for the first 60%, then add up to 2x gain into the sidechain. Past 30%, add up to 3x makeup gain
-	- Get meter to display full 24dB (just need to get the label to read that high
 - Channel EQ isn't working exactly right. Gain isn't symmetric in either direction and they're not adding/subtracting enough gain
 - Menu:
 	- OpenGL on/off (windows/linux)
