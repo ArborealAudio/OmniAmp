@@ -144,9 +144,9 @@ struct Guitar : Processor
     Guitar(AudioProcessorValueTreeState& a, strix::VolumeMeterSource& s) : Processor(a, ProcessorType::Guitar, s)
     {
     #if USE_SIMD
-        toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)0.5e6, (vec)20e3, (vec)65e3);
+        toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)1e6, (vec)20e3, (vec)65e3);
     #else
-        toneStack = std::make_unique<ToneStackNodal<double>>(0.25e-9, 25e-9, 22e-9, 300e3, 0.5e6, 20e3, 65e3);
+        toneStack = std::make_unique<ToneStackNodal<double>>(0.25e-9, 25e-9, 22e-9, 300e3, 1e6, 20e3, 65e3);
     #endif
         triode.resize(4);
     }
@@ -244,9 +244,9 @@ struct Bass : Processor
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
         auto&& processBlock = simdBlock;
-    #else
+#else
         auto&& processBlock = block;
-    #endif
+#endif
 
         if (*dist > 0.f)
             mxr.processBlock(processBlock);

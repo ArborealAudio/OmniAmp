@@ -102,8 +102,7 @@ private:
     /*std::array<ToneStackNodal, 3> toneStack
     { {
             {0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.25e6f, 20e3f, 65e3f},
-            {0.25e-9f, 22e-9f, 22e-9f, 300e3f, 0.5e6f, 30e3f, 56e3f},
-            {0.5e-9f, 22e-9f, 20e-9f, 270e3f, 1e6f, 125e3f, 33e3f}
+            {0.25e-9f, 22e-9f, 22e-9f, 300e3f, 0.5e6f, 30e3f, 56e3f}
     } };*/
 
     strix::VolumeMeterSource meterSource;
