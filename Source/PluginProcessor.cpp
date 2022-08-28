@@ -216,9 +216,10 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     }
     else if (parameterID.contains("dist"))
     {
-        guitar.setDistParam(newValue);
-        bass.setDistParam(newValue);
-        channel.setDistParam(newValue);
+        auto logval = std::tanh(3.0 * newValue);
+        guitar.setDistParam(logval);
+        bass.setDistParam(logval);
+        channel.setDistParam(logval);
     }
     else if (parameterID.contains("cabType"))
         cab.setCabType((Processors::CabType)newValue);
@@ -291,7 +292,6 @@ bool GammaAudioProcessor::hasEditor() const
 juce::AudioProcessorEditor *GammaAudioProcessor::createEditor()
 {
     return new GammaAudioProcessorEditor(*this);
-    // return new GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -329,7 +329,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("powerampAutoGain", 1), "Power Amp Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("compLink", 1), "Compression Stereo Link", true));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("dist", 1), "Pedal Distortion", NormalisableRange<float>(0.f, 1.f, 0.001f, 3.f), 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("dist", 1), "Pedal Distortion", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hiGain", 1), "High Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bass", 1), "Bass", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));
