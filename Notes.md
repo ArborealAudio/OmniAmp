@@ -83,7 +83,9 @@
 	- Post cab & verb
 - SIMD for reverb. Maybe cut channels in half and let SIMD do the rest?
 	- Need to basically write a SIMD-compatible buffer, or devise a way to get copyable SIMD buffers that'll work as a drop-in for the current impl
-- ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR (but it's working when pulling from upstream on Linux??)
+- ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
+	- (but it's working when pulling from upstream on Linux??)
+	- could be an issue w/ Neon specifically
 - Preset menu (start out with just the ability to save user presets)
 - Parameter smoothing
 - [BACK-BURNER] Advanced options including stereo/mono switch, stereo/MS linking for compressor
