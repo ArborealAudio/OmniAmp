@@ -46,23 +46,23 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
     inGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
     inGain.setLabel("Input");
-    inGain.setValueToStringFunction([](float val)
-                                     { auto str = String(val, 1); str.append("dB", 2); return str; });
+    inGain.valueToString = [](float val)
+                                     { auto str = String(val, 1); str.append("dB", 2); return str; };
 
     addAndMakeVisible(outGain);
     outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
     outGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
     outGain.setLabel("Output");
-    outGain.setValueToStringFunction([](float val)
-                                     { auto str = String(val, 1); str.append("dB", 2); return str; });
+    outGain.valueToString = [](float val)
+                                     { auto str = String(val, 1); str.append("dB", 2); return str; };
 
     addAndMakeVisible(gate);
     gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
     gate.setBounds(topSection.reduced(5, 0));
     gate.setLabel("Gate");
-    gate.setValueToStringFunction([](float val)
+    gate.valueToString = [](float val)
                                   { if (val < -95.f) return String("Off");
-                                    if (val >= -95.f) return String(val, 1); });
+                                    if (val >= -95.f) return String(val, 1); };
 
     addAndMakeVisible(wave);
     wave.setBounds(bounds.reduced(10).translated(0, -5));
@@ -150,20 +150,20 @@ void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 
 void GammaAudioProcessorEditor::resized()
 {
-     auto children = getChildren();
-     children.removeLast();
-     auto scale = (float)getWidth() / 800.f;
+    auto children = getChildren();
+    children.removeLast();
+    auto scale = (float)getWidth() / 800.f;
 
-     for (auto &c : children)
-         c->setTransform(AffineTransform::scale(scale));
+    for (auto &c : children)
+        c->setTransform(AffineTransform::scale(scale));
 
-     if (blur == nullptr)
-         return;
-     blur->clear(blur->getBounds());
-     wave.setVisible(false);
-     blur = std::make_unique<Image>(createComponentSnapshot(wave.getBoundsInParent()));
-     wave.setVisible(true);
+    if (blur == nullptr)
+        return;
+    blur->clear(blur->getBounds());
+    wave.setVisible(false);
+    blur = std::make_unique<Image>(createComponentSnapshot(wave.getBoundsInParent()));
+    wave.setVisible(true);
 
-     gin::applyContrast(*blur, -35);
-     gin::applyStackBlur(*blur, 10);
+    gin::applyContrast(*blur, -35);
+    gin::applyStackBlur(*blur, 10);
 }
