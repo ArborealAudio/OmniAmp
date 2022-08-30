@@ -42,7 +42,7 @@ struct AudioSource
     }
 
     template <typename T>
-    void getBufferRMS(const AudioBuffer<T>& buf)
+    void getBufferRMS(const juce::AudioBuffer<T>& buf)
     {
         splitBuffers(buf);
 
@@ -88,12 +88,12 @@ private:
     std::vector<float> src[6];
 
     dsp::LinkwitzRileyFilter<float> hp[5];
-    AudioBuffer<float> band[6];
+    juce::AudioBuffer<float> band[6];
 
     std::atomic<bool> newBuf;
 
     template <typename T>
-    void splitBuffers(const AudioBuffer<T>& buf)
+    void splitBuffers(const juce::AudioBuffer<T>& buf)
     {
         for (auto& b : band)
         {
