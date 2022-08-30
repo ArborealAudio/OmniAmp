@@ -9,12 +9,10 @@
 - Menu:
 	- OpenGL on/off (windows/linux)
 	- HQ on/off
+	- Render HQ
 	- Default window size
 	- About
-
 - Cabs, both the processing and UI features
-	- ~~Main trick will be deriving an FDN or some other type of high-pole filter to get the phase-y sound of a cab~~
-	- ~~Currently looking at Yeh et al (2008)[dafx08_17] & Harma et al (2000)~~
 - Ended up using parallel alternating comb & allpass filters
   
   - 2x12 V2
@@ -83,12 +81,18 @@
 	- Post cab & verb
 - SIMD for reverb. Maybe cut channels in half and let SIMD do the rest?
 	- Need to basically write a SIMD-compatible buffer, or devise a way to get copyable SIMD buffers that'll work as a drop-in for the current impl
+- Running into a larger issue pertaining to SIMD classes & the classes JUCE uses to process audio. You've got the AudioBuffer, which was easy enough to rewrite, but then you've got ProcessContexts which things like IIR take as their blockwise argument, and it's a pain to get it all to conform to one codebase. So we either must:
+	- settled on just doing sample-wise processing to avoid ProcessContext. Until next time...
 - ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
 	- (but it's working when pulling from upstream on Linux??)
 	- could be an issue w/ Neon specifically
 - Preset menu (start out with just the ability to save user presets)
 - Parameter smoothing
-- [BACK-BURNER] Advanced options including stereo/mono switch, stereo/MS linking for compressor
+- [BACK-BURNER] Advanced options including
+	- stereo/mono switch
+		- would this involve fukking with SIMD?
+	- stereo/MS linking for compressor
+		- currently have stereo linking option for compressor
 
 # NOTES
 
