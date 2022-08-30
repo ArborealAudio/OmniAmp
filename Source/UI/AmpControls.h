@@ -23,11 +23,11 @@ struct AmpControls : Component
 
         compAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "comp", comp);
         comp.setLabel("Opto");
-        comp.setValueToStringFunction(percent);
+        comp.valueToString = percent;
 
         distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "dist", dist);
         dist.setLabel("Pedal");
-        dist.setValueToStringFunction(zeroToTen);
+        dist.valueToString = zeroToTen;
 
         inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
         inGain.setLabel("Preamp");
@@ -37,7 +37,7 @@ struct AmpControls : Component
             a.getParameterAsValue("preampAutoGain") = state;
             repaint();
         };
-        inGain.setValueToStringFunction(zeroToTen);
+        inGain.valueToString = zeroToTen;
 
         bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
         bass.setLabel("Bass");
@@ -49,7 +49,7 @@ struct AmpControls : Component
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        bass.setValueToStringFunction(zeroToTen);
+        bass.valueToString = zeroToTen;
 
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
@@ -61,7 +61,7 @@ struct AmpControls : Component
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        mid.setValueToStringFunction(zeroToTen);
+        mid.valueToString = zeroToTen;
 
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
@@ -73,7 +73,7 @@ struct AmpControls : Component
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        treble.setValueToStringFunction(zeroToTen);
+        treble.valueToString = zeroToTen;
 
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
@@ -83,7 +83,7 @@ struct AmpControls : Component
             a.getParameterAsValue("powerampAutoGain") = state;
             repaint();
         };
-        outGain.setValueToStringFunction(zeroToTen);
+        outGain.valueToString = zeroToTen;
 
         addAndMakeVisible(mode);
         modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "mode", mode);
@@ -141,7 +141,7 @@ struct AmpControls : Component
         auto w = mb.getWidth() / 7;
 
         for (auto& k : getKnobs())
-            k->setBounds(mb.removeFromLeft(w));
+            k->setBounds(mb.removeFromLeft(w).reduced(5));
 
         auto leftSide = bounds.removeFromLeft(w * 2);
 
