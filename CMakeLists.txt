@@ -50,7 +50,6 @@ add_subdirectory(modules/chowdsp_wdf)
 juce_add_modules(
     "$ENV{HOME}/modules/Gin/modules/gin"
     "$ENV{HOME}/modules/Gin/modules/gin_gui"
-    "modules/DSPFilters/modules/dsp_filters"
     "$ENV{HOME}/modules/Arbor_modules")
 
 target_compile_definitions(Gamma
