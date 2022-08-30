@@ -150,8 +150,8 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     channel.setFilters(2, *apvts.getRawParameterValue("treble"));
 
     lfEnhancer.setMode((Processors::ProcessorType)currentMode);
-    lfEnhancer.prepare(osSpec);
-    hfEnhancer.prepare(osSpec);
+    lfEnhancer.prepare(spec);
+    hfEnhancer.prepare(spec);
 
     cab.prepare(spec);
     cab.setCabType((Processors::CabType)apvts.getRawParameterValue("cabType")->load());
@@ -338,8 +338,10 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{"Guitar", "Bass", "Channel"}, 2));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hfEnhanceAuto", 1), "HF Enhancer Auto Gain", false));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hfEnhanceInvert", 1), "HF Enhancer Invert", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("lfEnhanceAuto", 1), "LF Enhancer Auto Gain", false));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("lfEnhanceInvert", 1), "LF Enhancer Invert", false));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("cabOn", 1), "Cab On/Off", false));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("2x12", "4x12", "8x10"), 0));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("reverbType", 1), "Reverb Type", StringArray("Off", "Room", "Hall"), 0));

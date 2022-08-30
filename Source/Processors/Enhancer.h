@@ -21,8 +21,23 @@ struct EnhancerSaturation
             }
         }
     }
+
+    inline static void process(strix::AudioBlock<vec>& block, vec gp, vec gn, vec k)
+    {
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+            {
+                in[i] = xsimd::select(in[i] >= 0.0,
+                (1.0 / gp) * (in[i] * gp) / xsimd::pow((1.0 + gp * xsimd::pow(xsimd::abs(in[i] * gp), k)), 1.0 / k),
+                (1.0 / gn) * (in[i] * gn) / xsimd::pow((1.0 + gn * xsimd::pow(xsimd::abs(in[i] * gn), k)), 1.0 / k));
+            }
+        }
+    }
 };
 
+template <typename T>
 struct Enhancer
 {
     enum Type
@@ -60,11 +75,23 @@ struct Enhancer
             break;
         }
 
-        lp1.setup(1, spec.sampleRate, freq);
-        lp2.setup(1, spec.sampleRate, freq);
+        auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(freq, spec.sampleRate, 1);
+        auto hp_c = dsp::FilterDesign<double>::designIIRHighpassHighOrderButterworthMethod(7500.0, spec.sampleRate, 1);
 
-        hp1.setup(1, spec.sampleRate, 7500.0);
-        hp2.setup(1, spec.sampleRate, 7500.0);
+        lp1.clear();
+        lp2.clear();
+        hp1.clear();
+        hp2.clear();
+
+        for (auto& c : lp_c) {
+            lp1.emplace_back(dsp::IIR::Filter<T>(c));
+            lp2.emplace_back(dsp::IIR::Filter<T>(c));
+        }
+
+        for (auto& c : hp_c) {
+            hp1.emplace_back(dsp::IIR::Filter<T>(c));
+            hp2.emplace_back(dsp::IIR::Filter<T>(c));
+        }
 
         wetBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
     }
@@ -85,25 +112,34 @@ struct Enhancer
             break;
         }
 
-        lp1.setup(1, SR, freq);
-        lp2.setup(1, SR, freq);
+        auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(freq, SR, 1);
+        lp1.clear();
+        lp2.clear();
+        for (auto &c : lp_c)
+        {
+            lp1.emplace_back(dsp::IIR::Filter<T>(c));
+            lp2.emplace_back(dsp::IIR::Filter<T>(c));
+        }
     }
 
     void reset()
     {
-        lp1.reset();
-        lp2.reset();
-        hp1.reset();
-        hp2.reset();
+        if (!lp1.empty())
+            lp1[0].reset();
+        if (!lp2.empty())
+            lp2[0].reset();
+        if (!hp1.empty())
+            hp1[0].reset();
+        if (!hp2.empty())
+            hp2[0].reset();
     }
 
-    void processBlock(dsp::AudioBlock<double>& block, const double enhance, bool mono)
+    template <typename Block>
+    void processBlock(Block& block, const double enhance, const bool invert)
     {
-        wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), block.getNumSamples());
-        if (!mono)
-            wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), block.getNumSamples());
+        wetBuffer.copyFrom(0, block.getChannelPointer(0), block.getNumSamples());
 
-        auto processBlock = dsp::AudioBlock<double>(wetBuffer).getSubBlock(0, block.getNumSamples());
+        auto processBlock = Block(wetBuffer).getSubBlock(0, block.getNumSamples());
 
         switch (type)
         {
@@ -117,24 +153,22 @@ struct Enhancer
             break;
         }
 
-        FloatVectorOperations::add(block.getChannelPointer(0), processBlock.getChannelPointer(0), block.getNumSamples());
-        if (!mono)
-            FloatVectorOperations::add(block.getChannelPointer(1), processBlock.getChannelPointer(1), block.getNumSamples());
+        auto dest = block.getChannelPointer(0);
+        auto src = processBlock.getChannelPointer(0);
+        for (auto i = 0; i < block.getNumSamples(); ++i)
+            dest[i] += (!invert) * src[i];
     }
 
 private:
 
-    void processHF(dsp::AudioBlock<double>& block, double enhance)
+    template <typename Block>
+    void processHF(Block& block, double enhance)
     {
         auto inL = block.getChannelPointer(0);
-        auto inR = inL;
-        if (block.getNumChannels() > 1)
-            inR = block.getChannelPointer(1);
 
-        hp1.process(block.getNumSamples(), 0, inL);
-        if (block.getNumChannels() > 1)
-            hp1.process(block.getNumSamples(), 1, inR);
-
+        for (int i = 0; i < block.getNumSamples(); ++i)
+            inL[i] = hp1[0].processSample(inL[i]);
+        
         auto gain = jmap(enhance, 1.0, 4.0);
         double autoGain = 1.0;
 
@@ -146,24 +180,19 @@ private:
         if (*hfAutoGain)
             autoGain *= 1.0 / (2.0 * gain);
 
-        hp2.process(block.getNumSamples(), 0, inL);
-        if (block.getNumChannels() > 1)
-            hp2.process(block.getNumSamples(), 1, inR);
+        for (int i = 0; i < block.getNumSamples(); ++i)
+            inL[i] = hp2[0].processSample(inL[i]);
 
         block.multiplyBy(enhance * autoGain);
     }
 
-    void processLF(dsp::AudioBlock<double>& block, double enhance)
+    template <typename Block>
+    void processLF(Block& block, double enhance)
     {
         auto inL = block.getChannelPointer(0);
-        auto inR = inL;
-        if (block.getNumChannels() > 1)
-            inR = block.getChannelPointer(1);
-
-        lp1.process(block.getNumSamples(), 0, inL);
-        if (block.getNumChannels() > 1)
-            lp1.process(block.getNumSamples(), 1, inR);
-        // lp1.processBlock(block);
+        
+        for (int i = 0; i < block.getNumSamples(); ++i)
+            inL[i] = lp1[0].processSample(inL[i]);
 
         auto gain = jmap(enhance, 1.0, 4.0);
         double autoGain = 1.0;
@@ -175,10 +204,8 @@ private:
         if (*lfAutoGain)
             autoGain *= 1.0 / (6.0 * gain);
 
-        lp2.process(block.getNumSamples(), 0, inL);
-        if (block.getNumChannels() > 1)
-            lp2.process(block.getNumSamples(), 1, inR);
-        // lp2.processBlock(block);
+        for (int i = 0; i < block.getNumSamples(); ++i)
+            inL[i] = lp2[0].processSample(inL[i]);
 
         block.multiplyBy(enhance * autoGain);
     }
@@ -191,8 +218,10 @@ private:
     AudioProcessorValueTreeState &apvts;
     std::atomic<float> *hfAutoGain, *lfAutoGain;
 
-    Dsp::SimpleFilter<Dsp::Butterworth::LowPass<4>, 2> lp1, lp2;
-    Dsp::SimpleFilter<Dsp::Butterworth::HighPass<4>, 2> hp1, hp2;
+    // Dsp::SimpleFilter<Dsp::Butterworth::LowPass<4>, 2> lp1, lp2;
+    // Dsp::SimpleFilter<Dsp::Butterworth::HighPass<4>, 2> hp1, hp2;
 
-    AudioBuffer<double> wetBuffer;
+    std::vector<dsp::IIR::Filter<T>> lp1, lp2, hp1, hp2;
+
+    strix::Buffer<T> wetBuffer;
 };

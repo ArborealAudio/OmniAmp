@@ -116,11 +116,11 @@ private:
 
     AudioBuffer<double> doubleBuffer;
 
-    Processors::Enhancer hfEnhancer{apvts, Processors::Enhancer::Type::HF};
-    Processors::Enhancer lfEnhancer{apvts, Processors::Enhancer::Type::LF};
-
     Processors::CabType currentCab = Processors::CabType::small;
+
 #if USE_SIMD
+    Processors::Enhancer<vec> hfEnhancer{apvts, Processors::Enhancer<vec>::Type::HF};
+    Processors::Enhancer<vec> lfEnhancer{apvts, Processors::Enhancer<vec>::Type::LF};
     Processors::FDNCab<vec> cab;
 #else
     Processors::FDNCab<double> cab;
@@ -167,12 +167,6 @@ private:
             break;
         }
 
-        if (*lfEnhance)
-            lfEnhancer.processBlock(osBlock, (double)*lfEnhance, mono);
-
-        if (*hfEnhance)
-            hfEnhancer.processBlock(osBlock, (double)*hfEnhance, mono);
-
         oversample.processSamplesDown(block);
 
         setLatencySamples(oversample.getLatencyInSamples());
@@ -183,6 +177,11 @@ private:
 #else
         auto &&processBlock = block;
 #endif
+        if (*lfEnhance)
+            lfEnhancer.processBlock(processBlock, (double)*lfEnhance, *apvts.getRawParameterValue("lfEnhanceInvert"));
+
+        if (*hfEnhance)
+            hfEnhancer.processBlock(processBlock, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"));
 
         if (*apvts.getRawParameterValue("cabOn"))
             cab.processBlock(processBlock);
