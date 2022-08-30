@@ -44,6 +44,20 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
+            for (int i = 0; i < 11; ++i)
+            {
+                Path p;
+                const auto tickRadius = (float)jmin(slider.getWidth() / 2, slider.getHeight() / 1) - 4.f;
+                const auto pointerLength = tickRadius * 0.25f;
+                const auto pointerThickness = 2.5f;
+                const auto tickAngle = rotaryStartAngle + (i / 10.f) * (rotaryEndAngle - rotaryStartAngle);
+                p.addRectangle(-pointerThickness * 0.5f, -tickRadius, pointerThickness, pointerLength);
+                p.applyTransform(AffineTransform::rotation(tickAngle).translated(centerX, centerY));
+
+                g.setColour(Colours::grey);
+                g.fillPath(p);
+            }
+
             Image shadow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Image highlight{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Graphics sg(shadow);
@@ -232,10 +246,7 @@ struct Knob : Slider
         lnf.label = std::make_unique<String>(label);
     }
 
-    void setValueToStringFunction(std::function<String(float)> func)
-    {
-        lnf.valueToString = func;
-    }
+    std::function<String(float)> valueToString;
 
     void mouseDown(const MouseEvent& event) override
     {
