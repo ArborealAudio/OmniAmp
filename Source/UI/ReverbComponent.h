@@ -82,8 +82,8 @@ public:
         addAndMakeVisible(reverbAmount);
         amtAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "roomAmt", reverbAmount);
         reverbAmount.setLabel("Amount");
-        reverbAmount.setValueToStringFunction([](float val)
-                                              { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
+        reverbAmount.valueToString = [](float val)
+                                              { auto str = String(val * 100.0, 0); str.append("%", 1); return str; };
 
         for (int i = 0; i < reverb.size(); ++i)
         {
@@ -117,8 +117,6 @@ public:
             else
                 v.getParameterAsValue("reverbType") = 0;
         };
-
-        setBufferedToImage(true);
     }
 
     void paint(Graphics &g) override
