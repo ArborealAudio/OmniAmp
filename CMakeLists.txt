@@ -81,7 +81,6 @@ target_link_libraries(Gamma
         juce::juce_opengl
         gin
         gin_gui
-        dsp_filters
         Arbor_modules
         chowdsp_wdf
     PUBLIC
