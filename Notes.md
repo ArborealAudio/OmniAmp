@@ -12,8 +12,29 @@
 	- Render HQ
 	- Default window size
 	- About
-- Cabs, both the processing and UI features
-- Ended up using parallel alternating comb & allpass filters
+  
+- Getting different defaults for different modes? Would need to make them separate States if so.
+	- What would be the advantages to this? Mainly just getting the Cab to come on if you switch to one of the amps. 
+- ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
+	- (but it's working when pulling from upstream on Linux??)
+	- could be an issue w/ Neon specifically
+- Preset menu (start out with just the ability to save user presets)
+- Parameter smoothing
+- [BACK-BURNER] Advanced options including
+	- stereo/mono switch
+		- would this involve fukking with SIMD?
+	- stereo/MS linking for compressor
+		- currently have stereo linking option for compressor
+- [BACK-BURNER] Add triple option for enhancer placement:
+	- Pre
+	- FX Loop
+	- Post cab & verb
+
+# NOTES
+
+Using JUCE 7.0.2
+
+- Cabs: ended up using parallel alternating comb & allpass filters
   
   - 2x12 V2
     
@@ -72,28 +93,3 @@
     - LP2 3193 Q 1.5
     
     - LS 307
-  
-- Getting different defaults for different modes? Would need to make them separate States if so.
-	- What would be the advantages to this? Mainly just getting the Cab to come on if you switch to one of the amps. 
-- Add triple option for enhancer placement:
-	- Pre
-	- FX Loop
-	- Post cab & verb
-- SIMD for reverb. Maybe cut channels in half and let SIMD do the rest?
-	- Need to basically write a SIMD-compatible buffer, or devise a way to get copyable SIMD buffers that'll work as a drop-in for the current impl
-- Running into a larger issue pertaining to SIMD classes & the classes JUCE uses to process audio. You've got the AudioBuffer, which was easy enough to rewrite, but then you've got ProcessContexts which things like IIR take as their blockwise argument, and it's a pain to get it all to conform to one codebase. So we either must:
-	- settled on just doing sample-wise processing to avoid ProcessContext. Until next time...
-- ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
-	- (but it's working when pulling from upstream on Linux??)
-	- could be an issue w/ Neon specifically
-- Preset menu (start out with just the ability to save user presets)
-- Parameter smoothing
-- [BACK-BURNER] Advanced options including
-	- stereo/mono switch
-		- would this involve fukking with SIMD?
-	- stereo/MS linking for compressor
-		- currently have stereo linking option for compressor
-
-# NOTES
-
-Using JUCE 7.0.2
