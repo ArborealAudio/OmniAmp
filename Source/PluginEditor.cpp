@@ -46,23 +46,23 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
     inGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
     inGain.setLabel("Input");
-    inGain.valueToString = [](float val)
-                                     { auto str = String(val, 1); str.append("dB", 2); return str; };
+    inGain.setValueToStringFunction([](float val)
+                                     { auto str = String(val, 1); str.append("dB", 2); return str; });
 
     addAndMakeVisible(outGain);
     outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
     outGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
     outGain.setLabel("Output");
-    outGain.valueToString = [](float val)
-                                     { auto str = String(val, 1); str.append("dB", 2); return str; };
+    outGain.setValueToStringFunction([](float val)
+                                     { auto str = String(val, 1); str.append("dB", 2); return str; });
 
     addAndMakeVisible(gate);
     gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
     gate.setBounds(topSection.reduced(5, 0));
     gate.setLabel("Gate");
-    gate.valueToString = [](float val)
+    gate.setValueToStringFunction([](float val)
                                   { if (val < -95.f) return String("Off");
-                                    if (val >= -95.f) return String(val, 1); };
+                                    if (val >= -95.f) return String(val, 1); });
 
     addAndMakeVisible(wave);
     wave.setBounds(bounds.reduced(10).translated(0, -5));

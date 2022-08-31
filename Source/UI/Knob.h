@@ -17,7 +17,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
     std::unique_ptr<String> label;
 
-    std::function<String(float)> valueToString;
+    std::function<String(float)> valueToString = nullptr;
 
     std::atomic<bool>* autoGain;
 
@@ -91,11 +91,14 @@ struct KnobLookAndFeel : LookAndFeel_V4
             g.setColour(Colours::grey);
             g.fillPath(p);
 
+            String text;
+            if(slider.isMouseOverOrDragging() && valueToString)
+                text = valueToString(slider.getValue());
+            else if (label)
+                text = *label;
+
             g.setColour(Colours::black);
-            if (slider.isMouseOverOrDragging())
-                g.drawText(valueToString(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
-            else
-                g.drawText(*label, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
+            g.drawText(text, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             break;
             }
         case LF: {
@@ -246,8 +249,6 @@ struct Knob : Slider
         lnf.label = std::make_unique<String>(label);
     }
 
-    std::function<String(float)> valueToString;
-
     void mouseDown(const MouseEvent& event) override
     {
         auto alt = event.mods.isAltDown();
@@ -267,6 +268,11 @@ struct Knob : Slider
     String getLabel() { return label; }
 
     std::function<void(bool)> onAltClick;
+
+    void setValueToStringFunction(std::function<String(float)> func)
+    {
+        lnf.valueToString = func;
+    }
 
     std::atomic<bool> autoGain;
 
