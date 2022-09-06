@@ -219,9 +219,9 @@ struct Bass : Processor
     Bass(AudioProcessorValueTreeState& a, strix::VolumeMeterSource& s) : Processor(a, ProcessorType::Bass, s)
     {
     #if USE_SIMD
-        toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.5e-9, (vec)10e-9, (vec)10e-9, (vec)250e3, (vec)0.5e6, (vec)30e3, (vec)100e3);
+        toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.5e-9, (vec)10e-9, (vec)10e-9, (vec)250e3, (vec)0.5e6, (vec)100e3, (vec)200e3);
     #else
-        toneStack = std::make_unique<ToneStackNodal<double>>(0.5e-9, 10e-9, 10e-9, 250e3, 0.5e6, 30e3, 100e3);
+        toneStack = std::make_unique<ToneStackNodal<double>>(0.5e-9, 10e-9, 10e-9, 250e3, 0.5e6, 100e3, 200e3);
     #endif
         triode.resize(4);
     }
@@ -229,6 +229,9 @@ struct Bass : Processor
     void prepare(const dsp::ProcessSpec& spec) override
     {
         defaultPrepare(spec);
+
+        scoop.prepare(spec);
+        scoop.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(spec.sampleRate, 500.0, 1.0, 0.5);
     }
 
     template <typename T>
@@ -251,7 +254,7 @@ struct Bass : Processor
         if (*dist > 0.f)
             mxr.processBlock(processBlock);
 
-        triode[0].processBlock(processBlock, 0.5, 1.0);
+        triode[0].processBlock(processBlock, 1.0, 2.0); /* how much to bias this, since it's pre-gain? */
 
         processBlock.multiplyBy(gain_raw);
 
@@ -265,7 +268,15 @@ struct Bass : Processor
                 autoGain *= 0.5;
         }
 
-        triode[1].processBlock(processBlock, 0.5, 1.0);
+        triode[1].processBlock(processBlock, 1.0, 4.0);
+
+        for (int ch = 0; ch < processBlock.getNumChannels(); ++ch)
+        {
+           auto dest = processBlock.getChannelPointer(ch);
+           for (int i = 0; i < processBlock.getNumSamples(); ++i)
+               dest[i] = scoop.processSample(dest[i]);
+        }
+
         if (*hiGain)
         {
             triode[2].processBlock(processBlock, 1.0, 2.0);
@@ -290,6 +301,13 @@ struct Bass : Processor
         simd.deinterleaveBlock(processBlock);
 #endif
     }
+
+private:
+#if USE_SIMD
+    dsp::IIR::Filter<vec> scoop;
+#else
+    dsp::IIR::Filter<double> scoop;
+#endif
 };
 
 struct Channel : Processor
@@ -302,34 +320,37 @@ struct Channel : Processor
 
     void prepare(const dsp::ProcessSpec &spec) override
     {
+        SR = spec.sampleRate;
+
         defaultPrepare(spec);
 
         low.prepare(spec);
-        low.setCutoffFreq(150.0);
-        low.setType(strix::FilterType::firstOrderLowpass);
+        low.coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(spec.sampleRate, 250.0, 1.0, 1.0);
 
         mid.prepare(spec);
-        mid.setCutoffFreq(900.0);
-        mid.setType(strix::FilterType::bandpass);
+        mid.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(spec.sampleRate, 900.0, 0.707, 1.0);
 
         hi.prepare(spec);
-        hi.setCutoffFreq(7000.0);
-        hi.setType(strix::FilterType::firstOrderHighpass);
+        hi.coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(spec.sampleRate, 5000.0, 0.5, 1.0);
     }
 
     void setFilters(int index, float newValue)
     {
-        auto gain = jmap(newValue, -0.5f, 0.5f);
+        auto gaindB = jmap(newValue, -6.f, 6.f);
+        auto gain = Decibels::decibelsToGain(gaindB);
         switch (index)
         {
         case 0:
-            low.setGain(gain);
+            low.coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
             break;
-        case 1:
-            mid.setGain(gain);
+        case 1: {
+            double Q = 0.707;
+            Q *= 1.0 / gain;
+            mid.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
+        }
             break;
         case 2:
-            hi.setGain(gain);
+            hi.coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.5, gain);
             break;
         default:
             break;
@@ -351,11 +372,10 @@ struct Channel : Processor
         comp.processBlock(block, *p_comp, *linked);
 
 #if USE_SIMD
-        auto simdBlock = simd.interleaveBlock(block);
-        auto&& processBlock = simdBlock;
-    #else
+        auto&& processBlock = simd.interleaveBlock(block);
+#else
         auto&& processBlock = block;
-    #endif
+#endif
 
         if (*dist > 0.f)
             mxr.processBlock(processBlock);
@@ -369,7 +389,7 @@ struct Channel : Processor
         }
 
         if (*inGainAuto)
-            autoGain *= 1.0 / gain_raw;
+            autoGain *= 1.0 / std::sqrt(std::sqrt(gain_raw * gain_raw * gain_raw));
 
         processFilters(processBlock);
 
@@ -388,21 +408,23 @@ struct Channel : Processor
         if (*outGainAuto)
             autoGain *= 1.0 / out_raw;
 
-    #if USE_SIMD
+#if USE_SIMD
         processBlock.multiplyBy(xsimd::reduce_max(autoGain));
 
         simd.deinterleaveBlock(processBlock);
-    #else
+#else
         processBlock.multiplyBy(autoGain);
-    #endif
+#endif
     }
 
 private:
 #if USE_SIMD
-    strix::SVTFilter<vec> low, mid, hi;
+    dsp::IIR::Filter<vec> low, mid, hi;
 #else
-    strix::SVTFilter<double> low, mid, hi;
+    dsp::IIR::Filter<double> low, mid, hi;
 #endif
+
+    double SR = 0.0;
 
     template <class Block>
     void processFilters(Block& block)
@@ -413,48 +435,63 @@ private:
 
             for (auto i = 0; i < block.getNumSamples(); ++i)
             {
-                auto l = low.processSample(ch, in[i]);
-                auto m = mid.processSample(ch, in[i]);
-                auto h = hi.processSample(ch, in[i]);
-
-                in[i] += + l + m + h;
+                in[i] = low.processSample(in[i]);
+                in[i] = mid.processSample(in[i]);
+                in[i] = hi.processSample(in[i]);
             }
         }
     }
 
 #if USE_SIMD
-    // takes the current auto gain and multiplies it by freq-weighted eq gains
+    // get magnitude at some specific frequencies and take the reciprocal
     template <typename T>
     T setEQAutoGain(T autoGain)
     {
-        auto el_weight = [](T x)
-        { return 20.0 * x * (3.5 * x - 1.0) + 1.0; };
+        auto nyq = SR * 0.5;
 
-        T nyq = SR * 0.5;
+        auto weight = [](double x)
+        {
+            return 10.0 * x * x * (2.0 * x - 1.0) + 1.0;
+        };
 
-        if (xsimd::any(low.getGain() != 0.0))
-            autoGain *= 1.0 / (1.0 + low.getGain() * el_weight(low.getCutoffFreq() / nyq));
-        if (xsimd::any(mid.getGain() != 0.0))
-            autoGain *= 1.0 / (1.0 + mid.getGain() * el_weight(mid.getCutoffFreq() / nyq));
-        if (xsimd::any(hi.getGain() != 0.0))
-            autoGain *= 1.0 / (1.0 + hi.getGain() * el_weight(hi.getCutoffFreq() / nyq));
+        auto l_mag = low.coefficients->getMagnitudeForFrequency(300.0, SR);
+        // l_mag *= l_mag == 1.0 ? 1.0 : weight(300.0 / nyq);
+
+        std::array<double, 3> mid_freqs{500.0, 900.0, 2500.0};
+        std::vector<double> m_mags;
+        m_mags.resize(3);
+        mid.coefficients->getMagnitudeForFrequencyArray(mid_freqs.data(), m_mags.data(), 3, SR);
+        m_mags[0] *= m_mags[0] == 1.0 ? 1.0 : weight(600.0 / nyq);
+        m_mags[2] *= m_mags[2] == 1.0 ? 1.0 : weight(2500.0 / nyq);
+        auto m_sum = std::accumulate(m_mags.begin(), m_mags.end(), 0.0) / 3.0;
+
+        auto h_mag = hi.coefficients->getMagnitudeForFrequency(2500.0, SR);
+        // h_mag *= h_mag == 1.0 ? 1.0 : weight(2500.0 / nyq);
+
+        if (l_mag || m_sum || h_mag)
+        {
+            autoGain *= 1.0 / l_mag;
+            autoGain *= 1.0 / m_sum;
+            autoGain *= 1.0 / h_mag;
+        }
 
         return autoGain;
     }
 #else
     double setEQAutoGain(double autoGain)
     {
-        auto el_weight = [](double x)
-        { return 20.0 * x * (3.5 * x - 1.0) + 1.0; };
-
         auto nyq = SR * 0.5;
 
-        if (low.getGain() != 0.0)
-            autoGain *= 1.0 / (1.0 + low.getGain() * el_weight(low.getCutoffFreq() / nyq));
-        if (mid.getGain() != 0.0)
-            autoGain *= 1.0 / (1.0 + mid.getGain() * el_weight(mid.getCutoffFreq() / nyq));
-        if (hi.getGain() != 0.0)
-            autoGain *= 1.0 / (1.0 + hi.getGain() * el_weight(hi.getCutoffFreq() / nyq));
+        auto l_mag = low.coefficients->getMagnitudeForFrequency(300.0, SR);
+        auto m_mag = mid.coefficients->getMagnitudeForFrequency(900.0, SR);
+        auto h_mag = hi.coefficients->getMagnitudeForFrequency(5000.0, SR);
+
+        if (l_mag || m_mag || h_mag)
+        {
+            autoGain *= 1.0 / l_mag;
+            autoGain *= 1.0 / m_mag;
+            autoGain *= 1.0 / h_mag;
+        }
 
         return autoGain;
     }
