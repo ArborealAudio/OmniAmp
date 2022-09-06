@@ -323,6 +323,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("inputGain", 1), "Input Gain", -12.f, 12.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("outputGain", 1), "Output Gain", -12.f, 12.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("ampOn", 1), "Amp On/Off", true));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("preampAutoGain", 1), "Preamp Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("powerampGain", 1), "Power Amp Gain", 0.f, 1.f, 0.f));
@@ -346,6 +347,8 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("2x12", "4x12", "8x10"), 0));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("reverbType", 1), "Reverb Type", StringArray("Off", "Room", "Hall"), 0));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("roomAmt", 1), "Reverb Amount", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hq", 1), "HQ On/Off", true));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("renderHQ", 1), "Render HQ", false));
     // for (auto i = 0; i < 6; ++i)
     // {
     //     auto index = String(i);

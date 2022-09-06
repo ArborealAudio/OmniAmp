@@ -154,17 +154,20 @@ private:
 
         auto osBlock = oversample.processSamplesUp(block);
 
-        switch (currentMode)
+        if (*apvts.getRawParameterValue("ampOn"))
         {
-        case Guitar:
-            guitar.processBlock(osBlock);
-            break;
-        case Bass:
-            bass.processBlock(osBlock);
-            break;
-        case Channel:
-            channel.processBlock(osBlock);
-            break;
+            switch (currentMode)
+            {
+            case Guitar:
+                guitar.processBlock(osBlock);
+                break;
+            case Bass:
+                bass.processBlock(osBlock);
+                break;
+            case Channel:
+                channel.processBlock(osBlock);
+                break;
+            }
         }
 
         oversample.processSamplesDown(block);
@@ -172,8 +175,7 @@ private:
         setLatencySamples(oversample.getLatencyInSamples());
 
 #if USE_SIMD
-        auto simdBlock = simd.interleaveBlock(block);
-        auto &&processBlock = simdBlock;
+        auto&& processBlock = simd.interleaveBlock(block);
 #else
         auto &&processBlock = block;
 #endif
