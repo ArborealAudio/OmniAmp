@@ -125,7 +125,7 @@ class FDNCab
                 }
             }
 
-            block.multiplyBy(1.0 / std::sqrt(f_order));
+            block.multiplyBy(1.0 / (f_order * f_order));
         }
 
     private:
