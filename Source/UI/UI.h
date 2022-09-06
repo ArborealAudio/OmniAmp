@@ -22,3 +22,4 @@ static const Typeface::Ptr getCustomFont()
 #include "SineWave.hpp"
 #include "CabComponent.h"
 #include "ReverbComponent.h"
+#include "Menu.h"

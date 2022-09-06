@@ -11,7 +11,8 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.getActiveGRSource(), p.apvts), wave(p.audioSource), reverbComp(p.apvts), tooltip(this)
+    : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.getActiveGRSource(), p.apvts), wave(p.audioSource), reverbComp(p.apvts),
+    menu(p.apvts, 100), tooltip(this)
 {
 #if JUCE_WINDOWS
     opengl.attachTo(*this);
@@ -37,6 +38,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     pluginTitle.setFont(Font(getCustomFont()).withHeight(20.f).withExtraKerningFactor(0.5f));
     pluginTitle.setColour(Label::textColourId, Colours::beige);
     pluginTitle.setJustificationType(Justification::centred);
+
+    addAndMakeVisible(menu);
+    menu.setAlwaysOnTop(true);
+    menu.setBounds(getWidth() - 105, 10, 100, 150);
+    menu.windowResizeCallback = [&] {resetWindowSize();};
 
     topSection.removeFromLeft(getWidth() / 12);
     topSection.translate(0, -5);
@@ -120,6 +126,11 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 #if JUCE_WINDOWS
     opengl.detach();
 #endif
+}
+
+void GammaAudioProcessorEditor::resetWindowSize() noexcept
+{
+    setSize(800, 650);
 }
 
 //==============================================================================

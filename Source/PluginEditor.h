@@ -24,6 +24,9 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    void resetWindowSize() noexcept;
+    void checkUpdate() noexcept;
+
 private:
     GammaAudioProcessor& audioProcessor;
 
@@ -45,6 +48,8 @@ private:
     ReverbComponent reverbComp;
 
     Label pluginTitle;
+
+    MenuComponent menu;
 
 #if JUCE_WINDOWS
     OpenGLContext opengl;
