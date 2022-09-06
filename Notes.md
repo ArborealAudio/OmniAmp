@@ -1,8 +1,6 @@
 # TO-DO
 
-- Get freq-weighted auto gain for Channel EQ working properly
-	- mostly just needs polish at this point
-	- disable auto gain for amp modes
+- disable auto gain display for amp modes
 
 - Look into optimizing UI drawing & UI polish
 	- benchmark on lower-specced stuff to see how it performs
