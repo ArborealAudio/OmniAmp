@@ -355,6 +355,8 @@ struct Channel : Processor
         default:
             break;
         }
+
+        setEQAutoGain();
     }
 
     template <typename T>
@@ -394,7 +396,7 @@ struct Channel : Processor
         processFilters(processBlock);
 
         if (*eqAutoGain)
-            autoGain = setEQAutoGain(autoGain);
+            autoGain *= getEQAutoGain();
 
         if (*outGain > 0.f) {
             processBlock.multiplyBy(out_raw * 6.f);
@@ -424,7 +426,7 @@ private:
     dsp::IIR::Filter<double> low, mid, hi;
 #endif
 
-    double SR = 0.0;
+    double autoGain_m = 1.0;
 
     template <class Block>
     void processFilters(Block& block)
@@ -442,60 +444,26 @@ private:
         }
     }
 
-#if USE_SIMD
     // get magnitude at some specific frequencies and take the reciprocal
-    template <typename T>
-    T setEQAutoGain(T autoGain)
+    void setEQAutoGain()
     {
-        auto nyq = SR * 0.5;
-
-        auto weight = [](double x)
-        {
-            return 10.0 * x * x * (2.0 * x - 1.0) + 1.0;
-        };
+        autoGain_m = 1.0;
 
         auto l_mag = low.coefficients->getMagnitudeForFrequency(300.0, SR);
-        // l_mag *= l_mag == 1.0 ? 1.0 : weight(300.0 / nyq);
 
-        std::array<double, 3> mid_freqs{500.0, 900.0, 2500.0};
-        std::vector<double> m_mags;
-        m_mags.resize(3);
-        mid.coefficients->getMagnitudeForFrequencyArray(mid_freqs.data(), m_mags.data(), 3, SR);
-        m_mags[0] *= m_mags[0] == 1.0 ? 1.0 : weight(600.0 / nyq);
-        m_mags[2] *= m_mags[2] == 1.0 ? 1.0 : weight(2500.0 / nyq);
-        auto m_sum = std::accumulate(m_mags.begin(), m_mags.end(), 0.0) / 3.0;
+        auto m_mag = mid.coefficients->getMagnitudeForFrequency(2500.0, SR);
 
         auto h_mag = hi.coefficients->getMagnitudeForFrequency(2500.0, SR);
-        // h_mag *= h_mag == 1.0 ? 1.0 : weight(2500.0 / nyq);
-
-        if (l_mag || m_sum || h_mag)
-        {
-            autoGain *= 1.0 / l_mag;
-            autoGain *= 1.0 / m_sum;
-            autoGain *= 1.0 / h_mag;
-        }
-
-        return autoGain;
-    }
-#else
-    double setEQAutoGain(double autoGain)
-    {
-        auto nyq = SR * 0.5;
-
-        auto l_mag = low.coefficients->getMagnitudeForFrequency(300.0, SR);
-        auto m_mag = mid.coefficients->getMagnitudeForFrequency(900.0, SR);
-        auto h_mag = hi.coefficients->getMagnitudeForFrequency(5000.0, SR);
 
         if (l_mag || m_mag || h_mag)
         {
-            autoGain *= 1.0 / l_mag;
-            autoGain *= 1.0 / m_mag;
-            autoGain *= 1.0 / h_mag;
+            autoGain_m *= 1.0 / l_mag;
+            autoGain_m *= 1.0 / m_mag;
+            autoGain_m *= 1.0 / h_mag;
         }
-
-        return autoGain;
     }
-#endif
+
+    inline double getEQAutoGain() noexcept { return autoGain_m; }
 };
 
 } // namespace Processors
