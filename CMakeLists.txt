@@ -67,7 +67,8 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/6x10.svg"
     "Resources/amp_mesh_2.svg"
     "Resources/logo.svg"
-    "Resources/LiberationSans-Regular.ttf")
+    "Resources/LiberationSans-Regular.ttf"
+    "Resources/Hamburger_icon.svg")
 
 # -fPIC flag mainly for Linux
 set_target_properties(BinaryData PROPERTIES
