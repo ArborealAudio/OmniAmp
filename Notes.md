@@ -1,25 +1,37 @@
 # TO-DO
 
 - Get freq-weighted auto gain for Channel EQ working properly
+	- mostly just needs polish at this point
+	- disable auto gain for amp modes
+
 - Look into optimizing UI drawing & UI polish
+	- benchmark on lower-specced stuff to see how it performs
 	- on resize, render each sinewave to an image. keep that on hand until next resize. move and scale each image per the rms levels
+- Auto-scale the waveform display
+
 - Working on comp behavior:
 	- adjusted Channel so that only threshold lowers for the first 60%, then add up to 2x gain into the sidechain. Past 30%, add up to 3x makeup gain
-- Channel EQ isn't working exactly right. Gain isn't symmetric in either direction and they're not adding/subtracting enough gain
+
+- Lower initial threshold for comp in Bass mode (& guitar?)
+
 - Menu:
 	- OpenGL on/off (windows/linux)
 	- HQ on/off
 	- Render HQ
 	- Default window size
-	- About
+	- Check for update
   
 - Getting different defaults for different modes? Would need to make them separate States if so.
 	- What would be the advantages to this? Mainly just getting the Cab to come on if you switch to one of the amps. 
 - ~~Pedal is no longer working~~ Had to rewind chowdsp_wdf to a prior commit. Should figure out what caused the issue and submit a PR
 	- (but it's working when pulling from upstream on Linux??)
 	- could be an issue w/ Neon specifically
+- Profile performance & identify potential bottlenecks
 - Preset menu (start out with just the ability to save user presets)
 - Parameter smoothing
+- Save window size to config file
+- Activation
+	- Compile a beta version that doesn't include this so testers don't have to activate or be given keys
 - [BACK-BURNER] Advanced options including
 	- stereo/mono switch
 		- would this involve fukking with SIMD?
