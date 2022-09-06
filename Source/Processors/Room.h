@@ -447,6 +447,8 @@ class Room
             FloatVectorOperations::multiply(out[1], 2.0, outBuf.getNumSamples());
     }
 
+    dsp::DryWetMixer<double> mix;
+
 public:
     /**
      * @param roomSizeMs room size in Ms, use this in conjunction w/ rt60 to create bigger or larger rooms
@@ -519,6 +521,9 @@ public:
         for (auto &ch : usLP)
             for (auto &f : ch)
                 f.prepare(filterSpec);
+
+        mix.prepare(dsp::ProcessSpec{spec.sampleRate * ratio, spec.maximumBlockSize * ratio, spec.numChannels});
+        mix.setMixingRule(dsp::DryWetMixingRule::balanced);
     }
 
     void reset()
@@ -540,10 +545,14 @@ public:
         splitBuf.clear();
         erBuf.clear();
         dsBuf.clear();
+
+        mix.reset();
     }
 
     void process(AudioBuffer<double> &buf, float amt)
     {
+        mix.pushDrySamples(dsp::AudioBlock<double>(buf));
+
         dsBuf.clear();
         splitBuf.clear();
 
@@ -577,11 +586,12 @@ public:
 
         upsampleBuffer(usBuf, numSamples);
 
-        buf.applyGain(1.0 - amt);
+        usBuf.applyGain(upMix.scalingFactor1());
 
-        buf.addFrom(0, 0, usBuf.getReadPointer(0), buf.getNumSamples(), amt * upMix.scalingFactor1());
-        if (buf.getNumChannels() > 1)
-            buf.addFrom(1, 0, usBuf.getReadPointer(1), buf.getNumSamples(), amt * upMix.scalingFactor1());
+        mix.setWetMixProportion(amt);
+        mix.mixWetSamples(dsp::AudioBlock<double>(usBuf));
+
+        buf.makeCopyOf(usBuf);
     }
 };
 
