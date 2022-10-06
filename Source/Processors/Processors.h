@@ -325,16 +325,32 @@ struct Channel : Processor
         defaultPrepare(spec);
 
         low.prepare(spec);
-        low.coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(spec.sampleRate, 250.0, 1.0, 1.0);
+        setFilters(0);
 
         mid.prepare(spec);
-        mid.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(spec.sampleRate, 900.0, 0.707, 1.0);
+        setFilters(1);
 
         hi.prepare(spec);
-        hi.coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(spec.sampleRate, 5000.0, 0.5, 1.0);
+        setFilters(2);
     }
 
-    void setFilters(int index, float newValue)
+    void update(const dsp::ProcessSpec& spec, const float lowGain = 0.5f, const float midGain = 0.5f, const float trebleGain = 0.5f)
+    {
+        SR = spec.sampleRate;
+
+        defaultPrepare(spec);
+
+        low.prepare(spec);
+        setFilters(0, lowGain);
+
+        mid.prepare(spec);
+        setFilters(1, midGain);
+
+        hi.prepare(spec);
+        setFilters(2, trebleGain);
+    }
+
+    void setFilters(int index, float newValue = 0.5f)
     {
         auto gaindB = jmap(newValue, -6.f, 6.f);
         auto gain = Decibels::decibelsToGain(gaindB);
