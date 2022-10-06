@@ -13,7 +13,8 @@
 template <typename T>
 struct OptoComp
 {
-    OptoComp(ProcessorType t, strix::VolumeMeterSource& s) : type(t), grSource(s) {}
+    OptoComp(ProcessorType t, strix::VolumeMeterSource& s) : type(t), grSource(s)
+    {}
 
     void prepare(const dsp::ProcessSpec& spec)
     {
