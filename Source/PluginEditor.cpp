@@ -41,8 +41,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addAndMakeVisible(menu);
     menu.setAlwaysOnTop(true);
-    menu.setBounds(getWidth() - 105, 10, 100, 150);
-    menu.windowResizeCallback = [&] {resetWindowSize();};
+    menu.setBounds(getWidth() - 180, 10, 175, 150);
+    menu.windowResizeCallback = [&] { resetWindowSize(); };
 
     topSection.removeFromLeft(getWidth() / 12);
     topSection.translate(0, -5);
