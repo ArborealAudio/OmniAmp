@@ -8,7 +8,7 @@ struct ButtonLookAndFeel : LookAndFeel_V4
 
     void drawButtonBackground(Graphics& g, Button& button, const Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
     {
-        g.setColour(Colours::grey);
+        g.setColour(Colours::white);
         g.drawRoundedRectangle(button.getLocalBounds().reduced(3).toFloat(), 10.f, 1.f);
         if (button.getToggleState()){
             g.setColour(Colours::white);
@@ -22,7 +22,7 @@ struct ButtonLookAndFeel : LookAndFeel_V4
         if (button.getToggleState())
             g.setColour(Colours::black);
         else
-            g.setColour(Colours::grey);
+            g.setColour(Colours::white);
         g.drawText(text, button.getLocalBounds(), Justification::centred, false);
     }
 };
