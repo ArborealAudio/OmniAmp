@@ -15,6 +15,9 @@ struct KnobLookAndFeel : LookAndFeel_V4
 {
     KnobType type;
 
+    Colour baseColor = Colours::antiquewhite;
+    Colour accentColor = Colours::grey;
+
     std::unique_ptr<String> label;
 
     std::function<String(float)> valueToString = nullptr;
@@ -44,6 +47,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
+            /* draw ticks around knob */
             for (int i = 0; i < 11; ++i)
             {
                 Path p;
@@ -54,10 +58,11 @@ struct KnobLookAndFeel : LookAndFeel_V4
                 p.addRectangle(-pointerThickness * 0.5f, -tickRadius, pointerThickness, pointerLength);
                 p.applyTransform(AffineTransform::rotation(tickAngle).translated(centerX, centerY));
 
-                g.setColour(Colours::grey);
+                g.setColour(accentColor);
                 g.fillPath(p);
             }
 
+            /* shadow & highlight */
             Image shadow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Image highlight{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
             Graphics sg(shadow);
@@ -73,31 +78,34 @@ struct KnobLookAndFeel : LookAndFeel_V4
             g.drawImageAt(shadow, x - 3, y + 3);
             g.drawImageAt(highlight, x + 3, y - 3);
 
-            g.setColour(Colours::antiquewhite);
+            /* base knob */
+            g.setColour(baseColor);
             g.fillEllipse(rx, ry, rw, rw);
-            g.setColour(Colours::grey);
+            g.setColour(accentColor);
             g.drawEllipse(rx, ry, rw, rw, 3.f);
 
             ColourGradient gradient{Colours::darkgrey.withAlpha(0.5f), (float)x, (float)y + height, Colour(0xe8e8e8).withAlpha(0.5f), (float)x + width, (float)y, false};
             g.setGradientFill(gradient);
             g.fillEllipse(rx, ry, rw, rw);
 
+            /* draw knob pointer */
             Path p;
             auto pointerLength = radius * 0.75f;
             auto pointerThickness = 2.5f;
             p.addRectangle(-pointerThickness * 0.5f, -radius * 0.8, pointerThickness, pointerLength);
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
 
-            g.setColour(Colours::grey);
+            g.setColour(accentColor);
             g.fillPath(p);
 
+            /* text */
             String text;
             if(slider.isMouseOverOrDragging() && valueToString)
                 text = valueToString(slider.getValue());
             else if (label)
                 text = *label;
 
-            g.setColour(Colours::black);
+            g.setColour(accentColor == Colours::oldlace ? accentColor : Colours::black);
             g.drawText(text, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             break;
             }
@@ -238,7 +246,7 @@ struct Knob : Slider
         setPaintingIsUnclipped(true);
         setBufferedToImage(true);
     }
-    ~Knob() override
+    ~Knob()
     {
         setLookAndFeel(nullptr);
     }
@@ -272,6 +280,13 @@ struct Knob : Slider
     void setValueToStringFunction(std::function<String(float)> func)
     {
         lnf.valueToString = func;
+    }
+
+    /* sets the base & accent colors for Regular-style knobs */
+    void setColor(Colour newBaseColor, Colour newAccentColor)
+    {
+        lnf.baseColor = newBaseColor;
+        lnf.accentColor = newAccentColor;
     }
 
     std::atomic<bool> autoGain;
