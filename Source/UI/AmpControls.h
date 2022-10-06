@@ -2,16 +2,28 @@
 
 #pragma once
 
-struct AmpControls : Component
+struct AmpControls : Component, AudioProcessorValueTreeState::Listener
 {
-    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) : grMeter(vs, a.getRawParameterValue("comp"))
+    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) : vts(a), grMeter(vs, a.getRawParameterValue("comp"))
     {
+        vts.addParameterListener("mode", this);
+
         for (auto& k : getKnobs())
-            addAndMakeVisible(k);
+            addAndMakeVisible(*k);
+
+        setColorScheme((int)*vts.getRawParameterValue("mode"));
 
         auto zeroToTen = [](float val)
         {
             return String(val * 10.0, 1);
+        };
+
+        auto decibels = [](float val)
+        {
+            val = jmap(val, -6.f, 6.f);
+            String str(val, 1);
+            str.append("dB", 2);
+            return str;
         };
 
         auto percent = [](float val)
@@ -44,36 +56,39 @@ struct AmpControls : Component
         bass.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         bass.onAltClick = [&](bool state)
         {
+            if (*a.getRawParameterValue("mode") < 2) return;
             mid.autoGain.store(state);
             treble.autoGain.store(state);
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        bass.setValueToStringFunction(zeroToTen);
+        bass.setValueToStringFunction(*a.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
 
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
         mid.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         mid.onAltClick = [&](bool state)
         {
+            if (*a.getRawParameterValue("mode") < 2) return;
             bass.autoGain.store(state);
             treble.autoGain.store(state);
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        mid.setValueToStringFunction(zeroToTen);
+        mid.setValueToStringFunction(*a.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
 
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
         treble.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         treble.onAltClick = [&](bool state)
         {
+            if (*a.getRawParameterValue("mode") < 2) return;
             mid.autoGain.store(state);
             bass.autoGain.store(state);
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        treble.setValueToStringFunction(zeroToTen);
+        treble.setValueToStringFunction(*a.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
 
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
@@ -98,18 +113,129 @@ struct AmpControls : Component
         addAndMakeVisible(grMeter);
     }
 
+    ~AmpControls()
+    {
+        vts.removeParameterListener("mode", this);
+    }
+
+    void parameterChanged(const String& parameterID, float newValue) override
+    {
+        auto zeroToTen = [](float val)
+        {
+            return String(val * 10.0, 1);
+        };
+
+        auto decibels = [](float val)
+        {
+            val = jmap(val, -6.f, 6.f);
+            String str(val, 1);
+            str.append("dB", 2);
+            return str;
+        };
+
+        bass.setValueToStringFunction(*vts.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
+        mid.setValueToStringFunction(*vts.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
+        treble.setValueToStringFunction(*vts.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
+
+        bass.autoGain.store(*vts.getRawParameterValue("mode") > 1 && *vts.getRawParameterValue("eqAutoGain"));
+        mid.autoGain.store(*vts.getRawParameterValue("mode") > 1 && *vts.getRawParameterValue("eqAutoGain"));
+        treble.autoGain.store(*vts.getRawParameterValue("mode") > 1 && *vts.getRawParameterValue("eqAutoGain"));
+
+        setColorScheme((int)newValue);
+
+        repaint();
+    }
+
+    void setColorScheme(int m)
+    {
+        switch (m)
+        {
+        case 0:
+            for (auto& k : getKnobs())
+            {
+                if (k == &comp)
+                    k->setColor(Colours::wheat, Colours::grey);
+                else if (k == &dist)
+                    k->setColor(Colours::azure, Colours::grey);
+                else
+                    k->setColor(Colours::antiquewhite, Colours::grey);
+                k->repaint();
+            }
+            backgroundColor = Colour(AMP_COLOR);
+            secondaryColor = Colours::grey;
+            break;
+        case 1:
+            for (auto& k : getKnobs())
+            {
+                if (k == &comp)
+                    k->setColor(Colours::wheat.withMultipliedLightness(0.25f), Colours::lightgrey);
+                else if (k == &dist)
+                    k->setColor(Colours::azure.withMultipliedLightness(0.25f), Colours::lightgrey);
+                else
+                    k->setColor(Colours::black, Colours::lightgrey);
+                k->repaint();
+            }
+            backgroundColor = Colours::slategrey;
+            secondaryColor = Colours::lightgrey;
+            break;
+        case 2:
+            for (auto& k : getKnobs())
+            {
+                if (k == &comp)
+                    k->setColor(Colours::wheat, Colours::oldlace);
+                else if (k == &dist)
+                    k->setColor(Colours::azure, Colours::oldlace);
+                else if (k == &bass)
+                    k->setColor(Colours::forestgreen, Colours::oldlace);
+                else if (k == &mid)
+                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), Colours::oldlace);
+                else if (k == &treble)
+                    k->setColor(Colours::crimson, Colours::oldlace);
+                else
+                    k->setColor(Colours::slategrey, Colours::oldlace);
+
+                k->repaint();
+            }
+            backgroundColor = Colours::darkgrey;
+            secondaryColor = Colours::oldlace;
+            break;
+        default:
+            for (auto& k : getKnobs())
+            {
+                if (k == &comp)
+                    k->setColor(Colours::wheat, Colours::oldlace);
+                else if (k == &dist)
+                    k->setColor(Colours::azure, Colours::oldlace);
+                else if (k == &bass)
+                    k->setColor(Colours::forestgreen, Colours::oldlace);
+                else if (k == &mid)
+                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), Colours::oldlace);
+                else if (k == &treble)
+                    k->setColor(Colours::crimson, Colours::oldlace);
+                else
+                    k->setColor(Colours::slategrey, Colours::oldlace);
+
+                k->repaint();
+            }
+            backgroundColor = Colours::darkgrey;
+            secondaryColor = Colours::oldlace;
+            break;
+        };
+        
+    }
+
     void paint(Graphics& g) override
     {
-        g.setColour(Colour(AMP_COLOR));
+        g.setColour(backgroundColor);
         g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f);
-        g.setColour(Colours::grey);
+        g.setColour(secondaryColor);
         g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f, 2.f);
 
         g.fillRoundedRectangle(dist.getRight() - 1, 20, 2, dist.getHeight() - 20, 20.f);
 
         auto paintAuto = [&](Rectangle<int> bounds)
         {
-            g.setColour(Colours::slategrey);
+            g.setColour(secondaryColor);
             g.drawText("Auto", bounds, Justification::centred, false);
 
             Path p;
@@ -155,6 +281,7 @@ struct AmpControls : Component
     }
 
 private:
+    AudioProcessorValueTreeState& vts;
 
     Knob comp{KnobType::Regular}, dist{KnobType::Regular}, inGain{KnobType::Regular}, outGain{KnobType::Regular}, bass{KnobType::Regular}, mid{KnobType::Regular}, treble{KnobType::Regular};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> compAttach, distAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
@@ -166,6 +293,9 @@ private:
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach;
 
     strix::VolumeMeterComponent grMeter;
+
+    Colour backgroundColor = Colours::black;
+    Colour secondaryColor = Colours::white;
 
     std::vector<Knob*> getKnobs()
     {
