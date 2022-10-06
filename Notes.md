@@ -1,11 +1,9 @@
 # TO-DO
 
-- disable auto gain display for amp modes
-
 - Look into optimizing UI drawing & UI polish
 	- benchmark on lower-specced stuff to see how it performs
 	- on resize, render each sinewave to an image. keep that on hand until next resize. move and scale each image per the rms levels
-- Auto-scale the waveform display
+~~Auto-scale the waveform display~~ Settled for increasing RMS amplitude
 
 - Working on comp behavior:
 	- adjusted Channel so that only threshold lowers for the first 60%, then add up to 2x gain into the sidechain. Past 30%, add up to 3x makeup gain
@@ -16,6 +14,7 @@
 	- OpenGL on/off (windows/linux)
 	- HQ on/off
 	- Render HQ
+	- Comp stereo link
 	- Default window size
 	- Check for update
   
