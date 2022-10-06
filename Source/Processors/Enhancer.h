@@ -155,7 +155,12 @@ struct Enhancer
         auto dest = block.getChannelPointer(0);
         auto src = processBlock.getChannelPointer(0);
         for (auto i = 0; i < block.getNumSamples(); ++i)
-            dest[i] += (!invert) * src[i];
+        {
+            if (invert)
+                dest[i] -= src[i];
+            else
+                dest[i] += src[i];
+        }
     }
 
 private:
@@ -173,7 +178,7 @@ private:
 
         block.multiplyBy(gain);
 
-        EnhancerSaturation::process(block, 1.0, 3.0, 1.0);
+        EnhancerSaturation::process(block, 1.0, 1.0, 1.0);
         block.multiplyBy(2.0);
 
         if (*hfAutoGain)
@@ -193,7 +198,7 @@ private:
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = lp1[0].processSample(inL[i]);
 
-        auto gain = jmap(enhance, 1.0, 4.0);
+        auto gain = jmap(enhance, 1.0, 2.0);
         double autoGain = 1.0;
 
         block.multiplyBy(gain);
