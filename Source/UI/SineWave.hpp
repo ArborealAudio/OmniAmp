@@ -68,9 +68,9 @@ struct AudioSource
         for (int i = 0; i < 6; ++i)
         {
             if (src[i].size() > 0)
-                b_rms[i] = std::sqrt(std::accumulate(src[i].begin(), src[i].end(), 0.f) / (float)src[i].size());
+                b_rms[i] = 2.0 * std::sqrt(std::accumulate(src[i].begin(), src[i].end(), 0.f) / (float)src[i].size());
             else
-                b_rms[i] = std::sqrt(sum[i]);
+                b_rms[i] = 2.0 * std::sqrt(sum[i]);
         }
 
         return b_rms;
