@@ -41,6 +41,7 @@ GammaAudioProcessor::GammaAudioProcessor()
     apvts.addParameterListener("dist", this);
     apvts.addParameterListener("cabType", this);
     apvts.addParameterListener("reverbType", this);
+    apvts.addParameterListener("hq", this);
 }
 
 GammaAudioProcessor::~GammaAudioProcessor()
@@ -53,6 +54,7 @@ GammaAudioProcessor::~GammaAudioProcessor()
     apvts.removeParameterListener("dist", this);
     apvts.removeParameterListener("cabType", this);
     apvts.removeParameterListener("reverbType", this);
+    apvts.removeParameterListener("hq", this);
 }
 
 //==============================================================================
@@ -120,11 +122,16 @@ void GammaAudioProcessor::changeProgramName(int index, const juce::String &newNa
 //==============================================================================
 void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    oversample.initProcessing(samplesPerBlock);
+    for (auto& o : oversample)
+        o.initProcessing(samplesPerBlock);
 
-    lastSampleRate = sampleRate * oversample.getOversamplingFactor();
+    int ovs_fac = oversample[(size_t)*apvts.getRawParameterValue("hq")].getOversamplingFactor();
 
-    dsp::ProcessSpec osSpec{lastSampleRate, static_cast<uint32>(samplesPerBlock * oversample.getOversamplingFactor()), (uint32)getTotalNumInputChannels()};
+    maxBlockSize = samplesPerBlock;
+    SR = sampleRate;
+    lastSampleRate = sampleRate * ovs_fac;
+
+    dsp::ProcessSpec osSpec{lastSampleRate, static_cast<uint32>(samplesPerBlock * ovs_fac), (uint32)getTotalNumInputChannels()};
     dsp::ProcessSpec spec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()};
 
     gateProc.prepare(spec);
@@ -189,44 +196,51 @@ bool GammaAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) con
 
 void GammaAudioProcessor::parameterChanged(const String &parameterID, float newValue)
 {
-    if (parameterID.contains("mode"))
+    if (parameterID == "mode")
     {
         currentMode = (Mode)newValue;
         lfEnhancer.setMode((Processors::ProcessorType)currentMode);
         lfEnhancer.updateFilters();
     }
-    else if (parameterID.contains("bass"))
+    else if (parameterID == "bass")
     {
         auto logval = newValue * newValue * newValue;
         guitar.setToneControl(0, logval);
         bass.setToneControl(0, logval);
         channel.setFilters(0, newValue);
     }
-    else if (parameterID.contains("mid"))
+    else if (parameterID == "mid")
     {
         guitar.setToneControl(1, newValue);
         bass.setToneControl(1, newValue);
         channel.setFilters(1, newValue);
     }
-    else if (parameterID.contains("treble"))
+    else if (parameterID == "treble")
     {
         guitar.setToneControl(2, newValue);
         bass.setToneControl(2, newValue);
         channel.setFilters(2, newValue);
     }
-    else if (parameterID.contains("dist"))
+    else if (parameterID == "dist")
     {
         auto logval = std::tanh(3.0 * newValue);
         guitar.setDistParam(logval);
         bass.setDistParam(logval);
         channel.setDistParam(logval);
     }
-    else if (parameterID.contains("cabType"))
+    else if (parameterID == "cabType")
         cab.setCabType((Processors::CabType)newValue);
-    else if (parameterID.contains("reverbType"))
+    else if (parameterID == "reverbType")
         reverb.changeRoomType((Processors::ReverbType)newValue);
-    else if (parameterID.contains("gate"))
+    else if (parameterID == "gate")
         gateProc.setThreshold(*gate);
+    else if (parameterID == "hq") {
+        auto ovs_fac = oversample[(size_t)newValue].getOversamplingFactor();
+        dsp::ProcessSpec osSpec {SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
+        guitar.prepare(osSpec);
+        bass.prepare(osSpec);
+        channel.update(osSpec, *apvts.getRawParameterValue("bass"), *apvts.getRawParameterValue("mid"), *apvts.getRawParameterValue("treble"));
+    }
 }
 
 void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
