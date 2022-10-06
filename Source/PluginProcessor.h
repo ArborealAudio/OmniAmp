@@ -74,7 +74,8 @@ public:
 
     strix::AudioSource audioSource;
 
-    double lastSampleRate = 0.0;
+    double lastSampleRate = 0.0, SR = 0.0;
+    int maxBlockSize = 0;
 
     strix::VolumeMeterSource &getActiveGRSource()
     {
@@ -112,7 +113,8 @@ private:
     Processors::Guitar guitar;
     Processors::Bass bass;
     Processors::Channel channel;
-    dsp::Oversampling<double> oversample{2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR};
+    std::array<dsp::Oversampling<double>, 2> oversample{dsp::Oversampling<double>(2),
+    dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR)};
 
     AudioBuffer<double> doubleBuffer;
 
@@ -145,6 +147,8 @@ private:
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
 
+        size_t os_index = *apvts.getRawParameterValue("hq");
+
         dsp::AudioBlock<double> block(buffer);
 
         if (*gate > -95.0)
@@ -152,7 +156,7 @@ private:
 
         block.multiplyBy(inGain_raw);
 
-        auto osBlock = oversample.processSamplesUp(block);
+        auto osBlock = oversample[os_index].processSamplesUp(block);
 
         if (*apvts.getRawParameterValue("ampOn"))
         {
@@ -170,9 +174,9 @@ private:
             }
         }
 
-        oversample.processSamplesDown(block);
+        oversample[os_index].processSamplesDown(block);
 
-        setLatencySamples(oversample.getLatencyInSamples());
+        setLatencySamples(oversample[os_index].getLatencyInSamples());
 
 #if USE_SIMD
         auto&& processBlock = simd.interleaveBlock(block);
