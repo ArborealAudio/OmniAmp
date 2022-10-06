@@ -9,8 +9,6 @@ class MenuComponent : public Component
     #if JUCE_WINDOWS || JUCE_LINUX
         OpenGL,
     #endif
-        HQ,
-        RenderHQ,
         WindowSize,
         CheckUpdate
     };
@@ -59,19 +57,12 @@ class MenuComponent : public Component
 
             HQ.setButtonText("HQ");
             HQ.setClickingTogglesState(true);
-            HQ.onClick = [&]
-            {
-                if (onItemClick)
-                    onItemClick(CommandID::HQ, HQ.getToggleState());
-            };
 
             renderHQ.setButtonText("Render HQ");
             renderHQ.setClickingTogglesState(true);
-            renderHQ.onClick = [&]
-            {
-                if (onItemClick)
-                    onItemClick(CommandID::RenderHQ, renderHQ.getToggleState());
-            };
+
+            compLink.setButtonText("Comp Stereo Link");
+            compLink.setClickingTogglesState(true);
 
             windowSize.setButtonText("Default UI size");
             windowSize.setClickingTogglesState(false);
@@ -100,11 +91,13 @@ class MenuComponent : public Component
 
         std::function<void(CommandID, bool)> onItemClick;
 
+        ListButton HQ, renderHQ, compLink;
+
     private:
     #if JUCE_WINDOWS || JUCE_LINUX
         ListButton openGL;
     #endif
-        ListButton HQ, renderHQ, windowSize, checkUpdate;
+        ListButton windowSize, checkUpdate;
 
         std::vector<Component*> getButtons()
         {
@@ -114,6 +107,7 @@ class MenuComponent : public Component
             #endif
                 &HQ,
                 &renderHQ,
+                &compLink,
                 &windowSize,
                 &checkUpdate
             };
@@ -128,6 +122,8 @@ class MenuComponent : public Component
 
     SidePanel panel;
 
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hqAttach, renderHQAttach, compLinkAttach;
+
 public:
     MenuComponent(AudioProcessorValueTreeState& a, int width) : vts(a), panel("Options", width, false), menuButton("Menu", DrawableButton::ButtonStyle::ImageFitted)
     {
@@ -140,18 +136,12 @@ public:
         addAndMakeVisible(panel);
         panel.setColour(SidePanel::ColourIds::backgroundColour, Colours::white);
         panel.setContent(&list, false);
-        panel.setShadowWidth(10);
+        panel.setShadowWidth(0);
 
         list.onItemClick = [&](CommandID id, bool state)
         {
             switch (id)
             {
-            case CommandID::HQ:
-                vts.getParameterAsValue("hq") = state;
-                break;
-            case CommandID::RenderHQ:
-                vts.getParameterAsValue("renderHQ") = state;
-                break;
             case CommandID::WindowSize:
                 if (windowResizeCallback)
                     windowResizeCallback();
@@ -164,6 +154,10 @@ public:
                 break;
             };
         };
+
+        hqAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "hq", list.HQ);
+        renderHQAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "renderHQ", list.renderHQ);
+        compLinkAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "compLink", list.compLink);
     }
 
     ~MenuComponent() override
