@@ -181,10 +181,10 @@ struct AVTriode
 
     inline void processSamples(T* x, size_t ch, size_t numSamples, T gp, T gn)
     {
-        for (int i = 0; i < numSamples; ++i)
+        for (size_t i = 0; i < numSamples; ++i)
         {
-            auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
-            auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
+            auto f1 = (1.f / gp) * std::tanh(gp * x[i]) * y_m[ch];
+            auto f2 = (1.f / gn) * std::atan(gn * x[i]) * (1.f - y_m[ch]);
 
             auto y = sc_hp.processSample(ch, f1 + f2);
             y_m[ch] = y;
