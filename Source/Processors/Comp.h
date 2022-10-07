@@ -164,7 +164,7 @@ private:
             x = sc_hp[ch].processSample(x);
             x = sc_lp[ch].processSample(x);
 
-            in[i] = std::tanh(x);
+            x = std::tanh(x);
 
             auto gr = computeGR(ch, x);
 
