@@ -179,32 +179,30 @@ struct AVTriode
         sc_hp.reset();
     }
 
-    inline T processSample(T x, size_t ch, T gp, T gn)
+    inline void processSamples(T* x, size_t ch, size_t numSamples, T gp, T gn)
     {
-        auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
-        auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
-        // auto f1 = (gp * x) / 3.4;
-        // f1 = f1 * 0.5f;
-        // f1 = std::abs(f1 + 0.5) - abs(f1 - 0.5);
-        // f1 = (std::abs(f1) - 2.0) * f1;
-        // f1 = (std::abs(f1) - 2.0) * f1 * (1.0 / gp) * y_m[0];
-        // auto f2 = (1.0 / gn) * ((x * gn) / (1.0 + std::abs(x))) * (1.0 - y_m[ch]);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
+            auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
 
-        auto y = sc_hp.processSample(ch, f1 + f2);
-        y_m[ch] = y;
-
-        return y;
+            auto y = sc_hp.processSample(ch, f1 + f2);
+            y_m[ch] = y;
+            x[i] = y;
+        }
     }
 
-    inline T processSampleSIMD(T x, T gp, T gn)
+    inline void processSamplesSIMD(T* x, size_t numSamples, T gp, T gn)
     {
-        auto f1 = (1.0 / gp) * xsimd::tanh(gp * x) * y_m[0];
-        auto f2 = (1.0 / gn) * xsimd::atan(gn * x) * (1.0 - y_m[0]);
+        for (size_t i = 0; i < numSamples; ++i)
+        {
+            auto f1 = (1.0 / gp) * xsimd::tanh(gp * x[i]) * y_m[0];
+            auto f2 = (1.0 / gn) * xsimd::atan(gn * x[i]) * (1.0 - y_m[0]);
 
-        auto y = sc_hp.processSample(0, f1 + f2);
-        y_m[0] = y;
-
-        return y;
+            auto y = sc_hp.processSample(0, f1 + f2);
+            y_m[0] = y;
+            x[i] = y;
+        }
     }
 
     void processBlock(dsp::AudioBlock<double>& block, T gp, T gn)
@@ -213,8 +211,7 @@ struct AVTriode
         {
             auto in = block.getChannelPointer(ch);
 
-            for (size_t i = 0; i < block.getNumSamples(); i++)
-                in[i] = processSample(in[i], ch, gp, gn);
+            processSamples(in, ch, block.getNumSamples(), gp, gn);
         }
     }
 
@@ -224,8 +221,7 @@ struct AVTriode
         {
             auto in = block.getChannelPointer(ch);
 
-            for (size_t i = 0; i < block.getNumSamples(); i++)
-                in[i] = processSampleSIMD(in[i], gp, gn);
+            processSamplesSIMD(in, block.getNumSamples(), gp, gn);
         }
     }
 
