@@ -143,7 +143,9 @@ private:
             max = sc_hp[0].processSample(max);
             max = sc_lp[0].processSample(max);
 
-            auto gr = computeGR(max, 0);
+            max = std::tanh(max);
+
+            auto gr = computeGR(0, max);
 
             postComp(inL[i], 0, gr, comp, c_comp);
             postComp(inR[i], 1, gr, comp, c_comp);
@@ -157,19 +159,21 @@ private:
 
         for (int i = 0; i < numSamples; ++i)
         {
-            auto abs = std::abs(xm[ch]);
+            auto x = std::abs(xm[ch]);
 
-            abs = sc_hp[ch].processSample(abs);
-            abs = sc_lp[ch].processSample(abs);
+            x = sc_hp[ch].processSample(x);
+            x = sc_lp[ch].processSample(x);
 
-            auto gr = computeGR(abs, ch);
+            in[i] = std::tanh(x);
+
+            auto gr = computeGR(ch, x);
 
             postComp(in[i], ch, gr, comp, c_comp);
         }
     }
 
     /*returns gain reduction multiplier*/
-    inline T computeGR(T x, int ch)
+    inline T computeGR(int ch, T x)
     {     
         if (x < 1.175494351e-38)
             x = 1.175494351e-38;
