@@ -12,7 +12,14 @@
 #ifndef USE_SIMD
     #if NDEBUG
         #define USE_SIMD 1
+    #else // make sure DBG builds are labeled non-production
+        #ifndef PRODUCTION_BUILD
+            #define PRODUCTION_BUILD 1
+        #endif
     #endif
+#endif
+#ifndef PRODUCTION_BUILD // use this, if otherwise not defined, to label the plugin as production or not
+    #define PRODUCTION_BUILD 0
 #endif
 
 #include <JuceHeader.h>
