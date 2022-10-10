@@ -181,8 +181,8 @@ struct Guitar : Processor
 
         gtrPre.processBlock(processBlock, *hiGain);
 
-        triode[1].processBlock(processBlock, 0.7, 1.2);
-        triode[2].processBlock(processBlock, 0.7, 1.2);
+        triode[1].processBlock(processBlock, 1.4, 2.4);
+        triode[2].processBlock(processBlock, 1.4, 2.4);
 
         if (*inGainAuto)
             autoGain *= 1.0 / gain_raw;
@@ -190,7 +190,7 @@ struct Guitar : Processor
         toneStack->processBlock(processBlock);
 
         if (*hiGain)
-            triode[3].processBlock(processBlock, 1.0, 2.0);
+            triode[3].processBlock(processBlock, 2.0, 4.0);
 
         processBlock.multiplyBy(out_raw * 6.0);
 
