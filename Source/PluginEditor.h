@@ -28,6 +28,37 @@ public:
     void checkUpdate() noexcept;
 
 private:
+
+    void writeConfigFile(const String& property, int value)
+    {
+        File config {File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
+        if (!config.existsAsFile())
+            config.create();
+        
+        auto xml = parseXML(config);
+        if (xml == nullptr)
+        {
+            xml.reset(new XmlElement("Config"));
+        }
+
+        xml->setAttribute(property, value);
+        xml->writeTo(config);
+    }
+
+    /*returns integer value of read property, or -1 if it doesn't exist*/
+    int readConfigFile(const String& property)
+    {
+        File config {File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
+        if (!config.existsAsFile())
+            return -1;
+        
+        auto xml = parseXML(config);
+        if (xml != nullptr && xml->hasTagName("Config"))
+            return xml->getIntAttribute(property, -1);
+        
+        return -1;
+    }
+
     GammaAudioProcessor& audioProcessor;
 
     std::unique_ptr<Drawable> logo, mesh;
@@ -51,7 +82,7 @@ private:
 
     MenuComponent menu;
 
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS || JUCE_LINUX
     OpenGLContext opengl;
 #endif
 

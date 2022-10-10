@@ -29,10 +29,9 @@ class MenuComponent : public Component
                 g.setColour(Colours::white);
                 if (getToggleState()) {
                     AttributedString checked;
-                    checked.setText(L"✔︎ ");
+                    checked.setText(String::fromUTF8("✅ ") + text);
                     checked.setJustification(Justification::centred);
                     checked.setColour(Colours::white);
-                    checked.append(text);
                     checked.draw(g, getLocalBounds().toFloat());
                 }
                 else
@@ -142,6 +141,10 @@ public:
         {
             switch (id)
             {
+            case CommandID::OpenGL:
+                if (openGLCallback)
+                    openGLCallback(state);
+                break;
             case CommandID::WindowSize:
                 if (windowResizeCallback)
                     windowResizeCallback();
@@ -167,6 +170,7 @@ public:
 
     std::function<void()> windowResizeCallback;
     std::function<void()> checkUpdateCallback;
+    std::function<void(bool)> openGLCallback;
 
     void resized() override
     {

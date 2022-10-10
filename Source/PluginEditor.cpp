@@ -14,9 +14,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.getActiveGRSource(), p.apvts), wave(p.audioSource), reverbComp(p.apvts),
     menu(p.apvts, 100), tooltip(this)
 {
-#if JUCE_WINDOWS
-    opengl.attachTo(*this);
+#if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024);
+    if (readConfigFile("openGL"))
+        opengl.attachTo(*this);
 #endif
 
     mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
@@ -43,6 +44,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     menu.setAlwaysOnTop(true);
     menu.setBounds(getWidth() - 180, 10, 175, 150);
     menu.windowResizeCallback = [&] { resetWindowSize(); };
+    menu.openGLCallback = [&](bool state)
+    {
+        state ? opengl.attachTo(*this) : opengl.detach();
+        writeConfigFile("openGL", state);
+    };
 
     topSection.removeFromLeft(getWidth() / 12);
     topSection.translate(0, -5);
@@ -119,11 +125,15 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     setResizable(true, true);
     getConstrainer()->setMinimumSize(400, 325);
     getConstrainer()->setFixedAspectRatio(1.231);
+
+    // auto lastWidth = readConfigFile("size");
+
+    // setSize(lastWidth, (float)lastWidth / 1.231f);
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 {
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS || JUCE_LINUX
     opengl.detach();
 #endif
 }
@@ -131,6 +141,7 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 void GammaAudioProcessorEditor::resetWindowSize() noexcept
 {
     setSize(800, 650);
+    writeConfigFile("size", 800);
 }
 
 //==============================================================================
@@ -177,4 +188,6 @@ void GammaAudioProcessorEditor::resized()
 
     gin::applyContrast(*blur, -35);
     gin::applyStackBlur(*blur, 10);
+
+    writeConfigFile("size", getWidth());
 }
