@@ -231,7 +231,7 @@ struct Bass : Processor
         defaultPrepare(spec);
 
         scoop.prepare(spec);
-        scoop.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(spec.sampleRate, 500.0, 1.0, 0.5);
+        scoop.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(spec.sampleRate, 650.0, 1.0, 0.5);
     }
 
     template <typename T>
@@ -268,7 +268,7 @@ struct Bass : Processor
                 autoGain *= 0.5;
         }
 
-        triode[1].processBlock(processBlock, 1.0, 4.0);
+        triode[1].processBlock(processBlock, 1.0, 2.0);
 
         for (int ch = 0; ch < processBlock.getNumChannels(); ++ch)
         {
