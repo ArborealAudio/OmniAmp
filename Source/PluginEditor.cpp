@@ -37,12 +37,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(pluginTitle);
     pluginTitle.setBounds(topSection.removeFromRight(getWidth() * 0.66f).removeFromLeft(getWidth() / 3));
     String title = "GAMMA";
+    Colour titleColor = Colours::beige;
 #if !PRODUCTION_BUILD
     title.append("_DEV", 4);
+    titleColor = Colours::red;
 #endif
     pluginTitle.setText(title, NotificationType::dontSendNotification);
     pluginTitle.setFont(Font(getCustomFont()).withHeight(20.f).withExtraKerningFactor(0.5f));
-    pluginTitle.setColour(Label::textColourId, Colours::beige);
+    pluginTitle.setColour(Label::textColourId, titleColor);
     pluginTitle.setJustificationType(Justification::centred);
 
     addAndMakeVisible(menu);
