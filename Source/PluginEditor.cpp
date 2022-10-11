@@ -50,12 +50,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         DBG("panel showing? " << state);
     };
     menu.windowResizeCallback = [&] { resetWindowSize(); };
+#if JUCE_WINDOWS || JUCE_LINUX
     menu.openGLCallback = [&](bool state)
     {
         state ? opengl.attachTo(*this) : opengl.detach();
         DBG("OpenGL: " << opengl.isAttached());
         writeConfigFile("openGL", state);
     };
+#endif
 
     topSection.removeFromLeft(getWidth() / 12);
     // topSection.translate(0, -5);
