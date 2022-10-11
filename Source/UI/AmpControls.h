@@ -33,6 +33,12 @@ struct AmpControls : Component, AudioProcessorValueTreeState::Listener
             return str;
         };
 
+        std::function<String(float)> eqFunc;
+        if (*vts.getRawParameterValue("mode") > 1)
+            eqFunc = decibels;
+        else
+            eqFunc = zeroToTen;
+
         compAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "comp", comp);
         comp.setLabel("Opto");
         comp.setValueToStringFunction(percent);
@@ -62,7 +68,7 @@ struct AmpControls : Component, AudioProcessorValueTreeState::Listener
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        bass.setValueToStringFunction(*a.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
+        bass.setValueToStringFunction(eqFunc);
 
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
@@ -75,7 +81,7 @@ struct AmpControls : Component, AudioProcessorValueTreeState::Listener
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        mid.setValueToStringFunction(*a.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
+        mid.setValueToStringFunction(eqFunc);
 
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
@@ -88,7 +94,7 @@ struct AmpControls : Component, AudioProcessorValueTreeState::Listener
             a.getParameterAsValue("eqAutoGain") = state;
             repaint();
         };
-        treble.setValueToStringFunction(*a.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
+        treble.setValueToStringFunction(eqFunc);
 
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
@@ -120,22 +126,28 @@ struct AmpControls : Component, AudioProcessorValueTreeState::Listener
 
     void parameterChanged(const String& parameterID, float newValue) override
     {
-        auto zeroToTen = [](float val)
+        std::function<String(float)> function;
+        if (*vts.getRawParameterValue("mode") < 2)
         {
-            return String(val * 10.0, 1);
-        };
-
-        auto decibels = [](float val)
+            function = [](float val)
+            {
+                return String(val * 10.0, 1);
+            };
+        }
+        else
         {
-            val = jmap(val, -6.f, 6.f);
-            String str(val, 1);
-            str.append("dB", 2);
-            return str;
-        };
-
-        bass.setValueToStringFunction(*vts.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
-        mid.setValueToStringFunction(*vts.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
-        treble.setValueToStringFunction(*vts.getRawParameterValue("mode") > 1 ? decibels : zeroToTen);
+            function = [](float val)
+            {
+                val = jmap(val, -6.f, 6.f);
+                String str(val, 1);
+                str.append("dB", 2);
+                return str;
+            };
+        }
+        
+        bass.setValueToStringFunction(function);
+        mid.setValueToStringFunction(function);
+        treble.setValueToStringFunction(function);
 
         bass.autoGain.store(*vts.getRawParameterValue("mode") > 1 && *vts.getRawParameterValue("eqAutoGain"));
         mid.autoGain.store(*vts.getRawParameterValue("mode") > 1 && *vts.getRawParameterValue("eqAutoGain"));
