@@ -27,8 +27,8 @@ struct OptoComp
             sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 200.0, 1.02);
             sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 3500.0, 0.8);
 
-            hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 2500.0);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(spec.sampleRate, 6500.0);
+            hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 1000.0);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 5000.0);
 
             for (auto &h : hp)
             {
@@ -45,7 +45,7 @@ struct OptoComp
             sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(spec.sampleRate, 2500.0);
 
             hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 1000.0);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(spec.sampleRate, 2500.0);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 3500.0);
 
             for (auto& h : hp) {
                 h.prepare(spec);
@@ -180,7 +180,7 @@ private:
 
         auto env = jmax(0.0, 8.685889638 * std::log10(x / threshold.load()));
 
-        T att_time = jlimit(0.0050, 0.050, (1.0 / x) * 0.015);
+        T att_time = jlimit(0.005, 0.05, (1.0 / x) * 0.015);
 
         T att = std::exp(-1.0 / (att_time * lastSR));
         T rel = std::exp(-1.0 / (0.6 * lastGR[ch] * lastSR));
@@ -212,7 +212,7 @@ private:
         {
         case ProcessorType::Guitar:
         case ProcessorType::Bass:
-            x *= c_comp * gr; /* c_comp functions like a recursive input gain, amplifying the sidechain */
+            x *= c_comp * gr; /* c_comp functions like a recursive input gain, amplifying the output, which is also the sidechain */
             break;
         case ProcessorType::Channel:
             if (c_comp <= 4.f)
@@ -232,7 +232,7 @@ private:
             auto bp = hp[ch].processSample(x);
             bp = lp[ch].processSample(bp);
 
-            x += bp * comp; /* use comp as gain for bp signal, this also kind of doubles as a filtered output gain */
+            x += bp * (comp * 2.0); /* use comp as gain for bp signal, this also kind of doubles as a filtered output gain */
             break;
         }
         case ProcessorType::Channel:
