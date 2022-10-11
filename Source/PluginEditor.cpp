@@ -12,12 +12,13 @@
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.getActiveGRSource(), p.apvts), wave(p.audioSource), reverbComp(p.apvts),
-    menu(p.apvts, 100), tooltip(this)
+    menu(p.apvts, 200), tooltip(this)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024);
     if (readConfigFile("openGL"))
         opengl.attachTo(*this);
+    DBG("init opengl: " << opengl.isAttached());
 #endif
 
     mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
@@ -41,12 +42,17 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     pluginTitle.setJustificationType(Justification::centred);
 
     addAndMakeVisible(menu);
-    menu.setAlwaysOnTop(true);
-    menu.setBounds(getWidth() - 180, 10, 175, 150);
+    menu.setBounds(getWidth() - 205, 10, 200, 250);
+    menu.menuClicked = [&] (bool state)
+    {
+        menu.setAlwaysOnTop(state);
+        DBG("panel showing? " << state);
+    };
     menu.windowResizeCallback = [&] { resetWindowSize(); };
     menu.openGLCallback = [&](bool state)
     {
         state ? opengl.attachTo(*this) : opengl.detach();
+        DBG("OpenGL: " << opengl.isAttached());
         writeConfigFile("openGL", state);
     };
 
