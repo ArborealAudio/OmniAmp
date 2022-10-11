@@ -24,18 +24,19 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
 
-    setSize(800, 450);
+    setSize(800, 700);
 
     auto bounds = getLocalBounds();
-    auto topSection = bounds.removeFromTop(55);
-    auto qtr = bounds.getWidth() / 4;
+    auto topSection = bounds.removeFromTop(100);
+    auto third = bounds.getWidth() / 3;
 
+    auto bottomSection = bounds.removeFromBottom(200);
     auto ampSection = bounds.removeFromBottom(200).reduced(10, 2);
-    auto topLeftQtr = bounds.removeFromLeft(qtr);
-    auto topRightQtr = bounds.removeFromRight(qtr);
+    auto topLeftThird = bounds.removeFromLeft(third);
+    auto topRightThird = bounds.removeFromRight(third);
 
     addAndMakeVisible(pluginTitle);
-    pluginTitle.setBounds(topSection.removeFromRight(getWidth() * 0.66f).removeFromLeft(getWidth() / 3));
+    pluginTitle.setBounds(topSection.removeFromRight(third).removeFromLeft(third));
     pluginTitle.setText("GAMMA", NotificationType::dontSendNotification);
     pluginTitle.setFont(Font(getCustomFont()).withHeight(20.f).withExtraKerningFactor(0.5f));
     pluginTitle.setColour(Label::textColourId, Colours::beige);
@@ -57,7 +58,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     };
 
     topSection.removeFromLeft(getWidth() / 12);
-    topSection.translate(0, -5);
+    // topSection.translate(0, -5);
     auto topSectionThird = topSection.getWidth() / 3;
 
     addAndMakeVisible(inGain);
@@ -93,7 +94,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addAndMakeVisible(lfEnhance);
     lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "lfEnhance", lfEnhance);
-    lfEnhance.setBounds(topLeftQtr);
+    lfEnhance.setBounds(topLeftThird);
     lfEnhance.autoGain.store(*p.apvts.getRawParameterValue("lfEnhanceAuto"));
     lfEnhance.onAltClick = [&](bool state)
     {
@@ -102,16 +103,12 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addAndMakeVisible(hfEnhance);
     hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
-    hfEnhance.setBounds(topRightQtr);
+    hfEnhance.setBounds(topRightThird);
     hfEnhance.autoGain.store(*p.apvts.getRawParameterValue("hfEnhanceAuto"));
     hfEnhance.onAltClick = [&](bool state)
     {
         p.apvts.getParameterAsValue("hfEnhanceAuto") = state;
     };
-
-    setSize(800, 650);
-
-    auto bottomSection = getLocalBounds().removeFromBottom(200);
 
     cabComponent.setBounds(bottomSection.removeFromLeft(getWidth() * 0.66f));
     addAndMakeVisible(cabComponent);
@@ -129,8 +126,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(reverbComp);
 
     setResizable(true, true);
-    getConstrainer()->setMinimumSize(400, 325);
-    getConstrainer()->setFixedAspectRatio(1.231);
+    getConstrainer()->setMinimumSize(400, 350);
+    getConstrainer()->setFixedAspectRatio(1.143);
 
     // auto lastWidth = readConfigFile("size");
 
@@ -146,7 +143,7 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 
 void GammaAudioProcessorEditor::resetWindowSize() noexcept
 {
-    setSize(800, 650);
+    setSize(800, 700);
     writeConfigFile("size", 800);
 }
 
