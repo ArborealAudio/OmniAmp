@@ -165,7 +165,8 @@ struct Guitar : Processor
 
         T autoGain = 1.0;
 
-        comp.processBlock(block, *p_comp, *linked);
+        if (!*apvts.getRawParameterValue("compPos"))
+            comp.processBlock(block, *p_comp, *linked);
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -203,7 +204,10 @@ struct Guitar : Processor
 
 #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
-    #endif
+#endif
+
+        if (*apvts.getRawParameterValue("compPos"))
+            comp.processBlock(block, *p_comp, *linked);
     }
 
 private:
@@ -242,7 +246,8 @@ struct Bass : Processor
 
         T autoGain = 1.0;
 
-        comp.processBlock(block, *p_comp, *linked);
+        if (!*apvts.getRawParameterValue("compPos"))
+            comp.processBlock(block, *p_comp, *linked);
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -300,6 +305,9 @@ struct Bass : Processor
 #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
 #endif
+
+        if (*apvts.getRawParameterValue("compPos"))
+            comp.processBlock(block, *p_comp, *linked);
     }
 
 private:
@@ -387,7 +395,8 @@ struct Channel : Processor
         double autoGain = 1.0;
 #endif
 
-        comp.processBlock(block, *p_comp, *linked);
+        if (!*apvts.getRawParameterValue("compPos"))
+            comp.processBlock(block, *p_comp, *linked);
 
 #if USE_SIMD
         auto&& processBlock = simd.interleaveBlock(block);
@@ -433,6 +442,8 @@ struct Channel : Processor
 #else
         processBlock.multiplyBy(autoGain);
 #endif
+        if (*apvts.getRawParameterValue("compPos"))
+            comp.processBlock(block, *p_comp, *linked);
     }
 
 private:
