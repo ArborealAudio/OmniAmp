@@ -11,8 +11,7 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.getActiveGRSource(), p.apvts), wave(p.audioSource), reverbComp(p.apvts),
-    menu(p.apvts, 200), tooltip(this)
+    : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), reverbComp(p.apvts), menu(p.apvts, 200), tooltip(this)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024);
@@ -21,22 +20,18 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     DBG("init opengl: " << opengl.isAttached());
 #endif
 
-    mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
 
     setSize(800, 700);
 
     auto bounds = getLocalBounds();
-    auto topSection = bounds.removeFromTop(100);
     auto third = bounds.getWidth() / 3;
-
+    auto topSection = bounds.removeFromTop(60);
     auto bottomSection = bounds.removeFromBottom(200);
-    auto ampSection = bounds.removeFromBottom(200).reduced(10, 2);
-    auto topLeftThird = bounds.removeFromLeft(third);
-    auto topRightThird = bounds.removeFromRight(third);
+    auto ampSection = bounds.removeFromBottom(200).reduced(1);
 
     addAndMakeVisible(pluginTitle);
-    pluginTitle.setBounds(topSection.removeFromRight(third).removeFromLeft(third));
+    pluginTitle.setBounds(topSection.removeFromRight(third * 2).removeFromLeft(third));
     pluginTitle.setText("GAMMA", NotificationType::dontSendNotification);
     pluginTitle.setFont(Font(getCustomFont()).withHeight(20.f).withExtraKerningFactor(0.5f));
     pluginTitle.setColour(Label::textColourId, Colours::beige);
@@ -60,7 +55,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 #endif
 
     topSection.removeFromLeft(getWidth() / 12);
-    // topSection.translate(0, -5);
+    topSection.translate(0, -5);
     auto topSectionThird = topSection.getWidth() / 3;
 
     addAndMakeVisible(inGain);
@@ -85,32 +80,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
                                   { if (val < -95.f) return String("Off");
                                     if (val >= -95.f) return String(val, 1); });
 
-    addAndMakeVisible(wave);
-    wave.setBounds(bounds.reduced(10).translated(0, -5));
-    wave.setInterceptsMouseClicks(false, false);
-
-    blur = std::make_unique<Image>(Image::PixelFormat::ARGB, wave.getWidth(), wave.getHeight(), true);
+    addAndMakeVisible(top);
+    top.setBounds(bounds);
 
     addAndMakeVisible(ampControls);
     ampControls.setBounds(ampSection);
-
-    addAndMakeVisible(lfEnhance);
-    lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "lfEnhance", lfEnhance);
-    lfEnhance.setBounds(topLeftThird);
-    lfEnhance.autoGain.store(*p.apvts.getRawParameterValue("lfEnhanceAuto"));
-    lfEnhance.onAltClick = [&](bool state)
-    {
-        p.apvts.getParameterAsValue("lfEnhanceAuto") = state;
-    };
-
-    addAndMakeVisible(hfEnhance);
-    hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "hfEnhance", hfEnhance);
-    hfEnhance.setBounds(topRightThird);
-    hfEnhance.autoGain.store(*p.apvts.getRawParameterValue("hfEnhanceAuto"));
-    hfEnhance.onAltClick = [&](bool state)
-    {
-        p.apvts.getParameterAsValue("hfEnhanceAuto") = state;
-    };
 
     cabComponent.setBounds(bottomSection.removeFromLeft(getWidth() * 0.66f));
     addAndMakeVisible(cabComponent);
@@ -153,26 +127,11 @@ void GammaAudioProcessorEditor::resetWindowSize() noexcept
 void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
     g.fillAll(Colour(TOP_TRIM));
-    g.setColour(Colour(BACKGROUND_COLOR));
+    
     auto top = getLocalBounds().withTrimmedBottom(getHeight() / 3);
     auto trimmedTop = top.removeFromTop(top.getHeight() / 10);
 
     logo->drawWithin(g, trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
-
-    auto topsection = top.withTrimmedBottom(top.getHeight() / 2).reduced(10, 0).translated(0, 10).toFloat();
-
-    g.fillRoundedRectangle(topsection, 5.f);
-    g.setColour(Colours::grey);
-    g.drawRoundedRectangle(topsection, 5.f, 2.f);
-
-    g.reduceClipRegion(topsection.toNearestInt());
-    mesh->drawWithin(g, topsection, RectanglePlacement::fillDestination, 1.f);
-
-    if (blur != nullptr)
-        g.drawImage(*blur, wave.getBoundsInParent().toFloat(), RectanglePlacement::doNotResize);
-
-    g.setColour(Colour(DEEP_BLUE));
-    g.drawRoundedRectangle(wave.getBoundsInParent().toFloat(), 5.f, 2.f);
 }
 
 void GammaAudioProcessorEditor::resized()
@@ -184,15 +143,5 @@ void GammaAudioProcessorEditor::resized()
     for (auto &c : children)
         c->setTransform(AffineTransform::scale(scale));
 
-    if (blur == nullptr)
-        return;
-    blur->clear(blur->getBounds());
-    wave.setVisible(false);
-    blur = std::make_unique<Image>(createComponentSnapshot(wave.getBoundsInParent()));
-    wave.setVisible(true);
-
-    gin::applyContrast(*blur, -35);
-    gin::applyStackBlur(*blur, 10);
-
-    writeConfigFile("size", getWidth());
+    MessageManager::callAsync([&]{writeConfigFile("size", getWidth());});
 }
