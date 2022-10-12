@@ -126,7 +126,7 @@ struct SineWaveComponent : Component, Timer
 
     void paint(Graphics& g) override
     {
-        g.setColour(Colour(TOP_TRIM).withAlpha(0.4f));
+        g.setColour(Colour(TOP_TRIM).withAlpha(0.95f));
         g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
 
         drawSineWave(g);
