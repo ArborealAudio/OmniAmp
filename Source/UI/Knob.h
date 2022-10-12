@@ -6,8 +6,7 @@
 enum KnobType
 {
     Regular,
-    LF,
-    HF,
+    Enhancer,
     Simple
 };
 
@@ -109,7 +108,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
             g.drawText(text, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
             break;
             }
-        case LF: {
+        case Enhancer: {
             width *= 0.8;
             height *= 0.8;
 
@@ -121,76 +120,34 @@ struct KnobLookAndFeel : LookAndFeel_V4
             auto rw = radius * 2.f;
             auto angle = rotaryStartAngle * 0.8 + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            Image glow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
-            Graphics gg(glow);
-            gg.setColour(Colours::whitesmoke);
-            auto fac = 1.f + (15.f * sliderPos);
-            gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
-
-            gin::applyStackBlur(glow, 5);
-
+            /* base background */
             g.setColour(Colour(BACKGROUND_COLOR));
             g.fillEllipse(rx, ry, rw, rw);
 
+            /* glow ring */
+            Image glow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
+            Graphics gg(glow);
+            gg.setColour(accentColor);
+            auto fac = 1.f + (15.f * sliderPos);
+            gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
+            gin::applyStackBlur(glow, 5);
+
             g.drawImageAt(glow, 0, 0);
 
-            ColourGradient gradient{Colours::transparentBlack, centerX, centerY, Colours::black, (float)x, (float)y, true};
+            /* gradient overlay */
+            ColourGradient gradient{baseColor.withAlpha(0.f), centerX, centerY, baseColor, (float)x, (float)y, true};
             g.setGradientFill(gradient);
             g.fillEllipse(rx, ry, rw, rw);
 
+            /* knob thumb */
             Path p;
             auto ellipseWidth = radius * 0.25f;
-            p.addEllipse(rx, -radius * 0.9, ellipseWidth, ellipseWidth);
+            p.addEllipse(rx + 2.f, -radius * 0.9, ellipseWidth, ellipseWidth);
             p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
             g.setColour(Colour(BACKGROUND_COLOR));
             g.fillPath(p);
 
-            if (autoGain->load()) {
-                g.setColour(Colour(BACKGROUND_COLOR));
-                auto bounds = Rectangle<float>(centerX - rw / 4, centerY - 10, rw * 0.5f, 20);
-                g.fillRoundedRectangle(bounds, 5.f);
-                g.setColour(Colours::white);
-                g.drawFittedText("Auto", bounds.toNearestInt(), Justification::centred, 1);
-            }
-            break;
-            }
-        case HF: {
-            width *= 0.8;
-            height *= 0.8;
-
-            auto radius = (float)jmin(width * 0.5f, height * 0.5f) - 4.f;
-            auto centerX = (float)slider.getLocalBounds().getCentreX();
-            auto centerY = (float)slider.getLocalBounds().getCentreY();
-            auto rx = centerX - radius;
-            auto ry = centerY - radius;
-            auto rw = radius * 2.f;
-            auto angle = rotaryStartAngle * 0.8 + sliderPos * (rotaryEndAngle - rotaryStartAngle);
-
-            Image glow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
-            
-            Graphics gg(glow);
-            gg.setColour(Colours::wheat);
-            auto fac = 1.f + (15.f * sliderPos);
-            gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
-
-            gin::applyStackBlur(glow, 5);
-
-            g.setColour(Colour(BACKGROUND_COLOR));
-            g.fillEllipse(rx, ry, rw, rw);
-
-            g.drawImageAt(glow, 0, 0);
-
-            ColourGradient gradient{Colours::transparentWhite, centerX, centerY, Colours::white, (float)x, (float)y, true};
-            g.setGradientFill(gradient);
-            g.fillEllipse(rx, ry, rw, rw);
-
-            Path p;
-            auto ellipseWidth = radius * 0.25f;
-            p.addEllipse(rx, -radius * 0.9, ellipseWidth, ellipseWidth);
-            p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
-            g.setColour(Colour(BACKGROUND_COLOR));
-            g.fillPath(p);
-
+            /* autogain label */
             if (autoGain->load()) {
                 g.setColour(Colour(BACKGROUND_COLOR));
                 auto bounds = Rectangle<float>(centerX - rw / 4, centerY - 10, rw * 0.5f, 20);
@@ -283,7 +240,7 @@ struct Knob : Slider
     }
 
     /* sets the base & accent colors for Regular-style knobs */
-    void setColor(Colour newBaseColor, Colour newAccentColor)
+    void setColor(Colour newBaseColor, Colour newAccentColor = Colours::grey)
     {
         lnf.baseColor = newBaseColor;
         lnf.accentColor = newAccentColor;

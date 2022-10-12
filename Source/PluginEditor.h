@@ -61,18 +61,14 @@ private:
 
     GammaAudioProcessor& audioProcessor;
 
-    std::unique_ptr<Drawable> logo, mesh;
-    std::unique_ptr<Image> blur;
+    std::unique_ptr<Drawable> logo;
+
+    TopComponent top;
 
     AmpControls ampControls;
 
-    Knob hfEnhance{KnobType::HF}, lfEnhance{KnobType::LF};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
-
     Knob inGain{KnobType::Simple}, outGain{KnobType::Simple}, gate{KnobType::Simple};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach;
-
-    strix::SineWaveComponent wave;
 
     CabsComponent cabComponent;
 

@@ -198,10 +198,12 @@ public:
         {
             switch (id)
             {
+        #if JUCE_WINDOWS || JUCE_LINUX
             case CommandID::OpenGL:
                 if (openGLCallback)
                     openGLCallback(state);
                 break;
+        #endif
             case CommandID::WindowSize:
                 if (windowResizeCallback)
                     windowResizeCallback();
