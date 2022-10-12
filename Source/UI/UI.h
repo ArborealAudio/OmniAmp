@@ -23,3 +23,4 @@ static const Typeface::Ptr getCustomFont()
 #include "CabComponent.h"
 #include "ReverbComponent.h"
 #include "Menu.h"
+#include "UI_Top.h"

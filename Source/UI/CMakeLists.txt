@@ -8,4 +8,5 @@ PRIVATE
     SineWave.hpp
     CabComponent.h
     ReverbComponent.h
-    Menu.h)
+    Menu.h
+    UI_Top.h)
