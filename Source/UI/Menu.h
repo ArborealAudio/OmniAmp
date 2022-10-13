@@ -43,22 +43,23 @@ class MenuComponent : public Component
                 auto text = getButtonText();
 
                 auto bounds = getLocalBounds();
+                bounds.reduce(15, 10);
                 auto textBounds = bounds;
 
                 switch (type)
                 {
                 case ButtonType::Toggle:
-                    textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.75f);
-                    bounds.reduce(2, 10);
+                    textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.5f);
+                    bounds.reduce(20, 0);
                     if (getToggleState()) {
-                        g.setColour(Colours::seagreen);
-                        g.fillRoundedRectangle(bounds.toFloat(), 5.f);
+                        g.setColour(Colours::cadetblue);
+                        g.fillRoundedRectangle(bounds.toFloat(), 10.f);
                         g.setColour(Colours::white);
                         g.fillEllipse(bounds.removeFromRight(bounds.getWidth() / 2).toFloat());
                     }
                     else {
                         g.setColour(Colours::darkgrey);
-                        g.fillRoundedRectangle(bounds.toFloat(), 5.f);
+                        g.fillRoundedRectangle(bounds.toFloat(), 10.f);
                         g.setColour(Colours::white);
                         g.fillEllipse(bounds.removeFromLeft(bounds.getWidth() / 2).toFloat());
                     }
@@ -66,10 +67,10 @@ class MenuComponent : public Component
                     g.drawFittedText(text, textBounds, Justification::centred, 1);
                     break;
                 case ButtonType::PrePost:
-                    textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.75f);
-                    bounds.reduce(0, 5);
+                    textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.5f);
+                    bounds.reduce(20, 0);
                     g.setColour(Colours::white);
-                    g.fillRoundedRectangle(bounds.toFloat(), 5.f);
+                    g.fillRoundedRectangle(bounds.toFloat(), 10.f);
                     g.setColour(Colours::black);
                     if (getToggleState())
                         g.drawFittedText("Post", bounds, Justification::centred, 1);
@@ -177,7 +178,7 @@ class MenuComponent : public Component
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hqAttach, renderHQAttach, compLinkAttach, compPosAttach;
 
 public:
-    MenuComponent(AudioProcessorValueTreeState& a, int width) : vts(a), panel("", width, false), menuButton("Menu", DrawableButton::ButtonStyle::ImageFitted)
+    MenuComponent(AudioProcessorValueTreeState& a, int width) : vts(a), panel("Options", width, false), menuButton("Menu", DrawableButton::ButtonStyle::ImageFitted)
     {
         addAndMakeVisible(menuButton);
         icon = Drawable::createFromImageData(BinaryData::Hamburger_icon_svg, BinaryData::Hamburger_icon_svgSize);
@@ -185,8 +186,10 @@ public:
         menuButton.onClick = [&]
         {
             panel.showOrHide(!panel.isPanelShowing());
-            if (menuClicked)
-                menuClicked(panel.isPanelShowing());
+        };
+        panel.onPanelShowHide = [&] (bool state)
+        {
+            state ? toFront(false) : toBack();
         };
 
         addAndMakeVisible(panel);
@@ -228,7 +231,6 @@ public:
         panel.setContent(nullptr);
     }
 
-    std::function<void(bool)> menuClicked;
     std::function<void()> windowResizeCallback;
     std::function<void()> checkUpdateCallback;
     std::function<void(bool)> openGLCallback;
