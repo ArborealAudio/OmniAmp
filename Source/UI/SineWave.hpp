@@ -126,7 +126,7 @@ struct SineWaveComponent : Component, Timer
 
     void paint(Graphics& g) override
     {
-        g.setColour(Colour(TOP_TRIM).withAlpha(0.95f));
+        g.setColour(Colour(TOP_TRIM).withAlpha(0.9f));
         g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
 
         drawSineWave(g);
@@ -190,19 +190,12 @@ struct SineWaveComponent : Component, Timer
         if (!needsRepaint)
             return;
 
-//        auto bounds = getLocalBounds().toFloat();
         auto w = getWidth();
 
         auto f = phase.advance(0.05f); // inc btw 0->2Pi
-//        auto fw = (f * w) / MathConstants<float>::twoPi; // width section represented by f
 
         auto rms = src.getAvgRMS();
 
-//        for (int i = 0; i < 6; ++i)
-//        {
-//            g.drawImage(wave[i], bounds.withX(fw), RectanglePlacement::fillDestination);
-//            g.drawImage(wave[i], bounds.withRightX(fw), RectanglePlacement::fillDestination);
-//        }
         float min = getLocalBounds().getBottom();
         float max = getLocalBounds().getY();
 
@@ -212,19 +205,27 @@ struct SineWaveComponent : Component, Timer
         };
 
         Path p[6];
+        Colour colors[6]{Colour(0xff975755), Colour(0xff977757), Colour(0xff859358),
+                         Colour(0xff499481), Colour(0xff516692), Colour(0xff975792) };
+        float scale[6]{0.025f, 0.0275f, 0.03f, 0.0325f, 0.035f, 0.0375f};
+        float lineThickness[6]{3.f, 2.75f, 2.5f, 1.25f, 1.f, 0.75f};
 
-        for (auto& q : p)
-            q.startNewSubPath(-1, getLocalBounds().getCentreY());
-
-        for (int i = 0; i < w; ++i)
+        auto drawWave = [&](int i)
         {
-            p[0].lineTo(i, map(std::sin(i * 0.025f  - f) * rms[0]));
-            p[1].lineTo(i, map(std::sin(i * 0.0275f - f) * rms[1]));
-            p[2].lineTo(i, map(std::sin(i * 0.03f   - f) * rms[2]));
-            p[3].lineTo(i, map(std::sin(i * 0.0325f - f) * rms[3]));
-            p[4].lineTo(i, map(std::sin(i * 0.035f  - f) * rms[4]));
-            p[5].lineTo(i, map(std::sin(i * 0.0375f - f) * rms[5]));
-        }
+            p[i].startNewSubPath(-1, getLocalBounds().getCentreY());
+            std::vector<float> x;
+            for (int j = 0; j < w; ++j)
+                x.emplace_back(j);
+            FloatVectorOperations::multiply(x.data(), scale[i], x.size());
+            FloatVectorOperations::add(x.data(), -f, x.size());
+            for (int j = 0; j < w; ++j)
+                p[i].lineTo(j, map(std::sin(x[j]) * rms[i]));
+        };
+
+        ThreadPool pool{6};
+        pool.setThreadPriorities(7);
+
+        gin::multiThreadedFor<int>(0, 6, 1, &pool, drawWave);
 
         g.setColour(Colour(0xff975792));
         g.strokePath(p[5], PathStrokeType(0.75f));
@@ -257,7 +258,7 @@ private:
     dsp::Phase<float> phase;
     bool needsRepaint = false;
 
-    Image wave[6];
+    // Image wave[6];
 };
 
 } // namespace strix
