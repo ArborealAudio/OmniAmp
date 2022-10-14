@@ -48,6 +48,8 @@ private:
 
     MenuComponent menu;
 
+    DownloadManager dl;
+
 #if JUCE_WINDOWS || JUCE_LINUX
     OpenGLContext opengl;
 #endif

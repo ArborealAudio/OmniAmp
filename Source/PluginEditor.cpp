@@ -11,7 +11,7 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), reverbComp(p.apvts), menu(p.apvts, 200), tooltip(this)
+    : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), reverbComp(p.apvts), menu(p.apvts, 200), dl(false), tooltip(this)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024);
@@ -39,6 +39,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addAndMakeVisible(menu);
     menu.windowResizeCallback = [&] { resetWindowSize(); };
+    menu.checkUpdateCallback = [&]
+    { dl.setVisible(dl.checkForUpdate()); };
 #if JUCE_WINDOWS || JUCE_LINUX
     menu.openGLCallback = [&](bool state)
     {
@@ -86,6 +88,9 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     setResizable(true, true);
     getConstrainer()->setMinimumSize(400, 350);
     getConstrainer()->setFixedAspectRatio(1.143);
+
+    addChildComponent(dl);
+    dl.centreWithSize(300, 200);
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -123,6 +128,7 @@ void GammaAudioProcessorEditor::resized()
 
     pluginTitle.setBounds(topSection.removeFromRight(w * 0.66f).removeFromLeft(w / 3));
     menu.setBounds(w - (w * 0.25f), h * 0.03f, w * 0.25f, h / 2.5f);
+    // dl.setBounds(w - (w * 0.3f), h * 0.03f, w * 0.1f, h * 0.1f);
 
     topSection.removeFromLeft(w / 12);
     topSection.translate(0, -5);
