@@ -136,7 +136,9 @@ struct Enhancer
     template <typename Block>
     void processBlock(Block& block, const double enhance, const bool invert)
     {
-        wetBuffer.copyFrom(0, block.getChannelPointer(0), block.getNumSamples());
+        wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), block.getNumSamples());
+        if (block.getNumChannels() > 1)
+            wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), block.getNumSamples());
 
         auto processBlock = Block(wetBuffer).getSubBlock(0, block.getNumSamples());
 
@@ -226,6 +228,9 @@ private:
     // Dsp::SimpleFilter<Dsp::Butterworth::HighPass<4>, 2> hp1, hp2;
 
     std::vector<dsp::IIR::Filter<T>> lp1, lp2, hp1, hp2;
-
+#if USE_SIMD
     strix::Buffer<T> wetBuffer;
+#else
+    AudioBuffer<T> wetBuffer;
+#endif
 };
