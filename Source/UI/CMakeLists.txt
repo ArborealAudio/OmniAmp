@@ -9,4 +9,5 @@ PRIVATE
     CabComponent.h
     ReverbComponent.h
     Menu.h
-    UI_Top.h)
+    UI_Top.h
+    DownloadManager.h)

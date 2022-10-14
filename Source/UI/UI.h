@@ -54,3 +54,4 @@ static int readConfigFile(const String& property)
 #include "ReverbComponent.h"
 #include "Menu.h"
 #include "UI_Top.h"
+#include "DownloadManager.h"
