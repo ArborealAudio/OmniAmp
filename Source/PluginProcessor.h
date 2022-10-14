@@ -14,7 +14,7 @@
         #define USE_SIMD 1
     #else // make sure DBG builds are labeled non-production
         #ifndef PRODUCTION_BUILD
-            #define PRODUCTION_BUILD 1
+            #define PRODUCTION_BUILD 0
         #endif
     #endif
 #endif
@@ -132,6 +132,8 @@ private:
     Processors::Enhancer<vec> lfEnhancer{apvts, Processors::Enhancer<vec>::Type::LF};
     Processors::FDNCab<vec> cab;
 #else
+    Processors::Enhancer<double> hfEnhancer{apvts, Processors::Enhancer<double>::Type::HF};
+    Processors::Enhancer<double> lfEnhancer{apvts, Processors::Enhancer<double>::Type::LF};
     Processors::FDNCab<double> cab;
 #endif
 
