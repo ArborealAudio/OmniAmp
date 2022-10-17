@@ -60,7 +60,7 @@ struct Enhancer
     {
         SR = spec.sampleRate;
 
-        double freq;
+        double freq = 0.0;
         switch (mode)
         {
         case Processors::ProcessorType::Guitar:
@@ -97,7 +97,7 @@ struct Enhancer
 
     void updateFilters()
     {
-        double freq;
+        double freq = 0.0;
         switch (mode)
         {
         case Processors::ProcessorType::Guitar:
