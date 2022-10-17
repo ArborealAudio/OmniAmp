@@ -97,6 +97,7 @@ class MenuComponent : public Component
 #if JUCE_WINDOWS || JUCE_LINUX
             openGL.setButtonText("OpenGL On/Off");
             openGL.setClickingTogglesState(true);
+            openGL.setToggleState(readConfigFile("openGL"), NotificationType::sendNotification);
             openGL.onClick = [&]
             {
                 if (onItemClick)
