@@ -237,7 +237,16 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     else if (parameterID == "gate")
         gateProc.setThreshold(*gate);
     else if (parameterID == "hq") {
-        auto ovs_fac = oversample[(size_t)newValue].getOversamplingFactor();
+        os_index = (size_t)newValue;
+        auto ovs_fac = oversample[os_index].getOversamplingFactor();
+        dsp::ProcessSpec osSpec {SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
+        guitar.prepare(osSpec);
+        bass.prepare(osSpec);
+        channel.update(osSpec, *apvts.getRawParameterValue("bass"), *apvts.getRawParameterValue("mid"), *apvts.getRawParameterValue("treble"));
+    }
+    else if (parameterID == "renderHQ") {
+        os_index = isNonRealtime() ? 1 : 0;
+        auto ovs_fac = oversample[os_index].getOversamplingFactor();
         dsp::ProcessSpec osSpec {SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
         guitar.prepare(osSpec);
         bass.prepare(osSpec);
