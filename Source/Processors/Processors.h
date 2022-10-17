@@ -101,6 +101,8 @@ protected:
     void defaultPrepare(const dsp::ProcessSpec& spec)
     {
         SR = spec.sampleRate;
+        numSamples = spec.maximumBlockSize;
+        numChannels = spec.numChannels;
 
         comp.prepare(spec);
 
@@ -114,7 +116,8 @@ protected:
 
         pentode.prepare(spec);
 
-        simd.setInterleavedBlockSize(spec.numChannels, spec.maximumBlockSize);
+        updateSIMD = true;
+        // simd.setInterleavedBlockSize(spec.numChannels, spec.maximumBlockSize);
     }
 
     AudioProcessorValueTreeState &apvts;
@@ -136,7 +139,10 @@ protected:
 
     strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
 
+    std::atomic<bool> updateSIMD = false;
+
     double SR = 44100.0;
+    int numSamples = 0, numChannels = 0;
 };
 
 struct Guitar : Processor
@@ -167,6 +173,11 @@ struct Guitar : Processor
 
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
+
+        if (updateSIMD) {
+            simd.setInterleavedBlockSize(numChannels, numSamples);
+            updateSIMD = false;
+        }
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -248,6 +259,11 @@ struct Bass : Processor
 
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
+
+        if (updateSIMD) {
+            simd.setInterleavedBlockSize(numChannels, numSamples);
+            updateSIMD = false;
+        }
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -348,14 +364,10 @@ struct Channel : Processor
 
         defaultPrepare(spec);
 
-        low.prepare(spec);
-        setFilters(0, lowGain);
-
-        mid.prepare(spec);
-        setFilters(1, midGain);
-
-        hi.prepare(spec);
-        setFilters(2, trebleGain);
+        this->lowGain = lowGain;
+        this->midGain = midGain;
+        this->trebGain = trebleGain;
+        updateFilters = true;
     }
 
     void setFilters(int index, float newValue = 0.5f)
@@ -365,16 +377,16 @@ struct Channel : Processor
         switch (index)
         {
         case 0:
-            low.coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
+            *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
             break;
         case 1: {
             double Q = 0.707;
             Q *= 1.0 / gain;
-            mid.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
-        }
+            *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
+            }
             break;
         case 2:
-            hi.coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.5, gain);
+            *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.5, gain);
             break;
         default:
             break;
@@ -397,6 +409,11 @@ struct Channel : Processor
 
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
+
+        if (updateSIMD) {
+            simd.setInterleavedBlockSize(numChannels, numSamples);
+            updateSIMD = false;
+        }
 
 #if USE_SIMD
         auto&& processBlock = simd.interleaveBlock(block);
@@ -452,12 +469,23 @@ private:
 #else
     dsp::IIR::Filter<double> low, mid, hi;
 #endif
+    double lowGain = 0.0, midGain = 0.0, trebGain = 0.0;
+
+    std::atomic<bool> updateFilters = false;
 
     double autoGain_m = 1.0;
 
     template <class Block>
     void processFilters(Block& block)
     {
+        if (updateFilters)
+        {
+            setFilters(0, lowGain);
+            setFilters(1, midGain);
+            setFilters(2, trebGain);
+            updateFilters = false;
+        }
+
         for (auto ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
