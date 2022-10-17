@@ -17,7 +17,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     opengl.setImageCacheSize((size_t)64 * 1024);
     if (readConfigFile("openGL"))
         opengl.attachTo(*this);
-    DBG("init opengl: " << opengl.isAttached());
+    DBG("init opengl: " << (int)opengl.isAttached());
 #endif
 
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
@@ -45,7 +45,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     menu.openGLCallback = [&](bool state)
     {
         state ? opengl.attachTo(*this) : opengl.detach();
-        DBG("OpenGL: " << opengl.isAttached());
+        DBG("OpenGL: " << (int)opengl.isAttached());
         writeConfigFile("openGL", state);
     };
 #endif
