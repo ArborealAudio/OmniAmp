@@ -15,9 +15,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024);
-    if (readConfigFile("openGL"))
+    if (readConfigFile("openGL")) {
         opengl.attachTo(*this);
-    DBG("init opengl: " << (int)opengl.isAttached());
+        DBG("init opengl: " << 1);
+    }
+    else
+    {
+        DBG("init openGL: " << 0);
+    }
 #endif
 
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
