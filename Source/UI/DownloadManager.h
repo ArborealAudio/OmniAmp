@@ -38,8 +38,14 @@ struct DownloadManager : Component
             setVisible(false);
         }
 
-        no.onClick = [this] { setVisible(false); updated = true; onUpdateChange(updated); };
-        yes.onClick = [this] { downloadFinished.store(false); downloadUpdate(); };
+        no.onClick = [&]
+        {
+            setVisible(false);
+            updated = true;
+            if (onUpdateChange)
+                onUpdateChange(updated);
+        };
+        yes.onClick = [&] { downloadFinished.store(false); downloadUpdate(); };
     }
 
     ~DownloadManager() override
@@ -66,6 +72,9 @@ struct DownloadManager : Component
 
                 StringArray changesList{chVec.data(), (int)chVec.size()};
                 changes = changesList.joinIntoString(", ");
+            }
+            else {
+                changes = changesObj;
             }
             
             auto latestVersion = data.getProperty("version", var());
