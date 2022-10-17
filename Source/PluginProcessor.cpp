@@ -157,6 +157,7 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     channel.setFilters(2, *apvts.getRawParameterValue("treble"));
 
     lfEnhancer.setMode((Processors::ProcessorType)currentMode);
+    hfEnhancer.setMode((Processors::ProcessorType)currentMode);
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
 
@@ -200,6 +201,7 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     {
         currentMode = (Mode)newValue;
         lfEnhancer.setMode((Processors::ProcessorType)currentMode);
+        hfEnhancer.setMode((Processors::ProcessorType)currentMode);
         lfEnhancer.updateFilters();
     }
     else if (parameterID == "bass")
