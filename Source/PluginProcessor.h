@@ -122,6 +122,7 @@ private:
     Processors::Channel channel;
     std::array<dsp::Oversampling<double>, 2> oversample{dsp::Oversampling<double>(2),
     dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR)};
+    size_t os_index = 0;
 
     AudioBuffer<double> doubleBuffer;
 
@@ -156,14 +157,17 @@ private:
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
 
-        size_t os_index = *apvts.getRawParameterValue("hq");
-
         dsp::AudioBlock<double> block(buffer);
 
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
 
         block.multiplyBy(inGain_raw);
+
+        // if (*apvts.getRawParameterValue("hq"))
+        //     os_index = 1;
+        // else
+        //     os_index = size_t(isNonRealtime() && *apvts.getRawParameterValue("renderHQ"));
 
         auto osBlock = oversample[os_index].processSamplesUp(block);
 
