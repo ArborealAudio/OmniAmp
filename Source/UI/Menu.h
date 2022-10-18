@@ -43,23 +43,23 @@ class MenuComponent : public Component
                 auto text = getButtonText();
 
                 auto bounds = getLocalBounds();
-                bounds.reduce(15, 10);
+                bounds.reduce(bounds.getWidth() * 0.07, bounds.getHeight() * 0.2);
                 auto textBounds = bounds;
 
                 switch (type)
                 {
                 case ButtonType::Toggle:
                     textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.5f);
-                    bounds.reduce(20, 0);
+                    bounds.reduce(bounds.getWidth() * 0.2, 0);
                     if (getToggleState()) {
                         g.setColour(Colours::cadetblue);
-                        g.fillRoundedRectangle(bounds.toFloat(), 10.f);
+                        g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() * 0.5);
                         g.setColour(Colours::white);
                         g.fillEllipse(bounds.removeFromRight(bounds.getWidth() / 2).toFloat());
                     }
                     else {
                         g.setColour(Colours::darkgrey);
-                        g.fillRoundedRectangle(bounds.toFloat(), 10.f);
+                        g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() * 0.5);
                         g.setColour(Colours::white);
                         g.fillEllipse(bounds.removeFromLeft(bounds.getWidth() / 2).toFloat());
                     }
@@ -68,9 +68,9 @@ class MenuComponent : public Component
                     break;
                 case ButtonType::PrePost:
                     textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.5f);
-                    bounds.reduce(20, 0);
+                    bounds.reduce(bounds.getWidth() * 0.2, 0);
                     g.setColour(Colours::white);
-                    g.fillRoundedRectangle(bounds.toFloat(), 10.f);
+                    g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() * 0.5);
                     g.setColour(Colours::black);
                     if (getToggleState())
                         g.drawFittedText("Post", bounds, Justification::centred, 1);
