@@ -125,7 +125,8 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     for (auto& o : oversample)
         o.initProcessing(samplesPerBlock);
 
-    int ovs_fac = oversample[(size_t)*apvts.getRawParameterValue("hq")].getOversamplingFactor();
+    setOversampleIndex();
+    int ovs_fac = oversample[os_index].getOversamplingFactor();
 
     maxBlockSize = samplesPerBlock;
     SR = sampleRate;
@@ -135,9 +136,9 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     dsp::ProcessSpec spec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()};
 
     gateProc.prepare(spec);
-    gateProc.setAttack(100.0);
-    gateProc.setRelease(500.0);
-    gateProc.setRatio(4.0);
+    gateProc.setAttack(10.0);
+    gateProc.setRelease(180.0);
+    gateProc.setRatio(10.0);
     gateProc.setThreshold(*gate);
 
     guitar.prepare(osSpec);
@@ -237,7 +238,7 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     else if (parameterID == "gate")
         gateProc.setThreshold(*gate);
     else if (parameterID == "hq") {
-        os_index = (size_t)newValue;
+        setOversampleIndex();
         auto ovs_fac = oversample[os_index].getOversamplingFactor();
         dsp::ProcessSpec osSpec {SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
         guitar.prepare(osSpec);
@@ -245,13 +246,23 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         channel.update(osSpec, *apvts.getRawParameterValue("bass"), *apvts.getRawParameterValue("mid"), *apvts.getRawParameterValue("treble"));
     }
     else if (parameterID == "renderHQ") {
-        os_index = isNonRealtime() ? 1 : 0;
+        setOversampleIndex();
         auto ovs_fac = oversample[os_index].getOversamplingFactor();
         dsp::ProcessSpec osSpec {SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
         guitar.prepare(osSpec);
         bass.prepare(osSpec);
         channel.update(osSpec, *apvts.getRawParameterValue("bass"), *apvts.getRawParameterValue("mid"), *apvts.getRawParameterValue("treble"));
     }
+}
+
+void GammaAudioProcessor::setOversampleIndex()
+{
+    if (*apvts.getRawParameterValue("hq"))
+        os_index = 1;
+    else if (isNonRealtime() && *apvts.getRawParameterValue("renderHQ"))
+        os_index = 1;
+    else
+        os_index = 0;
 }
 
 void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)

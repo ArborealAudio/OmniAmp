@@ -103,8 +103,6 @@ public:
 private:
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
-    ValueTree gtrState, bassState, channelState;
-
     std::atomic<float> *inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     /*std::array<ToneStackNodal, 3> toneStack
@@ -150,6 +148,8 @@ private:
     };
 
     Mode currentMode = Mode::Channel;
+
+    void setOversampleIndex();
 
     // expects stereo in and out
     void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)
