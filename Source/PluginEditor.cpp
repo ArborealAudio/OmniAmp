@@ -14,10 +14,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), reverbComp(p.apvts), menu(p.apvts, 200), dl(false), tooltip(this)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
-    opengl.setImageCacheSize((size_t)64 * 1024);
+    opengl.setImageCacheSize((size_t)128 * 1024000);
     if (readConfigFile("openGL")) {
+        opengl.detach();
         opengl.attachTo(*this);
-        DBG("init opengl: " << 1);
+        DBG("init opengl: " << 1 << ", w/ cache size: " << opengl.getImageCacheSize());
     }
     else
     {
@@ -49,8 +50,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 #if JUCE_WINDOWS || JUCE_LINUX
     menu.openGLCallback = [&](bool state)
     {
-        state ? opengl.attachTo(*this) : opengl.detach();
-        DBG("OpenGL: " << (int)opengl.isAttached());
+        if (state)
+            opengl.attachTo(*this);
+        else
+            opengl.detach();
+        DBG("OpenGL: " << (int)opengl.isAttached() << ", w/ cache size: " << opengl.getImageCacheSize());
         writeConfigFile("openGL", state);
     };
 #endif
@@ -91,7 +95,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(reverbComp);
 
     setResizable(true, true);
-    getConstrainer()->setMinimumSize(400, 350);
+    getConstrainer()->setMinimumSize(550, 481);
     getConstrainer()->setFixedAspectRatio(1.143);
 
     addChildComponent(dl);
