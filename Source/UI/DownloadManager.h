@@ -192,7 +192,7 @@ private:
             return;
 
 #if JUCE_WINDOWS
-        auto exe = File("C:/Users/" + SystemStats::getLogonName() + "/Downloads/Gamma-windows.exe");
+        auto exe = File("~/Downloads/Gamma-windows.exe");
         
         if (!downloadResult.saveToFile(exe))
             downloadStatus.store(false);
