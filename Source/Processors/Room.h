@@ -551,7 +551,9 @@ public:
 
     void process(AudioBuffer<double> &buf, float amt)
     {
-        mix.pushDrySamples(dsp::AudioBlock<double>(buf));
+        mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(0));
+        if (buf.getNumChannels() > 1)
+            mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(1));
 
         dsBuf.clear();
         splitBuf.clear();
@@ -589,7 +591,9 @@ public:
         usBuf.applyGain(upMix.scalingFactor1());
 
         mix.setWetMixProportion(amt);
-        mix.mixWetSamples(dsp::AudioBlock<double>(usBuf));
+        mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(0));
+        if (buf.getNumChannels() > 1)
+            mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(1));
 
         buf.makeCopyOf(usBuf);
     }
