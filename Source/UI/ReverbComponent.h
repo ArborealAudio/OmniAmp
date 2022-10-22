@@ -67,7 +67,7 @@ protected:
     LookAndFeelMethods lnf;
 };
 
-class ReverbComponent : public Component
+class ReverbComponent : public Component, private Timer
 {
     Knob reverbAmount{KnobType::Simple};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> amtAttach;
@@ -75,6 +75,9 @@ class ReverbComponent : public Component
     std::array<ReverbButton, 2> reverb{ReverbButton::Placement::Left, ReverbButton::Placement::Right};
 
     std::array<String, 2> names{"Room", "Hall"};
+
+    std::atomic<float> *reverbType;
+    int lastType = 0;
 
 public:
     ReverbComponent(AudioProcessorValueTreeState &v)
@@ -85,6 +88,8 @@ public:
         reverbAmount.setValueToStringFunction([](float val)
                                               { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
 
+        reverbType = v.getRawParameterValue("reverbType");
+
         for (int i = 0; i < reverb.size(); ++i)
         {
             addAndMakeVisible(reverb[i]);
@@ -94,7 +99,7 @@ public:
             reverb[i].setButtonText(names[i]);
 
             reverb[i].setClickingTogglesState(true);
-            reverb[i].setToggleState(i + 1 == *v.getRawParameterValue("reverbType"), NotificationType::sendNotification);
+            reverb[i].setToggleState(i + 1 == (int)*reverbType, NotificationType::sendNotification);
         }
 
         reverb[0].onClick = [&]
@@ -117,6 +122,19 @@ public:
             else
                 v.getParameterAsValue("reverbType") = 0;
         };
+
+        startTimerHz(15);
+    }
+
+    ~ReverbComponent()
+    {
+        stopTimer();
+    }
+
+    void updateState()
+    {
+        for (int i = 0; i < reverb.size(); ++i)
+            reverb[i].setToggleState(i + 1 == (int)*reverbType, NotificationType::dontSendNotification);
     }
 
     void paint(Graphics &g) override
@@ -137,5 +155,12 @@ public:
         auto half = b.getWidth() / reverb.size();
         reverb[0].setBounds(b.removeFromLeft(half));
         reverb[1].setBounds(b);
+    }
+
+    void timerCallback() override
+    {
+        if (lastType != (int)*reverbType)
+            updateState();
+        lastType = (int)*reverbType;
     }
 };

@@ -2,7 +2,7 @@
 
 #pragma once
 
-class CabsComponent : public Component
+class CabsComponent : public Component, private Timer
 {
     struct Cab : DrawableButton
     {
@@ -59,8 +59,14 @@ class CabsComponent : public Component
                             {Cab("4x12", DrawableButton::ButtonStyle::ImageFitted)},
                             {Cab("6x10", DrawableButton::ButtonStyle::ImageFitted)}}};
 
+    std::atomic<float> *cabType, *cabState;
+    int lastType, lastState;
+
 public:
-    CabsComponent()
+    /// @brief Constructor
+    /// @param type pointer to cab type parameter
+    /// @param state pointer to cab state parameter
+    CabsComponent(std::atomic<float>* type, std::atomic<float>* state) : cabType(type), cabState(state)
     {
         addAndMakeVisible(cab[0]);
         cab[0].setDrawable(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize);
@@ -81,9 +87,25 @@ public:
         { setState(cab[2].getToggleState() ? 3 : 0); };
 
         setBufferedToImage(true);
+
+        startTimerHz(15);
+    }
+
+    ~CabsComponent()
+    {
+        stopTimer();
     }
 
     void paint(Graphics &g) override { g.fillAll(Colours::beige); }
+
+    /// @brief function for setting new parameter pointers if need be
+    /// @param cabType pointer to cab type param
+    /// @param cabOn pointer to cab state param
+    void setStatePointers(std::atomic<float>* cabType, std::atomic<float>* cabOn)
+    {
+        this->cabType = cabType;
+        this->cabState = cabOn;
+    }
 
     // 0 = none on
     void setState(int state)
@@ -121,6 +143,15 @@ public:
             else
                 cab[i].setBounds(bounds);
         }
+    }
+
+    void timerCallback() override
+    {
+        if (lastType != (int)*cabType || lastState != (int)*cabState)
+            setState((int)*cabType + (int)*cabState);
+        
+        lastType = (int)*cabType;
+        lastState = (int)*cabState;
     }
 
     std::function<void(bool, int)> cabChanged;
