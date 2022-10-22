@@ -18,6 +18,10 @@ struct TopComponent : Component
             apvts.getParameterAsValue("lfEnhanceAuto") = state;
         };
 
+        addAndMakeVisible(lfInvert);
+        lfInvAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "lfEnhanceInvert", lfInvert);
+        lfInvert.setButtonText(String::fromUTF8("inv"));
+
         addAndMakeVisible(hfEnhance);
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfEnhance", hfEnhance);
         hfEnhance.setColor(Colours::white, Colours::wheat);
@@ -26,6 +30,10 @@ struct TopComponent : Component
         {
             apvts.getParameterAsValue("hfEnhanceAuto") = state;
         };
+
+        addAndMakeVisible(hfInvert);
+        hfInvAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hfEnhanceInvert", hfInvert);
+        hfInvert.setButtonText("inv");
     }
 
     void paint(Graphics& g) override
@@ -50,8 +58,12 @@ struct TopComponent : Component
         auto left = bounds.removeFromLeft(div);
         auto right = bounds.removeFromRight(div);
 
+        auto invHeight = left.getHeight() * 0.45;
+
         wave.setBounds(bounds.reduced(10, (float)bounds.getHeight() * 0.2f));
+        lfInvert.setBounds(left.removeFromLeft(left.getWidth() * 0.2).reduced(0, invHeight));
         lfEnhance.setBounds(left);
+        hfInvert.setBounds(right.removeFromRight(right.getWidth() * 0.2).reduced(0, invHeight));
         hfEnhance.setBounds(right);
     }
 
@@ -60,7 +72,9 @@ private:
     std::unique_ptr<Image> blur;
 
     Knob hfEnhance{KnobType::Enhancer}, lfEnhance{KnobType::Enhancer};
+    LightButton hfInvert, lfInvert;
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hfInvAttach, lfInvAttach;
 
     strix::SineWaveComponent wave;
 };
