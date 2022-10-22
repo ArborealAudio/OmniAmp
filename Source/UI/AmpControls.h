@@ -2,16 +2,16 @@
 
 #pragma once
 
-struct AmpControls : Component, AudioProcessorValueTreeState::Listener
+struct AmpControls : Component, private Timer
 {
     AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) : vts(a), grMeter(vs, a.getRawParameterValue("comp"))
     {
-        vts.addParameterListener("mode", this);
-
         for (auto& k : getKnobs())
             addAndMakeVisible(*k);
 
-        setColorScheme((int)*vts.getRawParameterValue("mode"));
+        mode_p = vts.getRawParameterValue("mode");
+
+        setColorScheme((int)*mode_p);
 
         auto zeroToTen = [](float val)
         {
@@ -117,17 +117,24 @@ struct AmpControls : Component, AudioProcessorValueTreeState::Listener
         grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
         grMeter.setMeterColor(Colours::oldlace);
         addAndMakeVisible(grMeter);
+
+        startTimerHz(30);
     }
 
     ~AmpControls()
     {
-        vts.removeParameterListener("mode", this);
+        stopTimer();
     }
 
-    void parameterChanged(const String& parameterID, float newValue) override
+    void timerCallback() override
     {
+        if (*mode_p == lastMode)
+            return;
+
+        int currentMode = *mode_p;
+
         std::function<String(float)> function;
-        if (*vts.getRawParameterValue("mode") < 2)
+        if (currentMode < 2)
         {
             function = [](float val)
             {
@@ -149,13 +156,15 @@ struct AmpControls : Component, AudioProcessorValueTreeState::Listener
         mid.setValueToStringFunction(function);
         treble.setValueToStringFunction(function);
 
-        bass.autoGain.store(*vts.getRawParameterValue("mode") > 1 && *vts.getRawParameterValue("eqAutoGain"));
-        mid.autoGain.store(*vts.getRawParameterValue("mode") > 1 && *vts.getRawParameterValue("eqAutoGain"));
-        treble.autoGain.store(*vts.getRawParameterValue("mode") > 1 && *vts.getRawParameterValue("eqAutoGain"));
+        bass.autoGain.store(currentMode > 1 && *vts.getRawParameterValue("eqAutoGain"));
+        mid.autoGain.store(currentMode > 1 && *vts.getRawParameterValue("eqAutoGain"));
+        treble.autoGain.store(currentMode > 1 && *vts.getRawParameterValue("eqAutoGain"));
 
-        setColorScheme((int)newValue);
+        setColorScheme(currentMode);
 
-        repaint();
+        lastMode = currentMode;
+
+        repaint(getLocalBounds());
     }
 
     void setColorScheme(int m)
@@ -308,6 +317,9 @@ private:
 
     Colour backgroundColor = Colours::black;
     Colour secondaryColor = Colours::white;
+
+    std::atomic<float> *mode_p;
+    int lastMode = 0;
 
     std::vector<Knob*> getKnobs()
     {
