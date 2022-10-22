@@ -45,6 +45,7 @@ target_sources(Gamma
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
+add_subdirectory(Source/Presets)
 add_subdirectory(modules/chowdsp_wdf)
 
 juce_add_modules(

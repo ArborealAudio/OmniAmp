@@ -55,3 +55,4 @@ static int readConfigFile(const String& property)
 #include "Menu.h"
 #include "UI_Top.h"
 #include "DownloadManager.h"
+#include "../Presets/PresetComp.h"
