@@ -449,6 +449,8 @@ class Room
 
     dsp::DryWetMixer<double> mix;
 
+    int numChannels = 0;
+
 public:
     /**
      * @param roomSizeMs room size in Ms, use this in conjunction w/ rt60 to create bigger or larger rooms
@@ -489,6 +491,8 @@ public:
     /* pass in the down-sampled specs */
     void prepare(const dsp::ProcessSpec &spec)
     {
+        numChannels = spec.numChannels;
+
         usBuf.setSize(2, spec.maximumBlockSize * ratio);
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
@@ -522,7 +526,7 @@ public:
             for (auto &f : ch)
                 f.prepare(filterSpec);
 
-        mix.prepare(dsp::ProcessSpec{spec.sampleRate * ratio, spec.maximumBlockSize * ratio, spec.numChannels});
+        mix.prepare(dsp::ProcessSpec{spec.sampleRate * ratio, spec.maximumBlockSize * ratio, (uint32)numChannels});
         mix.setMixingRule(dsp::DryWetMixingRule::balanced);
     }
 
@@ -551,9 +555,10 @@ public:
 
     void process(AudioBuffer<double> &buf, float amt)
     {
-        mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(0));
-        if (buf.getNumChannels() > 1)
-            mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(1));
+        if (numChannels > 1)
+            mix.pushDrySamples(dsp::AudioBlock<double>(buf));
+        else
+            mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(0));
 
         dsBuf.clear();
         splitBuf.clear();
@@ -591,9 +596,11 @@ public:
         usBuf.applyGain(upMix.scalingFactor1());
 
         mix.setWetMixProportion(amt);
-        mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(0));
-        if (buf.getNumChannels() > 1)
-            mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(1));
+
+        if (numChannels > 1)
+            mix.mixWetSamples(dsp::AudioBlock<double>(usBuf));
+        else
+            mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(0));
 
         buf.makeCopyOf(usBuf);
     }
