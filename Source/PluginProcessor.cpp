@@ -92,7 +92,7 @@ bool GammaAudioProcessor::isMidiEffect() const
 
 double GammaAudioProcessor::getTailLengthSeconds() const
 {
-    return 1.0;
+    return 0.0;
 }
 
 int GammaAudioProcessor::getNumPrograms()
@@ -203,7 +203,7 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         currentMode = (Mode)newValue;
         lfEnhancer.setMode((Processors::ProcessorType)currentMode);
         hfEnhancer.setMode((Processors::ProcessorType)currentMode);
-        lfEnhancer.updateFilters();
+        lfEnhancer.flagUpdate(true);
     }
     else if (parameterID == "bass")
     {
@@ -237,21 +237,15 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         reverb.changeRoomType((Processors::ReverbType)newValue);
     else if (parameterID == "gate")
         gateProc.setThreshold(*gate);
-    else if (parameterID == "hq") {
+    else if (parameterID == "hq" || parameterID == "renderHQ") {
         setOversampleIndex();
         auto ovs_fac = oversample[os_index].getOversamplingFactor();
         dsp::ProcessSpec osSpec {SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
+        suspendProcessing(true);
         guitar.prepare(osSpec);
         bass.prepare(osSpec);
         channel.update(osSpec, *apvts.getRawParameterValue("bass"), *apvts.getRawParameterValue("mid"), *apvts.getRawParameterValue("treble"));
-    }
-    else if (parameterID == "renderHQ") {
-        setOversampleIndex();
-        auto ovs_fac = oversample[os_index].getOversamplingFactor();
-        dsp::ProcessSpec osSpec {SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
-        guitar.prepare(osSpec);
-        bass.prepare(osSpec);
-        channel.update(osSpec, *apvts.getRawParameterValue("bass"), *apvts.getRawParameterValue("mid"), *apvts.getRawParameterValue("treble"));
+        suspendProcessing(false);
     }
 }
 
@@ -360,9 +354,9 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("outputGain", 1), "Output Gain", -12.f, 12.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("ampOn", 1), "Amp On/Off", true));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("preampAutoGain", 1), "Preamp Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("powerampGain", 1), "Power Amp Gain", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("powerampGain", 1), "Power Amp Gain", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("powerampAutoGain", 1), "Power Amp Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("compLink", 1), "Comp Stereo Link", true));
@@ -373,15 +367,14 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("treble", 1), "Treble", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("eqAutoGain", 1), "EQ Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{"Guitar", "Bass", "Channel"}, 2));
+    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{"Guitar", "Bass", "Channel"}, 0));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hfEnhanceAuto", 1), "HF Enhancer Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hfEnhanceInvert", 1), "HF Enhancer Invert", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("lfEnhanceAuto", 1), "LF Enhancer Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("lfEnhanceInvert", 1), "LF Enhancer Invert", false));
-    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("cabOn", 1), "Cab On/Off", false));
-    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("2x12", "4x12", "8x10"), 0));
+    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("Off", "2x12", "4x12", "6x10"), 2));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("reverbType", 1), "Reverb Type", StringArray("Off", "Room", "Hall"), 0));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("roomAmt", 1), "Reverb Amount", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hq", 1), "HQ On/Off", true));
