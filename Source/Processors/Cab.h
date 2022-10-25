@@ -4,6 +4,7 @@
 
 enum CabType
 {
+    off,
     small,
     med,
     large
@@ -73,15 +74,15 @@ class FDNCab
             for (size_t i = 0; i < delay.size(); ++i)
             {
                 delay[i].prepare(monoSpec);
-                delay[i].setMaximumDelayInSamples(100);
+                delay[i].setMaximumDelayInSamples(100 * ratio);
                 delay[i].setDelay(dtime[i] * ratio);
             }
 
-            for (auto i = 0; i < lp.size(); ++i)
+            for (size_t i = 0; i < lp.size(); ++i)
             {
                 lp[i].prepare(spec);
                 lp[i].setType(strix::FilterType::lowpass);
-                lp[i].setCutoffFreq(5000.0 - (std::pow(2.0, i) * 50.0));
+                lp[i].setCutoffFreq(5000.0 - (std::pow(2.0, (double)i) * 50.0));
                 lp[i].setResonance(0.7);
             }
         }
@@ -109,7 +110,6 @@ class FDNCab
                     {
                         auto d = delay[n].popSample(ch, dtime[n]);
 
-                        // out += d + in[i] * -fdbk;
                         out += d;
                         if (n % 2 == 0)
                             out += in[i] * -fdbk;
@@ -125,7 +125,7 @@ class FDNCab
                 }
             }
 
-            block.multiplyBy(1.0 / (f_order * f_order));
+            block.multiplyBy(1.0 / f_order);
         }
 
     private:
@@ -146,6 +146,9 @@ class FDNCab
 
     double sr = 44100.0;
 
+    AudioProcessorValueTreeState &apvts;
+
+    // std::array<FDN<Type>, 3> fdn{FDN<Type>(apvts, CabType::small), FDN<Type>(apvts, CabType::med), FDN<Type>(apvts, CabType::large)};
     std::shared_ptr<FDN<Type>> fdn;
 
     dsp::ProcessSpec memSpec;
@@ -153,8 +156,6 @@ class FDNCab
     CabType type;
 
     strix::ReleasePoolShared releasePool;
-
-    AudioProcessorValueTreeState &apvts;
 
 public:
     FDNCab(AudioProcessorValueTreeState& a, CabType t) : apvts(a)
@@ -164,6 +165,9 @@ public:
 
     void setCabType(CabType newType)
     {
+        if (newType == CabType::off)
+            return;
+        
         type = newType;
         setParams();
 
@@ -191,10 +195,14 @@ public:
         lowshelf.setType(strix::FilterType::firstOrderLowpass);
 
         fdn->prepare(spec);
+        // for (auto& c : fdn)
+        //     c.prepare(spec);
     }
 
     void reset()
     {
+        // for (auto& c : fdn)
+        //     c.reset();
         fdn->reset();
         hp.reset();
         lp1.reset();
@@ -236,21 +244,12 @@ public:
         }
     }
 
-    // void setParams()
-    // {
-    //     hp.setCutoffFreq((Type)*apvts.getRawParameterValue("hpFreq"));
-    //     hp.setResonance((Type)*apvts.getRawParameterValue("hpQ"));
-    //     lp1.setCutoffFreq((Type)*apvts.getRawParameterValue("lp1Freq"));
-    //     lp1.setResonance((Type)*apvts.getRawParameterValue("lp1Q"));
-    //     lp2.setCutoffFreq((Type)*apvts.getRawParameterValue("lp2Freq"));
-    //     lp2.setResonance((Type)*apvts.getRawParameterValue("lp2Q"));
-    //     lowshelf.setCutoffFreq((Type)*apvts.getRawParameterValue("bpFreq"));
-    // }
-
     template <class Block>
     void processBlock(Block& block)
     {
         std::shared_ptr<FDN<Type>> proc_fdn = std::atomic_load(&fdn);
+
+        // size_t cabIndex = (size_t)type;
 
         lp1.processBlock(block);
         proc_fdn->processBlock(block);
