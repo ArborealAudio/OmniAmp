@@ -25,6 +25,7 @@
 #include <JuceHeader.h>
 #include "../modules/chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
 #include "Processors/Processors.h"
+#include "Presets/PresetManager.h"
 #include "UI/UI.h"
 #include "UI/SineWave.hpp"
 
@@ -164,11 +165,6 @@ private:
 
         block.multiplyBy(inGain_raw);
 
-        // if (*apvts.getRawParameterValue("hq"))
-        //     os_index = 1;
-        // else
-        //     os_index = size_t(isNonRealtime() && *apvts.getRawParameterValue("renderHQ"));
-
         auto osBlock = oversample[os_index].processSamplesUp(block);
 
         if (*apvts.getRawParameterValue("ampOn"))
@@ -202,7 +198,7 @@ private:
         if (*hfEnhance)
             hfEnhancer.processBlock(processBlock, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"));
 
-        if (*apvts.getRawParameterValue("cabOn"))
+        if (*apvts.getRawParameterValue("cabType"))
             cab.processBlock(processBlock);
 
 #if USE_SIMD
