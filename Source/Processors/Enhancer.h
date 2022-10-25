@@ -95,6 +95,7 @@ struct Enhancer
         wetBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
     }
 
+    /*method for updating filters IN SYNC w/ audio thread*/
     void updateFilters()
     {
         double freq = 0.0;
@@ -119,6 +120,13 @@ struct Enhancer
             lp1.emplace_back(dsp::IIR::Filter<T>(c));
             lp2.emplace_back(dsp::IIR::Filter<T>(c));
         }
+
+        needUpdate = false;
+    }
+
+    void flagUpdate(bool newFlag)
+    {
+        needUpdate.store(newFlag);
     }
 
     void reset()
@@ -136,6 +144,9 @@ struct Enhancer
     template <typename Block>
     void processBlock(Block& block, const double enhance, const bool invert)
     {
+        if (needUpdate) 
+            updateFilters();
+        
         wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), block.getNumSamples());
         if (block.getNumChannels() > 1)
             wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), block.getNumSamples());
@@ -217,15 +228,13 @@ private:
     }
 
     double SR = 44100.0;
+    std::atomic<bool> needUpdate = false;
 
     Type type;
     Processors::ProcessorType mode;
 
     AudioProcessorValueTreeState &apvts;
     std::atomic<float> *hfAutoGain, *lfAutoGain;
-
-    // Dsp::SimpleFilter<Dsp::Butterworth::LowPass<4>, 2> lp1, lp2;
-    // Dsp::SimpleFilter<Dsp::Butterworth::HighPass<4>, 2> hp1, hp2;
 
     std::vector<dsp::IIR::Filter<T>> lp1, lp2, hp1, hp2;
 #if USE_SIMD
