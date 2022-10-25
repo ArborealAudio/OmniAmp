@@ -11,7 +11,7 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), reverbComp(p.apvts), menu(p.apvts, 200), dl(false), tooltip(this)
+    : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), cabComponent(p.apvts.getRawParameterValue("cabType")), reverbComp(p.apvts), menu(p.apvts, 200), presetMenu(p.apvts), dl(false), tooltip(this)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)128 * 1024000);
@@ -59,6 +59,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     };
 #endif
 
+    addAndMakeVisible(presetMenu);
+
     addAndMakeVisible(inGain);
     inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
     inGain.setLabel("Input");
@@ -83,13 +85,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(ampControls);
 
     addAndMakeVisible(cabComponent);
-
-    cabComponent.setState(*p.apvts.getRawParameterValue("cabOn") + *p.apvts.getRawParameterValue("cabType"));
-
-    cabComponent.cabChanged = [&](bool state, int newType)
+    cabComponent.setState(*p.apvts.getRawParameterValue("cabType"));
+    cabComponent.cabChanged = [&](int newType)
     {
         p.apvts.getParameterAsValue("cabType") = newType;
-        p.apvts.getParameterAsValue("cabOn") = state;
     };
 
     addAndMakeVisible(reverbComp);
@@ -121,7 +120,7 @@ void GammaAudioProcessorEditor::paint(juce::Graphics &g)
     g.fillAll(Colour(TOP_TRIM));
     
     auto top = getLocalBounds().withTrimmedBottom(getHeight() / 3);
-    auto trimmedTop = top.removeFromTop(top.getHeight() / 10);
+    auto trimmedTop = top.removeFromTop(getHeight() * 0.085f);
 
     logo->drawWithin(g, trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
 }
@@ -129,33 +128,33 @@ void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 void GammaAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
-    auto w = getWidth();
-    auto h = getHeight();
+    const auto w = getWidth();
+    const auto h = getHeight();
     auto topSection = bounds.removeFromTop(h * 0.085f);
     auto bottomSection = bounds.removeFromBottom(h * 0.285f);
     auto ampSection = bounds.removeFromBottom(h * 0.285f).reduced(1);
 
-    pluginTitle.setBounds(topSection.removeFromRight(w * 0.66f).removeFromLeft(w / 3));
-    menu.setBounds(w - (w * 0.25f), h * 0.03f, w * 0.25f, h / 2.5f);
-    // dl.setBounds(w - (w * 0.3f), h * 0.03f, w * 0.1f, h * 0.1f);
-
-    topSection.removeFromLeft(w / 12);
-    topSection.translate(0, -5);
+    topSection.removeFromLeft(w / 12); // section where logo is drawn
     auto topSectionThird = topSection.getWidth() / 3;
-    inGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
-    outGain.setBounds(topSection.removeFromLeft(topSectionThird).reduced(5, 0));
-    gate.setBounds(topSection.reduced(5, 0));
+    auto topKnobs = topSection.removeFromLeft(topSectionThird);
+    auto titleSection = topSection.removeFromLeft(topSectionThird);
+    auto presetSection = topSection.removeFromLeft(topSection.getWidth() * 0.66);
+
+    pluginTitle.setBounds(titleSection);
+    presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.25));
+    menu.setBounds(w - (w * 0.25f), h * 0.03f, w * 0.25f, h / 2.5f);
+
+    auto knobThird = topKnobs.getWidth() / 3;
+    inGain.setBounds(topKnobs.removeFromLeft(knobThird).reduced(5, 0));
+    outGain.setBounds(topKnobs.removeFromLeft(knobThird).reduced(5, 0));
+    gate.setBounds(topKnobs.reduced(5, 0));
 
     top.setBounds(bounds);
     ampControls.setBounds(ampSection);
     cabComponent.setBounds(bottomSection.removeFromLeft(w * 0.66f));
     reverbComp.setBounds(bottomSection);
-    // auto children = getChildren();
-    // children.removeLast();
-    // auto scale = (float)getWidth() / 800.f;
 
-    // for (auto &c : children)
-    //     c->setTransform(AffineTransform::scale(scale));
+    dl.centreWithSize(300, 200);
 
     MessageManager::callAsync([&]{writeConfigFile("size", getWidth());});
 }
