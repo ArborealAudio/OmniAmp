@@ -59,32 +59,36 @@ class CabsComponent : public Component, private Timer
                             {Cab("4x12", DrawableButton::ButtonStyle::ImageFitted)},
                             {Cab("6x10", DrawableButton::ButtonStyle::ImageFitted)}}};
 
-    std::atomic<float> *cabType, *cabState;
-    int lastType, lastState;
+    std::atomic<float> *cabType;
+    int lastType = 0;
 
 public:
     /// @brief Constructor
     /// @param type pointer to cab type parameter
-    /// @param state pointer to cab state parameter
-    CabsComponent(std::atomic<float>* type, std::atomic<float>* state) : cabType(type), cabState(state)
+    CabsComponent(std::atomic<float>* type) : cabType(type)
     {
         addAndMakeVisible(cab[0]);
         cab[0].setDrawable(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize);
         cab[0].setColor(Colours::olivedrab);
         cab[0].onClick = [&]
-        { setState(cab[0].getToggleState() ? 1 : 0); };
+        {
+            auto state = cab[0].getToggleState();
+            setState(state ? 1 : 0);
+            if (cabChanged)
+                cabChanged(state);
+        };
 
         addAndMakeVisible(cab[1]);
         cab[1].setDrawable(BinaryData::_4x12_svg, BinaryData::_4x12_svgSize);
         cab[1].setColor(Colours::cadetblue);
         cab[1].onClick = [&]
-        { setState(cab[1].getToggleState() ? 2 : 0); };
+        { setState(cab[1].getToggleState() ? 2 : 0); if (cabChanged) cabChanged(cab[1].getToggleState() ? 2 : 0); };
 
         addAndMakeVisible(cab[2]);
         cab[2].setDrawable(BinaryData::_6x10_svg, BinaryData::_6x10_svgSize);
         cab[2].setColor(Colours::chocolate);
         cab[2].onClick = [&]
-        { setState(cab[2].getToggleState() ? 3 : 0); };
+        { setState(cab[2].getToggleState() ? 3 : 0); if (cabChanged) cabChanged(cab[2].getToggleState() ? 3 : 0); };
 
         setBufferedToImage(true);
 
@@ -100,26 +104,18 @@ public:
 
     /// @brief function for setting new parameter pointers if need be
     /// @param cabType pointer to cab type param
-    /// @param cabOn pointer to cab state param
-    void setStatePointers(std::atomic<float>* cabType, std::atomic<float>* cabOn)
+    void setStatePointers(std::atomic<float>* cabType)
     {
         this->cabType = cabType;
-        this->cabState = cabOn;
     }
 
-    // 0 = none on
     void setState(int state)
     {
-        bool on = false;
-        int index = 0;
-
         for (int i = 0; i < 3; ++i)
         {
             if (i + 1 == state)
             {
                 cab[i].setToggleState(true, NotificationType::dontSendNotification);
-                on = true;
-                index = i;
             }
             else
             {
@@ -127,8 +123,7 @@ public:
             }
         }
 
-        if (cabChanged != nullptr)
-            cabChanged(on, index);
+        lastType = *cabType;
     }
 
     void resized() override
@@ -147,12 +142,9 @@ public:
 
     void timerCallback() override
     {
-        if (lastType != (int)*cabType || lastState != (int)*cabState)
-            setState((int)*cabType + (int)*cabState);
-        
-        lastType = (int)*cabType;
-        lastState = (int)*cabState;
+        if (lastType != (int)*cabType)
+            setState((int)*cabType);
     }
 
-    std::function<void(bool, int)> cabChanged;
+    std::function<void(int)> cabChanged;
 };
