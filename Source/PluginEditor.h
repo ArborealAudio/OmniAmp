@@ -48,6 +48,8 @@ private:
 
     MenuComponent menu;
 
+    PresetComp presetMenu;
+
     DownloadManager dl;
 
 #if JUCE_WINDOWS || JUCE_LINUX
