@@ -116,8 +116,8 @@ protected:
 
         pentode.prepare(spec);
 
-        updateSIMD = true;
-        // simd.setInterleavedBlockSize(spec.numChannels, spec.maximumBlockSize);
+        // updateSIMD = true;
+        simd.setInterleavedBlockSize(spec.numChannels, spec.maximumBlockSize);
     }
 
     AudioProcessorValueTreeState &apvts;
@@ -174,10 +174,10 @@ struct Guitar : Processor
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
 
-        if (updateSIMD) {
-            simd.setInterleavedBlockSize(numChannels, numSamples);
-            updateSIMD = false;
-        }
+        // if (updateSIMD) {
+        //     simd.setInterleavedBlockSize(numChannels, numSamples);
+        //     updateSIMD = false;
+        // }
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -260,10 +260,10 @@ struct Bass : Processor
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
 
-        if (updateSIMD) {
-            simd.setInterleavedBlockSize(numChannels, numSamples);
-            updateSIMD = false;
-        }
+        // if (updateSIMD) {
+        //     simd.setInterleavedBlockSize(numChannels, numSamples);
+        //     updateSIMD = false;
+        // }
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -275,7 +275,7 @@ struct Bass : Processor
         if (*dist > 0.f)
             mxr.processBlock(processBlock);
 
-        triode[0].processBlock(processBlock, 1.0, 2.0); /* how much to bias this, since it's pre-gain? */
+        triode[0].processBlock(processBlock, 1.0, 2.0);
 
         processBlock.multiplyBy(gain_raw);
 
@@ -410,10 +410,10 @@ struct Channel : Processor
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
 
-        if (updateSIMD) {
-            simd.setInterleavedBlockSize(numChannels, numSamples);
-            updateSIMD = false;
-        }
+        // if (updateSIMD) {
+        //     simd.setInterleavedBlockSize(numChannels, numSamples); /*this doesn't appear to be safe after all*/
+        //     updateSIMD = false;
+        // }
 
 #if USE_SIMD
         auto&& processBlock = simd.interleaveBlock(block);
