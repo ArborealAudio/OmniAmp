@@ -251,9 +251,7 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
 
 void GammaAudioProcessor::setOversampleIndex()
 {
-    if (*apvts.getRawParameterValue("hq"))
-        os_index = 1;
-    else if (isNonRealtime() && *apvts.getRawParameterValue("renderHQ"))
+    if (*apvts.getRawParameterValue("hq") || (isNonRealtime() && *apvts.getRawParameterValue("renderHQ")))
         os_index = 1;
     else
         os_index = 0;
