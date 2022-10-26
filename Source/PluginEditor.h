@@ -9,7 +9,6 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "UI/UI.h"
 #include "PluginProcessor.h"
 
 //==============================================================================
@@ -25,26 +24,38 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    void resetWindowSize() noexcept;
+    void checkUpdate() noexcept;
+
 private:
+
     GammaAudioProcessor& audioProcessor;
 
-    ChoiceMenu mode;
-    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach;
+    std::unique_ptr<Drawable> logo;
+
+    TopComponent top;
 
     AmpControls ampControls;
 
-    Knob hfEnhance{Knob::Type::HF}, lfEnhance{Knob::Type::LF};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
+    Knob inGain{KnobType::Simple}, outGain{KnobType::Simple}, gate{KnobType::Simple}, width{KnobType::Simple};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach;
 
-    strix::SineWaveComponent wave;
-
-    VolumeMeterComponent grMeter;
+    LightButton midSide;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> msAttach;
 
     CabsComponent cabComponent;
 
     ReverbComponent reverbComp;
 
-#if JUCE_WINDOWS
+    Label pluginTitle;
+
+    MenuComponent menu;
+
+    PresetComp presetMenu;
+
+    DownloadManager dl;
+
+#if JUCE_WINDOWS || JUCE_LINUX
     OpenGLContext opengl;
 #endif
 

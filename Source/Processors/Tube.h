@@ -11,27 +11,6 @@
 #pragma once
 
 template <typename T>
-struct Cab
-{
-    Cab() = default;
-
-    void prepare(const dsp::ProcessSpec& spec)
-    {
-        sc_lp.setType(dsp::StateVariableTPTFilterType::lowpass);
-        sc_lp.setCutoffFrequency(5000.f);
-        sc_lp.prepare(spec);
-    }
-
-    inline T processSample(T x, int ch)
-    {
-        return std::tanh(sc_lp.processSample(ch, x));
-    }
-
-private:
-    dsp::StateVariableTPTFilter<T> sc_lp;
-};
-
-template <typename T>
 struct Tube
 {
     Tube() = default;
@@ -82,7 +61,7 @@ struct Tube
         }
     }
 
-    void processBlockClassB(chowdsp::AudioBlock<vec>& block, T gp, T gn)
+    void processBlockClassB(strix::AudioBlock<vec>& block, T gp, T gn)
     {
         auto in = block.getChannelPointer(0);
 
@@ -110,9 +89,9 @@ private:
 
     inline void processSamplesClassB(T* in, int ch, size_t numSamples, T gp, T gn)
     {
-        for (int i = 0; i < numSamples; ++i)
+        for (size_t i = 0; i < numSamples; ++i)
         {
-            in[i] -= 1.2f * processEnvelopeDetector(in[i], ch);
+            in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
 
             in[i] = saturate(in[i], gp, gn);
 
@@ -123,8 +102,8 @@ private:
     inline void processSamplesClassBSIMD(T* in, int ch, size_t numSamples, T gp, T gn)
     {
         for (int i = 0; i < numSamples; ++i)
-        {
-            in[i] -= (T)1.2 * processEnvelopeDetectorSIMD(in[i], ch);
+        {            
+            in[i] -= 1.2 * processEnvelopeDetectorSIMD(in[i], ch);
 
             in[i] = saturateSIMD(in[i], gp, gn);
 
@@ -149,8 +128,8 @@ private:
     inline T saturateSIMD(T x, T gp, T gn)
     {
         xsimd::batch_bool<double> pos {x > 0.0};
-        return xsimd::select(pos, (((T)1.0 / gp) * xsimd::tanh(gp * x)),
-        (((T)1.0 / gn) * xsimd::tanh(gn * x)));
+        return xsimd::select(pos, ((1.0 / gp) * xsimd::tanh(gp * x)),
+        ((1.0 / gn) * xsimd::tanh(gn * x)));
     }
 
     inline T processEnvelopeDetector(T x, int ch)
@@ -164,7 +143,7 @@ private:
     {
         auto xr = xsimd::fabs(x);
 
-        return (T)0.251188 * sc_lp[ch].processSample(xr);
+        return 0.251188 * sc_lp[ch].processSample(xr);
     }
 
     dsp::IIR::Coefficients<double>::Ptr sc_coeffs, m_coeffs;
@@ -177,7 +156,6 @@ private:
 
     T x_1 = 0.0;
     T xm1[2]{ 0.0 }, ym1[2]{ 0.0 };
-
 };
 
 template <typename T>
@@ -201,33 +179,30 @@ struct AVTriode
         sc_hp.reset();
     }
 
-    inline T processSample(T x, size_t ch, T gp, T gn)
+    inline void processSamples(T* x, size_t ch, size_t numSamples, T gp, T gn)
     {
-        auto f1 = (1.f / gp) * std::tanh(gp * x) * y_m[ch];
-        auto f2 = (1.f / gn) * std::atan(gn * x) * (1.f - y_m[ch]);
-        // auto f1 = (gp * x) / 3.4;
-        // f1 = f1 * 0.5f;
-        // f1 = std::abs(f1 + 0.5) - abs(f1 - 0.5);
-        // f1 = (std::abs(f1) - 2.0) * f1;
-        // f1 = (std::abs(f1) - 2.0) * f1 * (1.0 / gp) * y_m[0];
-        // auto f2 = (1.0 / gn) * ((x * gn) / (1.0 + std::abs(x))) * (1.0 - y_m[ch]);
+        for (size_t i = 0; i < numSamples; ++i)
+        {
+            auto f1 = (1.f / gp) * std::tanh(gp * x[i]) * y_m[ch];
+            auto f2 = (1.f / gn) * std::atan(gn * x[i]) * (1.f - y_m[ch]);
 
-        // auto y = sc_hp.processSample(ch, f1 + f2);
-        auto y = (f1 + f2);
-        y_m[ch] = y;
-
-        return y;
+            auto y = sc_hp.processSample(ch, f1 + f2);
+            y_m[ch] = y;
+            x[i] = y;
+        }
     }
 
-    inline T processSampleSIMD(T x, T gp, T gn)
+    inline void processSamplesSIMD(T* x, size_t numSamples, T gp, T gn)
     {
-        auto f1 = (1.0 / gp) * xsimd::tanh(gp * x) * y_m[0];
-        auto f2 = (1.0 / gn) * xsimd::atan(gn * x) * (1.0 - y_m[0]);
+        for (size_t i = 0; i < numSamples; ++i)
+        {
+            auto f1 = (1.0 / gp) * xsimd::tanh(gp * x[i]) * y_m[0];
+            auto f2 = (1.0 / gn) * xsimd::atan(gn * x[i]) * (1.0 - y_m[0]);
 
-        auto y = sc_hp.processSample(0, f1 + f2);
-        y_m[0] = y;
-
-        return y;
+            auto y = sc_hp.processSample(0, f1 + f2);
+            y_m[0] = y;
+            x[i] = y;
+        }
     }
 
     void processBlock(dsp::AudioBlock<double>& block, T gp, T gn)
@@ -236,19 +211,17 @@ struct AVTriode
         {
             auto in = block.getChannelPointer(ch);
 
-            for (size_t i = 0; i < block.getNumSamples(); i++)
-                in[i] = processSample(in[i], ch, gp, gn);
+            processSamples(in, ch, block.getNumSamples(), gp, gn);
         }
     }
 
-    void processBlock(chowdsp::AudioBlock<vec>& block, T gp, T gn)
+    void processBlock(strix::AudioBlock<vec>& block, T gp, T gn)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
             auto in = block.getChannelPointer(ch);
 
-            for (size_t i = 0; i < block.getNumSamples(); i++)
-                in[i] = processSampleSIMD(in[i], gp, gn);
+            processSamplesSIMD(in, block.getNumSamples(), gp, gn);
         }
     }
 
@@ -257,8 +230,6 @@ private:
     std::vector<T> y_m;
 
     strix::SVTFilter<T> sc_hp;
-
-    // Cab<T> cab;
 };
 
 struct DZTube

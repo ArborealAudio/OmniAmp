@@ -1,217 +1,245 @@
 // Enhancer.h
 
 #pragma once
-#include "dsp_filters/dsp_filters.h"
 
-template <typename T>
-struct HFEnhancer
+struct EnhancerSaturation
 {
-    HFEnhancer(){}
-    ~HFEnhancer(){}
-
-    void prepare(const dsp::ProcessSpec& spec)
+    // higher values of k = harder clipping
+    // lower values can attenuate the signal a bit
+    inline static void process(dsp::AudioBlock<double>& block, double gp, double gn, double k)
     {
-        hp1.setup(1, spec.sampleRate, 7500.0);
-        hp2.setup(2, spec.sampleRate, 7500.0);
-
-        tube.prepare(spec);
-
-        wetBlock = dsp::AudioBlock<double>(heap, spec.numChannels, spec.maximumBlockSize);
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+            {
+                if (in[i] >= 0.0)
+                    in[i] = (1.0 / gp) * (in[i] * gp) / std::pow((1.0 + gp * std::pow(std::abs(in[i] * gp), k)), 1.0 / k);
+                else
+                    in[i] = (1.0 / gn) * (in[i] * gn) / std::pow((1.0 + gn * std::pow(std::abs(in[i] * gn), k)), 1.0 / k);
+            }
+        }
     }
 
-    void reset()
+    inline static void process(strix::AudioBlock<vec>& block, vec gp, vec gn, vec k)
     {
-        hp1.reset();
-        hp2.reset();
-        tube.reset();
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+            {
+                in[i] = xsimd::select(in[i] >= 0.0,
+                (1.0 / gp) * (in[i] * gp) / xsimd::pow((1.0 + gp * xsimd::pow(xsimd::abs(in[i] * gp), k)), 1.0 / k),
+                (1.0 / gn) * (in[i] * gn) / xsimd::pow((1.0 + gn * xsimd::pow(xsimd::abs(in[i] * gn), k)), 1.0 / k));
+            }
+        }
     }
-
-    void processBlock(dsp::AudioBlock<T>& block, const double enhance)
-    {
-        wetBlock.copyFrom(block);
-
-        process(wetBlock, enhance);
-
-        block.add(wetBlock);
-    }
-
-    // void processBlock(chowdsp::AudioBlock<vec>& block, const double enhance)
-    // {
-    //     int size = (int)block.getNumChannels() * (int)block.getNumSamples();
-
-    //     wetBlock.copyFrom(block);
-
-    //     process(wetBlock, enhance);
-
-    //     block.add(wetBlock);
-    // }
-
-private:
-
-    void process(dsp::AudioBlock<T>& block, T enhance)
-    {
-        auto inL = block.getChannelPointer(0);
-        auto inR = block.getChannelPointer(1);
-
-        hp1.process(block.getNumSamples(), 0, inL);
-        hp1.process(block.getNumSamples(), 1, inR);
-
-        block.multiplyBy(jmap(enhance, (T)1.f, (T)4.f));
-
-        tube.processBlock(block, 1.0, 0.5);
-
-        hp2.process(block.getNumSamples(), 0, inL);
-        hp2.process(block.getNumSamples(), 1, inR);
-
-        block.multiplyBy(enhance);
-    }
-
-    // void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
-    // {
-    //     auto in = block.getChannelPointer(0);
-
-    //     hp1.process(block.getNumSamples(), 0, in);
-
-    //     block.multiplyBy(jmap(enhance, 1.0, 4.0));
-
-    //     tube.processBlock(block, 1.0, 0.5);
-
-    //     hp2.process(block.getNumSamples(), 0, in);
-
-    //     block.multiplyBy(enhance);
-    // }
-
-    Dsp::SimpleFilter<Dsp::Bessel::HighPass<4>, 2> hp1, hp2;
-
-    AVTriode<T> tube;
-
-    HeapBlock<char> heap;
-    dsp::AudioBlock<T> wetBlock;
 };
 
 template <typename T>
-struct LFEnhancer
+struct Enhancer
 {
-    LFEnhancer(){}
-    ~LFEnhancer(){}
-
-    enum Mode
+    enum Type
     {
-        Guitar,
-        Bass,
-        Channel
+        LF,
+        HF
     };
+
+    Enhancer(AudioProcessorValueTreeState& a, Type t) : type(t), apvts(a)
+    {
+        lfAutoGain = apvts.getRawParameterValue("lfEnhanceAuto");
+        hfAutoGain = apvts.getRawParameterValue("hfEnhanceAuto");
+    }
+
+    void setMode(Processors::ProcessorType newMode)
+    {
+        mode = newMode;
+    }
 
     void prepare(const dsp::ProcessSpec& spec)
     {
         SR = spec.sampleRate;
 
-        double freq;
-        switch (type)
+        double freq = 0.0;
+        switch (mode)
         {
-        case Guitar:
-            freq = 250.0;
+        case Processors::ProcessorType::Guitar:
+            freq = 300.0;
             break;
-        case Bass:
-            freq = 150.0;
+        case Processors::ProcessorType::Bass:
+            freq = 175.0;
             break;
-        case Channel:
-            freq = 100.0;
+        case Processors::ProcessorType::Channel:
+            freq = 200.0;
             break;
         }
 
-        lp1.setup(1, spec.sampleRate, freq);
-        lp2.setup(1, spec.sampleRate, freq);
+        auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(freq, spec.sampleRate, 1);
+        auto hp_c = dsp::FilterDesign<double>::designIIRHighpassHighOrderButterworthMethod(7500.0, spec.sampleRate, 1);
 
-        tube.prepare(spec);
+        lp1.clear();
+        lp2.clear();
+        hp1.clear();
+        hp2.clear();
 
-        wetBlock = dsp::AudioBlock<T>(heap, spec.numChannels, spec.maximumBlockSize);
+        for (auto& c : lp_c) {
+            lp1.emplace_back(dsp::IIR::Filter<T>(c));
+            lp2.emplace_back(dsp::IIR::Filter<T>(c));
+        }
+
+        for (auto& c : hp_c) {
+            hp1.emplace_back(dsp::IIR::Filter<T>(c));
+            hp2.emplace_back(dsp::IIR::Filter<T>(c));
+        }
+
+        wetBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
     }
 
-    void setType(Mode newType)
-    {
-        type = newType;
-    }
-
+    /*method for updating filters IN SYNC w/ audio thread*/
     void updateFilters()
     {
-        double freq;
-        switch (type)
+        double freq = 0.0;
+        switch (mode)
         {
-        case Guitar:
-            freq = 250.0;
+        case Processors::ProcessorType::Guitar:
+            freq = 300.0;
             break;
-        case Bass:
-            freq = 150.0;
+        case Processors::ProcessorType::Bass:
+            freq = 175.0;
             break;
-        case Channel:
-            freq = 100.0;
+        case Processors::ProcessorType::Channel:
+            freq = 200.0;
             break;
         }
 
-        lp1.setup(1, SR, freq);
-        lp2.setup(1, SR, freq);
+        auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(freq, SR, 1);
+        lp1.clear();
+        lp2.clear();
+        for (auto &c : lp_c)
+        {
+            lp1.emplace_back(dsp::IIR::Filter<T>(c));
+            lp2.emplace_back(dsp::IIR::Filter<T>(c));
+        }
+
+        needUpdate = false;
+    }
+
+    void flagUpdate(bool newFlag)
+    {
+        needUpdate.store(newFlag);
     }
 
     void reset()
     {
-        lp1.reset();
-        lp2.reset();
-        tube.reset();
+        if (!lp1.empty())
+            lp1[0].reset();
+        if (!lp2.empty())
+            lp2[0].reset();
+        if (!hp1.empty())
+            hp1[0].reset();
+        if (!hp2.empty())
+            hp2[0].reset();
     }
 
-    void processBlock(dsp::AudioBlock<T>& block, const double enhance)
+    template <typename Block>
+    void processBlock(Block& block, const double enhance, const bool invert)
     {
-        wetBlock.copyFrom(block);
+        if (needUpdate) 
+            updateFilters();
+        
+        wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), block.getNumSamples());
+        if (block.getNumChannels() > 1)
+            wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), block.getNumSamples());
 
-        process(wetBlock, enhance);
+        auto processBlock = Block(wetBuffer).getSubBlock(0, block.getNumSamples());
 
-        block.add(wetBlock);
+        switch (type)
+        {
+        case LF:
+            processLF(processBlock, enhance);
+            break;
+        case HF:
+            processHF(processBlock, enhance);
+            break;
+        default:
+            break;
+        }
+
+        auto dest = block.getChannelPointer(0);
+        auto src = processBlock.getChannelPointer(0);
+        for (auto i = 0; i < block.getNumSamples(); ++i)
+        {
+            if (invert)
+                dest[i] -= src[i];
+            else
+                dest[i] += src[i];
+        }
     }
 
 private:
 
-    void process(dsp::AudioBlock<T>& block, T enhance)
+    template <typename Block>
+    void processHF(Block& block, double enhance)
     {
         auto inL = block.getChannelPointer(0);
-        auto inR = block.getChannelPointer(1);
 
-        lp1.process(block.getNumSamples(), 0, inL);
-        lp1.process(block.getNumSamples(), 1, inR);
+        for (int i = 0; i < block.getNumSamples(); ++i)
+            inL[i] = hp1[0].processSample(inL[i]);
+        
+        auto gain = jmap(enhance, 1.0, 4.0);
+        double autoGain = 1.0;
 
-        block.multiplyBy(jmap(enhance, -1.0, -4.0));
+        block.multiplyBy(gain);
 
-        tube.processBlock(block, 1.0, 3.0);
+        EnhancerSaturation::process(block, 1.0, 1.0, 1.0);
+        block.multiplyBy(2.0);
 
-        lp2.process(block.getNumSamples(), 0, inL);
-        lp2.process(block.getNumSamples(), 1, inR);
+        if (*hfAutoGain)
+            autoGain *= 1.0 / (2.0 * gain);
 
-        block.multiplyBy(enhance);
+        for (int i = 0; i < block.getNumSamples(); ++i)
+            inL[i] = hp2[0].processSample(inL[i]);
+
+        block.multiplyBy(enhance * autoGain);
     }
 
-    // void processSIMD(chowdsp::AudioBlock<T>& block, double enhance)
-    // {
-    //     auto in = block.getChannelPointer(0);
+    template <typename Block>
+    void processLF(Block& block, double enhance)
+    {
+        auto inL = block.getChannelPointer(0);
+        
+        for (int i = 0; i < block.getNumSamples(); ++i)
+            inL[i] = lp1[0].processSample(inL[i]);
 
-    //     lp1.process(block.getNumSamples(), 0, in);
+        auto gain = jmap(enhance, 1.0, 2.0);
+        double autoGain = 1.0;
 
-    //     block.multiplyBy(jmap(enhance, -1.0, -4.0));
+        block.multiplyBy(gain);
 
-    //     tube.processBlock(block, 1.0, 3.0);
+        EnhancerSaturation::process(block, 1.0, 2.0, 4.0);
 
-    //     lp2.process(block.getNumSamples(), 0, in);
+        if (*lfAutoGain)
+            autoGain *= 1.0 / (6.0 * gain);
 
-    //     block.multiplyBy(enhance);
-    // }
+        for (int i = 0; i < block.getNumSamples(); ++i)
+            inL[i] = lp2[0].processSample(inL[i]);
 
-    Mode type;
+        block.multiplyBy(enhance * autoGain);
+    }
 
-    Dsp::SimpleFilter<Dsp::Bessel::LowPass<4>, 2> lp1, lp2;
+    double SR = 44100.0;
+    std::atomic<bool> needUpdate = false;
 
-    AVTriode<T> tube;
+    Type type;
+    Processors::ProcessorType mode;
 
-    HeapBlock<char> heap;
-    dsp::AudioBlock<T> wetBlock;
+    AudioProcessorValueTreeState &apvts;
+    std::atomic<float> *hfAutoGain, *lfAutoGain;
 
-    double SR = 0.0;
+    std::vector<dsp::IIR::Filter<T>> lp1, lp2, hp1, hp2;
+#if USE_SIMD
+    strix::Buffer<T> wetBuffer;
+#else
+    AudioBuffer<T> wetBuffer;
+#endif
 };

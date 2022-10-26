@@ -1,12 +1,6 @@
-[submodule "modules/chowdsp_utils"]
-	path = modules/chowdsp_utils
-	url = https://github.com/Chowdhury-DSP/chowdsp_utils
-[submodule "modules/chowdsp_wdf"]
-	path = modules/chowdsp_wdf
-	url = https://github.com/Chowdhury-DSP/chowdsp_wdf
 [submodule "modules/clap-juce-extensions"]
 	path = modules/clap-juce-extensions
 	url = https://github.com/free-audio/clap-juce-extensions
-[submodule "modules/DSPFilters"]
-	path = modules/DSPFilters
-	url = https://github.com/ArborealAudio/DSPFilters
+[submodule "modules/chowdsp_wdf"]
+	path = modules/chowdsp_wdf
+	url = https://github.com/Chowdhury-DSP/chowdsp_wdf

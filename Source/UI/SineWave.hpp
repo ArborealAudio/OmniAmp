@@ -28,9 +28,10 @@ struct AudioSource
         }
 
         float freq = 50.f;
+        float nyq = spec.sampleRate * 0.5f;
         for (int i = 0; i < 5; ++i)
         {
-            freq = jlimit(50.f, 16000.f, freq * (float)(i+1));
+            freq = jlimit(50.f, nyq * 0.73f, freq * (float)(i+1));
             hp[i].prepare(spec);
             hp[i].setType(dsp::LinkwitzRileyFilterType::highpass);
             hp[i].setCutoffFrequency(freq);
@@ -41,7 +42,7 @@ struct AudioSource
     }
 
     template <typename T>
-    void getBufferRMS(const AudioBuffer<T>& buf)
+    void getBufferRMS(const juce::AudioBuffer<T>& buf)
     {
         splitBuffers(buf);
 
@@ -67,9 +68,9 @@ struct AudioSource
         for (int i = 0; i < 6; ++i)
         {
             if (src[i].size() > 0)
-                b_rms[i] = std::sqrt(std::accumulate(src[i].begin(), src[i].end(), 0.f) / (float)src[i].size());
+                b_rms[i] = 2.0 * std::sqrt(std::accumulate(src[i].begin(), src[i].end(), 0.f) / (float)src[i].size());
             else
-                b_rms[i] = std::sqrt(sum[i]);
+                b_rms[i] = 2.0 * std::sqrt(sum[i]);
         }
 
         return b_rms;
@@ -87,11 +88,12 @@ private:
     std::vector<float> src[6];
 
     dsp::LinkwitzRileyFilter<float> hp[5];
-    AudioBuffer<float> band[6];
+    juce::AudioBuffer<float> band[6];
 
     std::atomic<bool> newBuf;
 
-    void splitBuffers(const AudioBuffer<float>& buf)
+    template <typename T>
+    void splitBuffers(const juce::AudioBuffer<T>& buf)
     {
         for (auto& b : band)
         {
@@ -101,13 +103,13 @@ private:
 
         for (int i = 0; i < 5; ++i)
         {
-            auto hpf = band[i + 1].getArrayOfWritePointers();
+            auto hpf = band[i + 1].getWritePointer(0);
             auto lpf = band[i].getWritePointer(0);
             for (auto j = 0; j < buf.getNumSamples(); ++j)
             {
-                auto mono = (hpf[0][j] + hpf[1][j]) / 2.f;
-                hpf[0][j] = hp[i].processSample(0, mono);
-                lpf[j] = lpf[j] - hpf[0][j];
+                auto mono = hpf[j];
+                hpf[j] = hp[i].processSample(0, mono);
+                lpf[j] = lpf[j] - hpf[j];
             }
         }
     }
@@ -117,30 +119,27 @@ struct SineWaveComponent : Component, Timer
 {
     SineWaveComponent(AudioSource& s) : src(s)
     {
-        startTimerHz(60);
+        startTimerHz(45);
     }
-    ~SineWaveComponent(){ stopTimer(); }
+    ~SineWaveComponent() override
+    { stopTimer(); }
 
     void paint(Graphics& g) override
     {
-        g.setColour(Colour(0xff363536));
+        g.setColour(Colour(TOP_TRIM).withAlpha(0.9f));
         g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
-
         drawSineWave(g);
-
-        // g.setColour(Colours::black);
-        // g.drawRoundedRectangle(getLocalBounds().toFloat(), 5.f, 3.f);
     }
 
-    void drawSineWave(Graphics& g)
+    inline void drawSineWave(Graphics& g)
     {
         if (!needsRepaint)
             return;
-        
+
         auto w = getWidth();
-        // std::vector<float> wave;
-        // wave.resize(w);
-        // src.readBuffer(wave);
+
+        auto f = phase.advance(0.05f); // inc btw 0->2Pi
+
         auto rms = src.getAvgRMS();
 
         float min = getLocalBounds().getBottom();
@@ -152,18 +151,26 @@ struct SineWaveComponent : Component, Timer
         };
 
         Path p[6];
+        Colour colors[6]{Colour(0xff975755), Colour(0xff977757), Colour(0xff859358),
+                         Colour(0xff499481), Colour(0xff516692), Colour(0xff975792) };
+        float scale[6]{0.025f, 0.0275f, 0.03f, 0.0325f, 0.035f, 0.0375f};
+        float lineThickness[6]{3.f, 2.75f, 2.5f, 1.25f, 1.f, 0.75f};
 
-        for (auto& q : p)
-            q.startNewSubPath(-1, getLocalBounds().getCentreY());
-
-        for (int i = 0; i < w; ++i)
+        auto drawWave = [&](int i)
         {
-            p[0].lineTo(i, map(std::sin(i * 0.025f  - f ) * rms[0]));
-            p[1].lineTo(i, map(std::sin(i * 0.0275f - f ) * rms[1] /*  * 0.9f */));
-            p[2].lineTo(i, map(std::sin(i * 0.03f   - f ) * rms[2]   /*  * 0.8f */));
-            p[3].lineTo(i, map(std::sin(i * 0.0325f - f ) * rms[3] /*  * 0.7f */));
-            p[4].lineTo(i, map(std::sin(i * 0.035f  - f ) * rms[4]  /*  * 0.6f */));
-            p[5].lineTo(i, map(std::sin(i * 0.0375f - f ) * rms[5] /*  * 0.5f */));
+            p[i].startNewSubPath(-1, getLocalBounds().getCentreY());
+            std::vector<float> x;
+            for (int j = 0; j < w; ++j)
+                x.emplace_back(j);
+            FloatVectorOperations::multiply(x.data(), scale[i], x.size());
+            FloatVectorOperations::add(x.data(), -f, x.size()); /*much faster w/ float vec ops!*/
+            for (int j = 0; j < w; ++j)
+                p[i].lineTo(j, map(std::sin(x[j]) * rms[i]));
+        };
+
+        for (int i = 0; i < 6; ++i)
+        {
+            drawWave(i);
         }
 
         g.setColour(Colour(0xff975792));
@@ -179,7 +186,6 @@ struct SineWaveComponent : Component, Timer
         g.setColour(Colour(0xff975755));
         g.strokePath(p[0], PathStrokeType(3.f));
 
-        f += 0.05;
         needsRepaint = false;
     }
 
@@ -188,15 +194,15 @@ struct SineWaveComponent : Component, Timer
         if (src.getFlag()) {
             src.setFlag(false);
             needsRepaint = true;
-            repaint();
+            repaint(getLocalBounds());
         }
     }
 
 private:
     AudioSource &src;
 
-    float f = 0.f;
-    bool needsRepaint = false;
+    dsp::Phase<float> phase;
+    std::atomic<bool> needsRepaint = false;
 };
 
 } // namespace strix

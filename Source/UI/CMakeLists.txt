@@ -4,8 +4,10 @@ PRIVATE
     Knob.h
     ChoiceMenu.h
     Button.h
-    Background.h
     AmpControls.h
     SineWave.hpp
-    Cabs.h
-    Reverb.h)
+    CabComponent.h
+    ReverbComponent.h
+    Menu.h
+    UI_Top.h
+    DownloadManager.h)
