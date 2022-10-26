@@ -4,7 +4,6 @@
 
 enum CabType
 {
-    off,
     small,
     med,
     large
@@ -30,7 +29,6 @@ class FDNCab
                 f_order = 4;
                 break;
             default:
-                f_order = 1;
                 break;
             }
 
@@ -78,7 +76,7 @@ class FDNCab
                 delay[i].setDelay(dtime[i] * ratio);
             }
 
-            for (size_t i = 0; i < lp.size(); ++i)
+            for (auto i = 0; i < lp.size(); ++i)
             {
                 lp[i].prepare(spec);
                 lp[i].setType(strix::FilterType::lowpass);
@@ -125,7 +123,7 @@ class FDNCab
                 }
             }
 
-            block.multiplyBy(1.0 / f_order);
+            block.multiplyBy(1.0 / (f_order * f_order));
         }
 
     private:
@@ -148,7 +146,6 @@ class FDNCab
 
     AudioProcessorValueTreeState &apvts;
 
-    // std::array<FDN<Type>, 3> fdn{FDN<Type>(apvts, CabType::small), FDN<Type>(apvts, CabType::med), FDN<Type>(apvts, CabType::large)};
     std::shared_ptr<FDN<Type>> fdn;
 
     dsp::ProcessSpec memSpec;
@@ -163,15 +160,17 @@ public:
         fdn = std::make_shared<FDN<Type>>(a, t);
     }
 
-    void setCabType(CabType newType)
+    /// @brief pass parameter changes to the cab processor
+    /// @param newType 0 = off, 1-3 = cab types
+    void setCabType(int newType)
     {
-        if (newType == CabType::off)
+        if (newType == 0)
             return;
         
-        type = newType;
+        type = static_cast<CabType>(newType - 1);
         setParams();
 
-        std::shared_ptr<FDN<Type>> new_fdn = std::make_shared<FDN<Type>>(apvts, newType);
+        std::shared_ptr<FDN<Type>> new_fdn = std::make_shared<FDN<Type>>(apvts, type);
         new_fdn->prepare(memSpec);
         releasePool.add(new_fdn);
         std::atomic_store(&fdn, new_fdn);

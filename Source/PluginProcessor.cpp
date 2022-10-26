@@ -232,7 +232,7 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         channel.setDistParam(logval);
     }
     else if (parameterID == "cabType")
-        cab.setCabType((Processors::CabType)newValue);
+        cab.setCabType((int)newValue);
     else if (parameterID == "reverbType")
         reverb.changeRoomType((Processors::ReverbType)newValue);
     else if (parameterID == "gate")
@@ -367,14 +367,14 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("treble", 1), "Treble", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("eqAutoGain", 1), "EQ Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{"Guitar", "Bass", "Channel"}, 0));
+    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("mode", 1), "Mode", StringArray{"Guitar", "Bass", "Channel"}, 2));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hfEnhanceAuto", 1), "HF Enhancer Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hfEnhanceInvert", 1), "HF Enhancer Invert", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("lfEnhanceAuto", 1), "LF Enhancer Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("lfEnhanceInvert", 1), "LF Enhancer Invert", false));
-    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("Off", "2x12", "4x12", "6x10"), 2));
+    params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("cabType", 1), "Cab Type", StringArray("Off", "2x12", "4x12", "6x10"), 0));
     params.emplace_back(std::make_unique<AudioParameterChoice>(ParameterID("reverbType", 1), "Reverb Type", StringArray("Off", "Room", "Hall"), 0));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("roomAmt", 1), "Reverb Amount", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hq", 1), "HQ On/Off", true));
