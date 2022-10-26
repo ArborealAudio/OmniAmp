@@ -165,6 +165,15 @@ private:
 
         block.multiplyBy(inGain_raw);
 
+        bool ms = (bool)*apvts.getRawParameterValue("m/s");
+        float width = *apvts.getRawParameterValue("width");
+
+        if (ms && block.getNumChannels() > 1)
+            Processors::MSMatrix::msEncode(block);
+
+        if (block.getNumChannels() > 1 && width != 1.f)
+            Processors::Balance::processBalance(block, width, ms);
+
         auto osBlock = oversample[os_index].processSamplesUp(block);
 
         if (*apvts.getRawParameterValue("ampOn"))
@@ -204,6 +213,9 @@ private:
 #if USE_SIMD
         simd.deinterleaveBlock(processBlock);
 #endif
+
+        if (ms && block.getNumChannels() > 1)
+            Processors::MSMatrix::msDecode(block);
 
         if (*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));

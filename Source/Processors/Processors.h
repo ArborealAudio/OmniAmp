@@ -29,6 +29,7 @@ enum class ProcessorType
 #include "Cab.h"
 #include "DistPlus.h"
 #include "Room.h"
+#include "MSMatrix.h"
 
 struct Processor : AudioProcessorValueTreeState::Listener
 {
