@@ -128,7 +128,6 @@ struct SineWaveComponent : Component, Timer
     {
         g.setColour(Colour(TOP_TRIM).withAlpha(0.9f));
         g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
-
         drawSineWave(g);
     }
 
@@ -203,7 +202,7 @@ private:
     AudioSource &src;
 
     dsp::Phase<float> phase;
-    bool needsRepaint = false;
+    std::atomic<bool> needsRepaint = false;
 };
 
 } // namespace strix
