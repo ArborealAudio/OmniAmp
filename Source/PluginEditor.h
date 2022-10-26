@@ -37,8 +37,11 @@ private:
 
     AmpControls ampControls;
 
-    Knob inGain{KnobType::Simple}, outGain{KnobType::Simple}, gate{KnobType::Simple};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach;
+    Knob inGain{KnobType::Simple}, outGain{KnobType::Simple}, gate{KnobType::Simple}, width{KnobType::Simple};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach;
+
+    LightButton midSide;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> msAttach;
 
     CabsComponent cabComponent;
 
