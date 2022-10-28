@@ -125,7 +125,7 @@ private:
 
     AudioBuffer<double> doubleBuffer;
 
-    Processors::CabType currentCab = Processors::CabType::small;
+    Processors::CabType lastCab;
 
 #if USE_SIMD
     Processors::Enhancer<vec> hfEnhancer{apvts, Processors::Enhancer<vec>::Type::HF};
@@ -151,6 +151,17 @@ private:
     Mode currentMode = Mode::Channel;
 
     void setOversampleIndex();
+
+    void onModeSwitch()
+    {
+        if (currentMode == Mode::Channel)
+            apvts.getParameterAsValue("cabType") = 0;
+        else {
+            apvts.getParameterAsValue("cabType") = lastCab;
+            apvts.getParameterAsValue("preampGain") = 0.5f;
+            apvts.getParameterAsValue("powerampGain") = 0.5f;
+        }
+    }
 
     // expects stereo in and out
     void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)

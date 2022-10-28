@@ -22,7 +22,7 @@ GammaAudioProcessor::GammaAudioProcessor()
                          ),
       apvts(*this, nullptr, "Parameters", createParams()),
       guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
-      cab(apvts, currentCab)
+      cab(apvts, (Processors::CabType)apvts.getRawParameterValue("cabType")->load())
 #endif
 {
     inGain = apvts.getRawParameterValue("inputGain");
@@ -135,6 +135,8 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     dsp::ProcessSpec osSpec{lastSampleRate, static_cast<uint32>(samplesPerBlock * ovs_fac), (uint32)getTotalNumInputChannels()};
     dsp::ProcessSpec spec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()};
 
+    currentMode = (Mode)apvts.getRawParameterValue("mode")->load();
+
     gateProc.prepare(spec);
     gateProc.setAttack(10.0);
     gateProc.setRelease(180.0);
@@ -204,6 +206,8 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         lfEnhancer.setMode((Processors::ProcessorType)currentMode);
         hfEnhancer.setMode((Processors::ProcessorType)currentMode);
         lfEnhancer.flagUpdate(true);
+        lastCab = (Processors::CabType)apvts.getRawParameterValue("cabType")->load();
+        onModeSwitch();
     }
     else if (parameterID == "bass")
     {
@@ -231,8 +235,10 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         bass.setDistParam(logval);
         channel.setDistParam(logval);
     }
-    else if (parameterID == "cabType")
+    else if (parameterID == "cabType") {
         cab.setCabType((int)newValue);
+        lastCab = (Processors::CabType)newValue;
+    }
     else if (parameterID == "reverbType")
         reverb.changeRoomType((Processors::ReverbType)newValue);
     else if (parameterID == "gate")
