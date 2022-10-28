@@ -2,9 +2,50 @@
 
 #pragma once
 
+struct PowerButton : TextButton
+{
+    PowerButton()
+    {
+        setClickingTogglesState(true);
+    }
+
+    void paint(Graphics &g) override
+    {
+        auto state = getToggleState();
+        auto mouseOver = isMouseOver();
+        auto b = getLocalBounds();
+        auto padding = b.getHeight() * 0.1f;
+
+        Colour background, icon;
+
+        if (state)
+            background = Colours::grey;
+        else
+            background = Colour(AMP_COLOR);
+        if (mouseOver)
+            background = Colours::darkgrey;
+        
+        g.setColour(background);
+        g.fillEllipse(b.reduced(padding).toFloat());
+
+        if (!state)
+            icon = Colours::grey;
+        else
+            icon = Colours::darkslategrey;
+
+        g.setColour(icon);
+        
+        g.drawEllipse(b.reduced(padding * 2).toFloat(), 5.f);
+        g.fillRoundedRectangle(b.getCentreX() - 2.5f, padding, 5.f, b.getCentreY() - padding, 2.f);
+        g.setColour(background);
+        g.drawRoundedRectangle(b.getCentreX() - 2.5f, padding, 5.f, b.getCentreY() - padding, 2.f, 2.f);
+    }
+};
+
 struct AmpControls : Component, private Timer
 {
-    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) : vts(a), grMeter(vs, a.getRawParameterValue("comp"))
+    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) : vts(a),
+    grMeter(vs, a.getRawParameterValue("comp"))
     {
         for (auto& k : getKnobs())
             addAndMakeVisible(*k);
@@ -112,6 +153,9 @@ struct AmpControls : Component, private Timer
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
         hiGain.setButtonText("Boost");
+
+        addAndMakeVisible(power);
+        powerAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "ampOn", power);
 
         grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
         grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
@@ -290,15 +334,21 @@ struct AmpControls : Component, private Timer
         for (auto& k : getKnobs())
             k->setBounds(mb.removeFromLeft(w).reduced(5));
 
-        auto leftSide = bounds.removeFromLeft(w * 2);
+        auto grMeterBounds = bounds.removeFromLeft(w * 2);
+        grMeter.setBounds(grMeterBounds.reduced(10));
+
+        auto hiGainBounds = bounds.removeFromLeft(w);
+        hiGain.setSize(50, 30);
+        hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
+
+        auto modeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.5);
+        auto powerBounds = bounds;
 
         mode.setSize(100, 40);
-        mode.setCentrePosition(bounds.getCentreX(), bounds.getBottom() - 25);
+        mode.setCentrePosition(modeBounds.getCentreX(), modeBounds.getCentreY());
 
-        hiGain.setSize(50, 30);
-        hiGain.setCentrePosition(inGain.getBounds().getCentreX(), mode.getBounds().getCentreY());
-
-        grMeter.setBounds(leftSide.reduced(10));
+        power.setSize(powerBounds.getHeight(), powerBounds.getHeight());
+        power.setCentrePosition(powerBounds.getCentreX(), powerBounds.getCentreY());
     }
 
 private:
@@ -311,7 +361,9 @@ private:
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach;
 
     LightButton hiGain;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach, powerAttach;
+
+    PowerButton power;
 
     strix::VolumeMeterComponent grMeter;
 
