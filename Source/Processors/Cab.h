@@ -123,7 +123,7 @@ class FDNCab
                 }
             }
 
-            block.multiplyBy(1.0 / (f_order * f_order));
+            block.multiplyBy(1.0 / (f_order * 2.0));
         }
 
     private:
