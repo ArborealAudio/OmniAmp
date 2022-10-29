@@ -189,7 +189,7 @@ private:
         auto gain = jmap(enhance, 1.0, 4.0);
         double autoGain = 1.0;
 
-        block.multiplyBy(gain);
+        SmoothGain<T>::applySmoothGain(block, gain, lastGain);
 
         EnhancerSaturation::process(block, 1.0, 1.0, 1.0);
         block.multiplyBy(2.0);
@@ -200,7 +200,7 @@ private:
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = hp2[0].processSample(inL[i]);
 
-        block.multiplyBy(enhance * autoGain);
+        SmoothGain<T>::applySmoothGain(block, enhance * autoGain, lastAutoGain);
     }
 
     template <typename Block>
@@ -214,7 +214,7 @@ private:
         auto gain = jmap(enhance, 1.0, 2.0);
         double autoGain = 1.0;
 
-        block.multiplyBy(gain);
+        SmoothGain<T>::applySmoothGain(block, gain, lastGain);
 
         EnhancerSaturation::process(block, 1.0, 2.0, 4.0);
 
@@ -224,7 +224,7 @@ private:
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = lp2[0].processSample(inL[i]);
 
-        block.multiplyBy(enhance * autoGain);
+        SmoothGain<T>::applySmoothGain(block, enhance * autoGain, lastAutoGain);
     }
 
     double SR = 44100.0;
@@ -235,6 +235,8 @@ private:
 
     AudioProcessorValueTreeState &apvts;
     std::atomic<float> *hfAutoGain, *lfAutoGain;
+
+    double lastGain = 0.0, lastAutoGain = 1.0;
 
     std::vector<dsp::IIR::Filter<T>> lp1, lp2, hp1, hp2;
 #if USE_SIMD
