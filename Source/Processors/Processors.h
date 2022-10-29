@@ -10,6 +10,64 @@
 
 #pragma once
 
+template <typename T>
+struct SmoothGain
+{
+    /// @brief apply a smoothed gain to an array of samples
+    /// @tparam T sample type
+    /// @param lastGain reference to gain state which can be update if needed
+    /// @param updateGain whether or not to update the gain state, true by default
+    inline static void applySmoothGain(T *in, size_t numSamples, double currentGain, double& lastGain, bool updateGain = true)
+    {
+        if (lastGain == currentGain)
+        {
+            for (size_t i = 0; i < numSamples; ++i)
+                in[i] *= lastGain;
+            return;
+        }
+
+        auto inc = (currentGain - lastGain) / numSamples;
+        
+        for (size_t i = 0; i < numSamples; ++i)
+        {
+            in[i] *= lastGain;
+            lastGain += inc;
+        }
+
+        if (updateGain)
+            lastGain = currentGain;
+    }
+
+    /// @brief apply a smoothed gain to a block of samples
+    /// @tparam T sample type
+    /// @param lastGain reference to gain state which can be update if needed
+    /// @param updateGain whether or not to update the gain state, true by default
+    template <typename Block>
+    inline static void applySmoothGain(Block& block, double currentGain, double& lastGain, bool updateGain = true)
+    {
+        if (lastGain == currentGain)
+        {
+            block.multiplyBy(lastGain);
+            return;
+        }
+
+        auto inc = (currentGain - lastGain) / block.getNumSamples();
+
+        auto l = block.getChannelPointer(0);
+        auto r = block.getChannelPointer(1);
+
+        for (size_t i = 0; i < block.getNumSamples(); ++i)
+        {
+            l[i] *= lastGain;
+            r[i] *= lastGain;
+            lastGain += inc;
+        }
+
+        if (updateGain)
+            lastGain = currentGain;
+    }
+};
+
 namespace Processors
 {
 
