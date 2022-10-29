@@ -286,7 +286,6 @@ struct AmpControls : Component, private Timer
             secondaryColor = Colours::oldlace;
             break;
         };
-        
     }
 
     void paint(Graphics& g) override

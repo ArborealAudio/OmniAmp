@@ -1,10 +1,12 @@
 /* UI_Top.h */
 
-struct TopComponent : Component
+struct TopComponent : Component, private Timer
 {
     TopComponent(strix::AudioSource& s, AudioProcessorValueTreeState& apvts) : wave(s)
     {
         mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
+
+        currentMode = apvts.getRawParameterValue("mode");
 
         addAndMakeVisible(wave);
         wave.setInterceptsMouseClicks(false, false);
@@ -34,13 +36,19 @@ struct TopComponent : Component
         addAndMakeVisible(hfInvert);
         hfInvAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hfEnhanceInvert", hfInvert);
         hfInvert.setButtonText("inv");
+
+        updateBackgroundColor();
+
+        startTimerHz(15);
     }
+
+    ~TopComponent() { stopTimer(); }
 
     void paint(Graphics& g) override
     {
         auto bounds = getLocalBounds().reduced(1).toFloat();
 
-        g.setColour(Colour(BACKGROUND_COLOR));
+        g.setColour(background.withMultipliedLightness(0.33));
         g.fillRoundedRectangle(bounds, 5.f);
         g.setColour(Colours::grey);
         g.drawRoundedRectangle(bounds, 5.f, 2.f);
@@ -67,6 +75,37 @@ struct TopComponent : Component
         hfEnhance.setBounds(right);
     }
 
+    void timerCallback() override
+    {
+        if ((int)*currentMode == lastMode)
+            return;
+
+        updateBackgroundColor();
+
+        repaint(getLocalBounds());
+
+        lastMode = *currentMode;
+    }
+
+    inline void updateBackgroundColor()
+    {
+        switch (int(currentMode->load()))
+        {
+        case 0:
+            background = Colour(AMP_COLOR);
+            break;
+        case 1:
+            background = Colours::slategrey;
+            break;
+        case 2:
+            background = Colours::darkgrey;
+            break;
+        default:
+            background = Colour(AMP_COLOR);
+            break;
+        }
+    }
+
 private:
     std::unique_ptr<Drawable> mesh;
     std::unique_ptr<Image> blur;
@@ -77,4 +116,9 @@ private:
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hfInvAttach, lfInvAttach;
 
     strix::SineWaveComponent wave;
+
+    Colour background;
+
+    int lastMode = 0;
+    std::atomic<float> *currentMode;
 };
