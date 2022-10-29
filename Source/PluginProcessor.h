@@ -106,6 +106,8 @@ private:
 
     std::atomic<float> *inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
+    float lastInGain = 1.f, lastOutGain = 1.f;
+
     /*std::array<ToneStackNodal, 3> toneStack
     { {
             {0.25e-9f, 25e-9f, 22e-9f, 300e3f, 0.25e6f, 20e3f, 65e3f},
@@ -154,17 +156,35 @@ private:
 
     void onModeSwitch()
     {
-        if (currentMode == Mode::Channel)
+        if (currentMode == Mode::Channel) {
             apvts.getParameterAsValue("cabType") = 0;
+            apvts.getParameterAsValue("preampGain") = 0.f;
+            apvts.getParameterAsValue("powerampGain") = 0.f;
+        }
         else {
-            apvts.getParameterAsValue("cabType") = lastCab;
+            apvts.getParameterAsValue("cabType") = lastCab + 1;
             apvts.getParameterAsValue("preampGain") = 0.5f;
             apvts.getParameterAsValue("powerampGain") = 0.5f;
         }
     }
 
+    // lastGain is a reference so it can be directly changed by this function
+    inline void applySmoothedGain(AudioBuffer<double> buffer, float currentGain, float& lastGain)
+    {
+        if (currentGain == lastGain)
+        {
+            buffer.applyGain(currentGain);
+            lastGain = currentGain;
+        }
+        else
+        {
+            buffer.applyGainRamp(0, buffer.getNumSamples(), lastGain, currentGain);
+            lastGain = currentGain;
+        }
+    }
+
     // expects stereo in and out
-    void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)
+    void processDoubleBuffer(AudioBuffer<double> &buffer)
     {
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
@@ -174,7 +194,8 @@ private:
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
 
-        block.multiplyBy(inGain_raw);
+        // apply input gain
+        applySmoothedGain(buffer, inGain_raw, lastInGain);
 
         bool ms = (bool)*apvts.getRawParameterValue("m/s");
         float width = *apvts.getRawParameterValue("width");
@@ -231,7 +252,8 @@ private:
         if (*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
 
-        buffer.applyGain(outGain_raw);
+        // apply output gain
+        applySmoothedGain(buffer, outGain_raw, lastOutGain);
     }
 
     //==============================================================================
