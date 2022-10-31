@@ -172,6 +172,11 @@ struct AmpControls : Component, private Timer
 
     void timerCallback() override
     {
+        if (*vts.getRawParameterValue("ampOn"))
+            grMeter.setState(vts.getRawParameterValue("comp"));
+        else
+            grMeter.setState(vts.getRawParameterValue("ampOn"));
+
         if (*mode_p == lastMode)
             return;
 
