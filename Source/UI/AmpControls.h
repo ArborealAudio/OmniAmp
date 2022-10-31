@@ -7,39 +7,54 @@ struct PowerButton : TextButton
     PowerButton()
     {
         setClickingTogglesState(true);
+        // setBufferedToImage(true);
     }
 
     void paint(Graphics &g) override
     {
-        auto state = getToggleState();
-        auto mouseOver = isMouseOver();
+        Colour icon, s_backgnd = background;
         auto b = getLocalBounds();
         auto padding = b.getHeight() * 0.1f;
 
-        Colour background, icon;
+        auto drawPowerIcon = [&](Graphics& gc)
+        {
+            gc.setColour(icon);
+            gc.drawEllipse(b.reduced(padding * 2).toFloat(), 5.f);
+            gc.fillRoundedRectangle(b.getCentreX() - 2.5f, padding, 5.f, b.getCentreY() - padding, 2.f);
 
-        if (state)
-            background = Colours::grey;
-        else
-            background = Colour(AMP_COLOR);
-        if (mouseOver)
-            background = Colours::darkgrey;
-        
-        g.setColour(background);
-        g.fillEllipse(b.reduced(padding).toFloat());
+            // gc.setColour(s_backgnd);
+            // gc.drawRoundedRectangle(b.getCentreX() - 3.f, padding, 6.f, b.getCentreY() - padding, 2.f, 2.f);
+        };
 
-        if (!state)
-            icon = Colours::grey;
-        else
-            icon = Colours::darkslategrey;
+        if (isMouseOver()) {
+            s_backgnd = background.contrasting(0.2f);
+            g.setColour(s_backgnd);
+            g.fillEllipse(b.reduced(padding).toFloat());
+        }
 
-        g.setColour(icon);
-        
-        g.drawEllipse(b.reduced(padding * 2).toFloat(), 5.f);
-        g.fillRoundedRectangle(b.getCentreX() - 2.5f, padding, 5.f, b.getCentreY() - padding, 2.f);
-        g.setColour(background);
-        g.drawRoundedRectangle(b.getCentreX() - 2.5f, padding, 5.f, b.getCentreY() - padding, 2.f, 2.f);
+        if (!getToggleState())
+            icon = s_backgnd.contrasting(0.2f);
+        else {
+            icon = Colours::white;
+            Image blur(Image::PixelFormat::ARGB, getWidth(), getHeight(), true);
+            Graphics g_blur(blur);
+
+            drawPowerIcon(g_blur);
+            gin::applyStackBlur(blur, 5);
+
+            g.drawImage(blur, getLocalBounds().toFloat(), RectanglePlacement::centred);
+        }
+
+        drawPowerIcon(g);
     }
+
+    void setBackgroundColor(Colour newColor)
+    {
+        background = newColor;
+    }
+
+private:
+    Colour background;
 };
 
 struct AmpControls : Component, private Timer
@@ -221,76 +236,78 @@ struct AmpControls : Component, private Timer
         switch (m)
         {
         case 0:
+            backgroundColor = Colour(AMP_COLOR).darker(0.1f);
+            secondaryColor = backgroundColor.contrasting(0.5f);
             for (auto& k : getKnobs())
             {
                 if (k == &comp)
-                    k->setColor(Colours::wheat, Colours::grey);
+                    k->setColor(Colours::wheat, secondaryColor);
                 else if (k == &dist)
-                    k->setColor(Colours::azure, Colours::grey);
+                    k->setColor(Colours::azure, secondaryColor);
                 else
-                    k->setColor(Colours::antiquewhite, Colours::grey);
+                    k->setColor(Colours::antiquewhite, secondaryColor);
                 k->repaint();
             }
-            backgroundColor = Colour(AMP_COLOR);
-            secondaryColor = Colours::grey;
             break;
         case 1:
-            for (auto& k : getKnobs())
-            {
-                if (k == &comp)
-                    k->setColor(Colours::wheat.withMultipliedLightness(0.25f), Colours::lightgrey);
-                else if (k == &dist)
-                    k->setColor(Colours::azure.withMultipliedLightness(0.25f), Colours::lightgrey);
-                else
-                    k->setColor(Colours::black, Colours::lightgrey);
-                k->repaint();
-            }
             backgroundColor = Colours::slategrey;
             secondaryColor = Colours::lightgrey;
+            for (auto& k : getKnobs())
+            {
+                if (k == &comp)
+                    k->setColor(Colours::wheat.withMultipliedLightness(0.25f), secondaryColor);
+                else if (k == &dist)
+                    k->setColor(Colours::azure.withMultipliedLightness(0.25f), secondaryColor);
+                else
+                    k->setColor(Colours::black, secondaryColor);
+                k->repaint();
+            }
             break;
         case 2:
+            backgroundColor = Colours::darkgrey;
+            secondaryColor = Colours::oldlace;
             for (auto& k : getKnobs())
             {
                 if (k == &comp)
-                    k->setColor(Colours::wheat, Colours::oldlace);
+                    k->setColor(Colours::wheat, secondaryColor);
                 else if (k == &dist)
-                    k->setColor(Colours::azure, Colours::oldlace);
+                    k->setColor(Colours::azure, secondaryColor);
                 else if (k == &bass)
-                    k->setColor(Colours::forestgreen, Colours::oldlace);
+                    k->setColor(Colours::forestgreen, secondaryColor);
                 else if (k == &mid)
-                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), Colours::oldlace);
+                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), secondaryColor);
                 else if (k == &treble)
-                    k->setColor(Colours::crimson, Colours::oldlace);
+                    k->setColor(Colours::crimson, secondaryColor);
                 else
-                    k->setColor(Colours::slategrey, Colours::oldlace);
+                    k->setColor(Colours::slategrey, secondaryColor);
 
                 k->repaint();
             }
-            backgroundColor = Colours::darkgrey;
-            secondaryColor = Colours::oldlace;
             break;
         default:
+            backgroundColor = Colours::darkgrey;
+            secondaryColor = Colours::oldlace;
             for (auto& k : getKnobs())
             {
                 if (k == &comp)
-                    k->setColor(Colours::wheat, Colours::oldlace);
+                    k->setColor(Colours::wheat, secondaryColor);
                 else if (k == &dist)
-                    k->setColor(Colours::azure, Colours::oldlace);
+                    k->setColor(Colours::azure, secondaryColor);
                 else if (k == &bass)
-                    k->setColor(Colours::forestgreen, Colours::oldlace);
+                    k->setColor(Colours::forestgreen, secondaryColor);
                 else if (k == &mid)
-                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), Colours::oldlace);
+                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), secondaryColor);
                 else if (k == &treble)
-                    k->setColor(Colours::crimson, Colours::oldlace);
+                    k->setColor(Colours::crimson, secondaryColor);
                 else
-                    k->setColor(Colours::slategrey, Colours::oldlace);
+                    k->setColor(Colours::slategrey, secondaryColor);
 
                 k->repaint();
             }
-            backgroundColor = Colours::darkgrey;
-            secondaryColor = Colours::oldlace;
             break;
         };
+
+        power.setBackgroundColor(backgroundColor);
     }
 
     void paint(Graphics& g) override
