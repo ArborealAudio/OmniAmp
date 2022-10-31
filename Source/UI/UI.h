@@ -1,10 +1,10 @@
 // UI.h
-// header for including all UI-related files
+// header for including all UI-related files & global UI definitions
 
 #pragma once
 
-#define BACKGROUND_COLOR 0xffaa8875
-#define AMP_COLOR 0xffcab4a0
+#define BACKGROUND_COLOR 0xffaa8875 // unused atm
+#define AMP_COLOR 0xffcab4a0 // guitar amp, specifically
 #define TOP_TRIM 0xff293236
 #define DEEP_BLUE 0xff194545
 
