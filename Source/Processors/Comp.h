@@ -13,7 +13,7 @@
 template <typename T>
 struct OptoComp
 {
-    OptoComp(ProcessorType t, strix::VolumeMeterSource& s) : type(t), grSource(s)
+    OptoComp(ProcessorType t, strix::VolumeMeterSource& s, std::atomic<float>* pos) : type(t), grSource(s), position(pos)
     {}
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -90,19 +90,42 @@ struct OptoComp
             l.reset();
     }
 
-    void setThreshold(double newComp)
+    // set threshold based on comp param
+    void setComp(double newComp)
     {
+        /*force static threshold if amp mode & post position*/
+        if (*position && type != ProcessorType::Channel) {
+            setThreshold(-24.0);
+            return;
+        }
+
         double c_comp = jmap(newComp, 1.0, 6.0);
 
         switch (type)
         {
         case ProcessorType::Guitar:
         case ProcessorType::Bass:
-            threshold.store(std::pow(10.0, -36.0 * 0.05)); /* static threshold at -36dB */
+            threshold.store(std::pow(10.0, -30.0 * 0.05)); /* static threshold at -36dB */
             break;
         case ProcessorType::Channel: {
             auto thresh_scale = c_comp / 2.0;
             threshold.store(std::pow(10.0, (-18.0 * thresh_scale) * 0.05)); /* start at -18dB and scale down 3x */
+            break;
+            }
+        }
+    }
+
+    // set threshold directly in dB
+    void setThreshold(double newThresh)
+    {
+        switch (type)
+        {
+        case ProcessorType::Guitar:
+        case ProcessorType::Bass:
+            threshold.store(std::pow(10.0, newThresh * 0.05)); /* static threshold at -36dB */
+            break;
+        case ProcessorType::Channel: {
+            threshold.store(std::pow(10.0, newThresh * 0.05)); /* start at -18dB and scale down 3x */
             break;
             }
         }
@@ -183,7 +206,7 @@ private:
         T att_time = jlimit(0.005, 0.05, (1.0 / x) * 0.015);
 
         T att = std::exp(-1.0 / (att_time * lastSR));
-        T rel = std::exp(-1.0 / (0.6 * lastGR[ch] * lastSR));
+        T rel = std::exp(-1.0 / (0.5 * (0.5 * lastGR[ch]) * lastSR));
 
         if (env > lastEnv[ch])
         {
@@ -200,7 +223,7 @@ private:
         auto gr = std::pow(10.0, gr_db * 0.05);
         lastGR[ch] = gr;
 
-        grSource.measureGR(lastGR[0]); // TODO: this should average btw L&R if unlinked stereo
+        grSource.measureGR(lastGR[0]); // TODO: this should average btw L&R if unlinked stereo. Maybe move it to the higher-level block call
 
         return gr;
     }
@@ -244,7 +267,8 @@ private:
 
     T lastSR = 44100.0;
 
-    std::atomic<float> threshold = std::pow(10.0, -18.0 * 0.05);
+    std::atomic<float> threshold = std::pow(10.0, -18.0 * 0.05),
+    *position = nullptr;
 
     T lastEnv[2]{0.0}, lastGR[2]{0.0}, xm[2]{0.0};
 

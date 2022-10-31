@@ -91,7 +91,7 @@ enum class ProcessorType
 
 struct Processor : AudioProcessorValueTreeState::Listener
 {
-    Processor(AudioProcessorValueTreeState& a, ProcessorType t, strix::VolumeMeterSource& s) : apvts(a), comp(t, s)
+    Processor(AudioProcessorValueTreeState& a, ProcessorType t, strix::VolumeMeterSource& s) : apvts(a), comp(t, s, a.getRawParameterValue("compPos"))
     {
         inGain = apvts.getRawParameterValue("preampGain");
         inGainAuto = apvts.getRawParameterValue("preampAutoGain");
@@ -104,14 +104,19 @@ struct Processor : AudioProcessorValueTreeState::Listener
         dist = apvts.getRawParameterValue("dist");
 
         apvts.addParameterListener("comp", this);
+        apvts.addParameterListener("compPos", this);
     }
 
-    ~Processor() { apvts.removeParameterListener("comp", this); }
+    ~Processor()
+    {
+        apvts.removeParameterListener("comp", this);
+        apvts.removeParameterListener("compPos", this);
+    }
 
     void parameterChanged(const String &parameterID, float newValue) override
     {
-        if (parameterID.contains("comp"))
-            comp.setThreshold(newValue);
+        if (parameterID == "comp" || parameterID == "compPos")
+            comp.setComp(*p_comp);
     }
 
     virtual void prepare(const dsp::ProcessSpec &spec) = 0;
