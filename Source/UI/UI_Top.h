@@ -1,12 +1,10 @@
 /* UI_Top.h */
 
-struct TopComponent : Component, private Timer
+struct TopComponent : Component
 {
     TopComponent(strix::AudioSource& s, AudioProcessorValueTreeState& apvts) : wave(s)
     {
         mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
-
-        currentMode = apvts.getRawParameterValue("mode");
 
         addAndMakeVisible(wave);
         wave.setInterceptsMouseClicks(false, false);
@@ -36,19 +34,13 @@ struct TopComponent : Component, private Timer
         addAndMakeVisible(hfInvert);
         hfInvAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hfEnhanceInvert", hfInvert);
         hfInvert.setButtonText("inv");
-
-        updateBackgroundColor();
-
-        startTimerHz(15);
     }
-
-    ~TopComponent() { stopTimer(); }
 
     void paint(Graphics& g) override
     {
         auto bounds = getLocalBounds().reduced(1).toFloat();
 
-        g.setColour(background.withMultipliedLightness(0.33));
+        g.setColour(background.withMultipliedLightness(0.5));
         g.fillRoundedRectangle(bounds, 5.f);
         g.setColour(Colours::grey);
         g.drawRoundedRectangle(bounds, 5.f, 2.f);
@@ -75,37 +67,6 @@ struct TopComponent : Component, private Timer
         hfEnhance.setBounds(right);
     }
 
-    void timerCallback() override
-    {
-        if ((int)*currentMode == lastMode)
-            return;
-
-        updateBackgroundColor();
-
-        repaint(getLocalBounds());
-
-        lastMode = *currentMode;
-    }
-
-    inline void updateBackgroundColor()
-    {
-        switch (int(currentMode->load()))
-        {
-        case 0:
-            background = Colour(AMP_COLOR);
-            break;
-        case 1:
-            background = Colours::slategrey;
-            break;
-        case 2:
-            background = Colours::darkgrey;
-            break;
-        default:
-            background = Colour(AMP_COLOR);
-            break;
-        }
-    }
-
 private:
     std::unique_ptr<Drawable> mesh;
     std::unique_ptr<Image> blur;
@@ -117,8 +78,5 @@ private:
 
     strix::SineWaveComponent wave;
 
-    Colour background;
-
-    int lastMode = 0;
-    std::atomic<float> *currentMode;
+    Colour background = Colour(DEEP_BLUE);
 };
