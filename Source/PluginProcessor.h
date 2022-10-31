@@ -169,7 +169,7 @@ private:
     }
 
     // lastGain is a reference so it can be directly changed by this function
-    inline void applySmoothedGain(AudioBuffer<double> buffer, float currentGain, float& lastGain)
+    inline void applySmoothedGain(AudioBuffer<double>& buffer, float currentGain, float& lastGain)
     {
         if (currentGain == lastGain)
         {
