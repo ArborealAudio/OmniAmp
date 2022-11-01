@@ -28,10 +28,10 @@
 #include "Presets/PresetManager.h"
 #include "UI/UI.h"
 #include "UI/SineWave.hpp"
-#include "Activation.hpp"
 #if PRODUCTION_BUILD
     #define BETA_BUILD 1
 #endif
+#include "Activation.hpp"
 
 //==============================================================================
 /**
