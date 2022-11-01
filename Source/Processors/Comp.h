@@ -13,7 +13,7 @@
 template <typename T>
 struct OptoComp
 {
-    OptoComp(ProcessorType t, strix::VolumeMeterSource& s, std::atomic<float>* pos) : type(t), grSource(s), position(pos)
+    OptoComp(ProcessorType t, strix::VolumeMeterSource& s, std::atomic<float>* pos) : type(t), position(pos), grSource(s)
     {}
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -22,7 +22,8 @@ struct OptoComp
 
         grSource.prepare(spec);
 
-        switch (type) {
+        switch (type)
+        {
         case ProcessorType::Guitar:
             sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 200.0, 1.02);
             sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 3500.0, 0.8);
@@ -156,6 +157,10 @@ private:
     inline void processStereo(T *inL, T *inR, T comp, int numSamples)
     {
         T c_comp = jmap(comp, (T)1.0, (T)6.0);
+        T last_c = jmap(lastComp, (T)1.0, (T)6.0);
+
+        auto inc = (comp - lastComp) / numSamples;
+        auto c_inc = (c_comp - last_c) / numSamples;
 
         for (int i = 0; i < numSamples; ++i)
         {
@@ -170,15 +175,31 @@ private:
 
             auto gr = computeGR(0, max);
 
-            postComp(inL[i], 0, gr, comp, c_comp);
-            postComp(inR[i], 1, gr, comp, c_comp);
+            postComp(inL[i], 0, gr, lastComp, last_c);
+            postComp(inR[i], 1, gr, lastComp, last_c);
+
+            lastComp += inc;
+            last_c += c_inc;
         }
+
+        // just in case
+        lastComp = comp;
+        last_c = c_comp;
     }
 
     /* mono or unlinked stereo */
     inline void processUnlinked(T *in, int ch, T comp, int numSamples)
     {
         T c_comp = jmap(comp, (T)1.0, (T)6.0);
+        T last_c = jmap(lastComp, (T)1.0, (T)6.0);
+
+        auto inc = (comp - lastComp) / numSamples;
+        if (inc == 0.0)
+            lastComp = comp;
+
+        auto c_inc = (c_comp - last_c) / numSamples;
+        if (c_inc == 0.0)
+            last_c = c_comp;
 
         for (int i = 0; i < numSamples; ++i)
         {
@@ -191,7 +212,10 @@ private:
 
             auto gr = computeGR(ch, x);
 
-            postComp(in[i], ch, gr, comp, c_comp);
+            postComp(in[i], ch, gr, lastComp, last_c);
+
+            lastComp += inc;
+            last_c += c_inc;
         }
     }
 
@@ -269,6 +293,8 @@ private:
 
     std::atomic<float> threshold = std::pow(10.0, -18.0 * 0.05),
     *position = nullptr;
+
+    double lastComp = 0.0;
 
     T lastEnv[2]{0.0}, lastGR[2]{0.0}, xm[2]{0.0};
 
