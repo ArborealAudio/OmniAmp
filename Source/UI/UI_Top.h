@@ -46,9 +46,6 @@ struct TopComponent : Component
         g.drawRoundedRectangle(bounds, 5.f, 2.f);
 
         mesh->drawWithin(g, bounds.reduced(1.f), RectanglePlacement::fillDestination, 0.7f);
-
-        g.setColour(Colour(DEEP_BLUE));
-        g.drawRoundedRectangle(wave.getBoundsInParent().toFloat(), 5.f, 2.f);
     }
 
     void resized() override
