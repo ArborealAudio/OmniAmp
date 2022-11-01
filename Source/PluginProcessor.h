@@ -18,8 +18,8 @@
         #endif
     #endif
 #endif
-#ifndef PRODUCTION_BUILD // use this, if otherwise not defined, to label the plugin as production or not
-    #define PRODUCTION_BUILD 0
+#ifndef PRODUCTION_BUILD // use this to control production build parameter
+    #define PRODUCTION_BUILD 1
 #endif
 
 #include <JuceHeader.h>
@@ -28,6 +28,10 @@
 #include "Presets/PresetManager.h"
 #include "UI/UI.h"
 #include "UI/SineWave.hpp"
+#include "Activation.hpp"
+#if PRODUCTION_BUILD
+    #define BETA_BUILD 1
+#endif
 
 //==============================================================================
 /**
@@ -99,6 +103,12 @@ public:
             return channel.getActiveGRSource();
             break;
         }
+    }
+
+    // call this from the UI if activation fails and processing should suspend
+    void lockProcessing(bool shouldBeLocked)
+    {
+        suspendProcessing(shouldBeLocked);
     }
 
 private:
