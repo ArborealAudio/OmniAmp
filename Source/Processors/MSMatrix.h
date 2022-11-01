@@ -1,5 +1,7 @@
 // MSMatrix.h
 
+#pragma once
+
 struct MSMatrix
 {
     template <typename T>
