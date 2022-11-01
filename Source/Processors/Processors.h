@@ -17,7 +17,7 @@ struct SmoothGain
     /// @tparam T sample type
     /// @param lastGain reference to gain state which can be update if needed
     /// @param updateGain whether or not to update the gain state, true by default
-    inline static void applySmoothGain(T *in, size_t numSamples, double currentGain, double& lastGain, bool updateGain = true)
+    inline static void applySmoothGain(T *in, size_t numSamples, T currentGain, T& lastGain, bool updateGain = true)
     {
         if (lastGain == currentGain)
         {
@@ -94,8 +94,10 @@ struct Processor : AudioProcessorValueTreeState::Listener
     Processor(AudioProcessorValueTreeState& a, ProcessorType t, strix::VolumeMeterSource& s) : apvts(a), comp(t, s, a.getRawParameterValue("compPos"))
     {
         inGain = apvts.getRawParameterValue("preampGain");
+        lastInGain = *inGain;
         inGainAuto = apvts.getRawParameterValue("preampAutoGain");
         outGain = apvts.getRawParameterValue("powerampGain");
+        lastOutGain = *outGain;
         outGainAuto = apvts.getRawParameterValue("powerampAutoGain");
         eqAutoGain = apvts.getRawParameterValue("eqAutoGain");
         p_comp = apvts.getRawParameterValue("comp");
@@ -200,6 +202,7 @@ protected:
 #endif
 
     std::atomic<float> *inGain, *inGainAuto, *outGain, *outGainAuto, *hiGain, *p_comp, *linked, *dist, *eqAutoGain;
+    double lastInGain, lastOutGain;
 
     strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
 
@@ -207,6 +210,19 @@ protected:
 
     double SR = 44100.0;
     int numSamples = 0, numChannels = 0;
+
+    // clip a simd batch
+    inline void clip(vec* in, size_t numSamples, double low, double hi)
+    {
+        for (size_t i = 0; i < numSamples; ++i)
+        {
+            auto p = xsimd::batch_bool<double>(in[i] > hi);
+            auto n = xsimd::batch_bool<double>(in[i] < low);
+
+            in[i] = xsimd::select(p, (vec)hi, in[i]);
+            in[i] = xsimd::select(n, (vec)low, in[i]);
+        }
+    }
 };
 
 struct Guitar : Processor
@@ -237,11 +253,6 @@ struct Guitar : Processor
 
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
-
-        // if (updateSIMD) {
-        //     simd.setInterleavedBlockSize(numChannels, numSamples);
-        //     updateSIMD = false;
-        // }
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -323,11 +334,6 @@ struct Bass : Processor
 
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
-
-        // if (updateSIMD) {
-        //     simd.setInterleavedBlockSize(numChannels, numSamples);
-        //     updateSIMD = false;
-        // }
 
 #if USE_SIMD
         auto simdBlock = simd.interleaveBlock(block);
@@ -464,6 +470,7 @@ struct Channel : Processor
     {
         T gain_raw = jmap(inGain->load(), 1.f, 4.f);
         T out_raw = jmap(outGain->load(), 1.f, 4.f);
+        double pre_lim = jmap(inGain->load(), 0.5f, 1.f);
 
 #if USE_SIMD
         vec autoGain = 1.0;
@@ -473,11 +480,6 @@ struct Channel : Processor
 
         if (!*apvts.getRawParameterValue("compPos"))
             comp.processBlock(block, *p_comp, *linked);
-
-        // if (updateSIMD) {
-        //     simd.setInterleavedBlockSize(numChannels, numSamples); /*this doesn't appear to be safe after all*/
-        //     updateSIMD = false;
-        // }
 
 #if USE_SIMD
         auto&& processBlock = simd.interleaveBlock(block);
@@ -491,9 +493,9 @@ struct Channel : Processor
         processBlock.multiplyBy(gain_raw);
 
         if (*inGain > 0.f) {
-            triode[0].processBlock(processBlock, inGain->load(), 2.f * inGain->load());
+            triode[0].processBlock(processBlock, pre_lim, 2.f * inGain->load());
             if (*hiGain)
-                triode[1].processBlock(processBlock, inGain->load(), gain_raw);
+                triode[1].processBlock(processBlock, pre_lim, gain_raw);
         }
 
         if (*inGainAuto)
