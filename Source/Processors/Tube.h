@@ -181,28 +181,46 @@ struct AVTriode
 
     inline void processSamples(T* x, size_t ch, size_t numSamples, T gp, T gn)
     {
+        auto inc_p = (gp - lastGp) / numSamples;
+        auto inc_n = (gn - lastGn) / numSamples;
+
         for (size_t i = 0; i < numSamples; ++i)
         {
-            auto f1 = (1.f / gp) * std::tanh(gp * x[i]) * y_m[ch];
-            auto f2 = (1.f / gn) * std::atan(gn * x[i]) * (1.f - y_m[ch]);
+            auto f1 = (1.f / lastGp) * std::tanh(lastGp * x[i]) * y_m[ch];
+            auto f2 = (1.f / lastGn) * std::atan(lastGn * x[i]) * (1.f - y_m[ch]);
+
+            lastGp += inc_p;
+            lastGn += inc_n;
 
             auto y = sc_hp.processSample(ch, f1 + f2);
             y_m[ch] = y;
             x[i] = y;
         }
+
+        lastGp = gp;
+        lastGn = gn;
     }
 
     inline void processSamplesSIMD(T* x, size_t numSamples, T gp, T gn)
     {
+        auto inc_p = (gp - lastGp) / numSamples;
+        auto inc_n = (gn - lastGn) / numSamples;
+
         for (size_t i = 0; i < numSamples; ++i)
         {
-            auto f1 = (1.0 / gp) * xsimd::tanh(gp * x[i]) * y_m[0];
-            auto f2 = (1.0 / gn) * xsimd::atan(gn * x[i]) * (1.0 - y_m[0]);
+            auto f1 = (1.0 / lastGp) * xsimd::tanh(lastGp * x[i]) * y_m[0];
+            auto f2 = (1.0 / lastGn) * xsimd::atan(lastGn * x[i]) * (1.0 - y_m[0]);
+
+            lastGp += inc_p;
+            lastGn += inc_n;
 
             auto y = sc_hp.processSample(0, f1 + f2);
             y_m[0] = y;
             x[i] = y;
         }
+
+        lastGp = gp;
+        lastGn = gn;
     }
 
     void processBlock(dsp::AudioBlock<double>& block, T gp, T gn)
@@ -230,6 +248,8 @@ private:
     std::vector<T> y_m;
 
     strix::SVTFilter<T> sc_hp;
+
+    T lastGp = 1.0, lastGn = 1.0;
 };
 
 struct DZTube
