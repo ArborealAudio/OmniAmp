@@ -55,6 +55,8 @@ private:
 
     DownloadManager dl;
 
+    ActivationComponent activation;
+
 #if JUCE_WINDOWS || JUCE_LINUX
     OpenGLContext opengl;
 #endif

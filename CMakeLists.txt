@@ -41,7 +41,8 @@ juce_generate_juce_header(Gamma)
 target_sources(Gamma
     PRIVATE
         Source/PluginEditor.cpp
-        Source/PluginProcessor.cpp)
+        Source/PluginProcessor.cpp
+        Source/Activation.hpp)
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
@@ -81,6 +82,7 @@ target_link_libraries(Gamma
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_opengl
+        juce::juce_cryptography
         gin
         gin_gui
         Arbor_modules

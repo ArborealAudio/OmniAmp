@@ -29,14 +29,18 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
 
     auto lastWidth = readConfigFile("size");
+    if (lastWidth <= 0)
+        lastWidth = 800;
     setSize(lastWidth, lastWidth);
 
     addAndMakeVisible(pluginTitle);
     String title = "GAMMA";
     Colour titleColor = Colours::beige;
 #if !PRODUCTION_BUILD
-    title.append("_DEV", 4);
+    title.append("\nDEV", 5);
     titleColor = Colours::red;
+#elif BETA_BUILD
+    title.append("\nbeta", 5);
 #endif
     pluginTitle.setText(title, NotificationType::dontSendNotification);
     pluginTitle.setFont(Font(getCustomFont()).withHeight(25.f).withExtraKerningFactor(0.5f));
@@ -111,6 +115,17 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(dl);
     dl.centreWithSize(300, 200);
+
+    addChildComponent(activation);
+    activation.centreWithSize(300, 200);
+    auto activated = activation.readFile();
+    activation.setVisible(!activated);
+    p.lockProcessing(!activated);
+    activation.onActivationCheck = [&](bool result)
+    {
+        activation.setVisible(!result);
+        p.lockProcessing(!result);
+    };
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -171,6 +186,8 @@ void GammaAudioProcessorEditor::resized()
     reverbComp.setBounds(bottomSection);
 
     dl.centreWithSize(300, 200);
+
+    activation.centreWithSize(300, 200);
 
     MessageManager::callAsync([&]{writeConfigFile("size", getWidth());});
 }
