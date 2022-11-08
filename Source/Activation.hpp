@@ -43,7 +43,7 @@ struct ActivationComponent : Component
     ActivationComponent()
     {
         addAndMakeVisible(editor);
-        editor.grabKeyboardFocus();
+        // editor.grabKeyboardFocus();
         editor.onReturnKey = [&] {
             checkInput();
         };
