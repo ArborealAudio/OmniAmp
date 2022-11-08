@@ -5,7 +5,7 @@
 
 #if BETA_BUILD
 
-#define KEY "gamma-beta-311"
+#define KEY "gamma-beta-1108"
 
 struct HashChecker
 {
