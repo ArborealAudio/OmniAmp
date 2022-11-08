@@ -25,14 +25,14 @@ public:
     {
         auto b = getLocalBounds().reduced(1).toFloat();
         g.drawImage(img, b, RectanglePlacement::doNotResize);
-        g.setColour(Colours::darkslategrey.withAlpha(0.5f));
+        g.setColour(Colour(TOP_TRIM).withAlpha(0.7f));
         g.fillRoundedRectangle(b, 5.f);
         g.setColour(Colour(TOP_TRIM));
         g.drawRoundedRectangle(b, 5.f, 2.f);
 
         g.setColour(Colours::white);
         g.setFont(20.f);
-        g.drawFittedText("Pick a default mode:", getLocalBounds().removeFromTop(getHeight() * 0.5f), Justification::centred, 2);
+        g.drawFittedText("Select a mode:", getLocalBounds().removeFromTop(getHeight() * 0.5f), Justification::centred, 2);
     }
 
     void resized() override
