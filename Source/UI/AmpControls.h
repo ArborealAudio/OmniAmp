@@ -116,8 +116,11 @@ struct AmpControls : Component, private Timer
         };
         inGain.setValueToStringFunction(zeroToTen);
 
+        String eqTooltip = "EQ section of the amp. In Channel mode, the EQ knobs will cut below 50% and add above 50%.\n\nIn Guitar & Bass mode, these controls will work like a traditional amp tone stack.\n\nIn Channel mode, Alt/Option-click will enable frequency-weighted Auto Gain.";
+
         bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
         bass.setLabel("Bass");
+        bass.setTooltip(eqTooltip);
         bass.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         bass.onAltClick = [&](bool state)
         {
@@ -131,6 +134,7 @@ struct AmpControls : Component, private Timer
 
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
+        mid.setTooltip(eqTooltip);
         mid.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         mid.onAltClick = [&](bool state)
         {
@@ -144,6 +148,7 @@ struct AmpControls : Component, private Timer
 
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
+        treble.setTooltip(eqTooltip);
         treble.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
         treble.onAltClick = [&](bool state)
         {
