@@ -2,11 +2,11 @@
 
 #pragma once
 
-struct EnhancerSaturation
+namespace EnhancerSaturation
 {
     // higher values of k = harder clipping
     // lower values can attenuate the signal a bit
-    inline static void process(dsp::AudioBlock<double>& block, double gp, double gn, double k)
+    inline void process(dsp::AudioBlock<double>& block, double gp, double gn, double k)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -21,7 +21,7 @@ struct EnhancerSaturation
         }
     }
 
-    inline static void process(strix::AudioBlock<vec>& block, vec gp, vec gn, vec k)
+    inline void process(strix::AudioBlock<vec>& block, vec gp, vec gn, vec k)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -36,16 +36,16 @@ struct EnhancerSaturation
     }
 };
 
-template <typename T>
+enum EnhancerType
+{
+    LF,
+    HF
+};
+
+template <typename T, EnhancerType type>
 struct Enhancer
 {
-    enum Type
-    {
-        LF,
-        HF
-    };
-
-    Enhancer(AudioProcessorValueTreeState& a, Type t) : type(t), apvts(a)
+    Enhancer(AudioProcessorValueTreeState& a) : apvts(a)
     {
         lfAutoGain = apvts.getRawParameterValue("lfEnhanceAuto");
         hfAutoGain = apvts.getRawParameterValue("hfEnhanceAuto");
@@ -153,17 +153,10 @@ struct Enhancer
 
         auto processBlock = Block(wetBuffer).getSubBlock(0, block.getNumSamples());
 
-        switch (type)
-        {
-        case LF:
+        if (type == EnhancerType::LF)
             processLF(processBlock, enhance);
-            break;
-        case HF:
+        else
             processHF(processBlock, enhance);
-            break;
-        default:
-            break;
-        }
 
         auto dest = block.getChannelPointer(0);
         auto src = processBlock.getChannelPointer(0);
@@ -230,7 +223,6 @@ private:
     double SR = 44100.0;
     std::atomic<bool> needUpdate = false;
 
-    Type type;
     Processors::ProcessorType mode;
 
     AudioProcessorValueTreeState &apvts;
