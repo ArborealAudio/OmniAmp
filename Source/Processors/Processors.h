@@ -17,7 +17,7 @@ struct SmoothGain
     /// @tparam T sample type
     /// @param lastGain reference to gain state which can be update if needed
     /// @param updateGain whether or not to update the gain state, true by default
-    inline static void applySmoothGain(T *in, size_t numSamples, T currentGain, T& lastGain, bool updateGain = true)
+    inline static void applySmoothGain(T *in, size_t numSamples, double currentGain, double& lastGain, bool updateGain = true)
     {
         if (lastGain == currentGain)
         {
@@ -53,13 +53,11 @@ struct SmoothGain
 
         auto inc = (currentGain - lastGain) / block.getNumSamples();
 
-        auto l = block.getChannelPointer(0);
-        auto r = block.getChannelPointer(1);
-
         for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
-            l[i] *= lastGain;
-            r[i] *= lastGain;
+            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+                block.getChannelPointer(ch)[i] *= (T)lastGain;
+            
             lastGain += inc;
         }
 
