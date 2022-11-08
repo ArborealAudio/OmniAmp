@@ -89,7 +89,7 @@ struct PresetComp : Component
     void setCurrentPreset(String newPreset) noexcept
     {
         currentPreset = newPreset;
-        box.setText(currentPreset);
+        box.setText(currentPreset, NotificationType::dontSendNotification);
     }
 
     void savePreset() noexcept
@@ -110,14 +110,8 @@ struct PresetComp : Component
 
         editor.onFocusLost = [&]
         {
-#if JUCE_WINDOWS
-            editor.clear(); editor.setVisible(false);
-#elif JUCE_MAC
-            // if (editor.onReturnKey)
-            //     editor.onReturnKey();
+            editor.clear();
             editor.setVisible(false);
-            setCurrentPreset(editor.getText());
-#endif
         };
 
         editor.onEscapeKey = [&] { editor.clear(); editor.setVisible(false); };
