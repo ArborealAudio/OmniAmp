@@ -85,6 +85,7 @@ public:
         addAndMakeVisible(reverbAmount);
         amtAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "roomAmt", reverbAmount);
         reverbAmount.setLabel("Amount");
+        reverbAmount.setTooltip("Mix for reverb. At 50%, wet and dry signals are both at full volume, and the dry signal begins to decrease after 50%");
         reverbAmount.setValueToStringFunction([](float val)
                                               { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
 

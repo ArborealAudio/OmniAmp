@@ -98,13 +98,16 @@ struct AmpControls : Component, private Timer
         compAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "comp", comp);
         comp.setLabel("Opto");
         comp.setValueToStringFunction(percent);
+        comp.setTooltip("An opto-style compressor, with program-dependent attack and release. Increasing values give more compression and sustain, and can also boost the volume going into the amp.");
 
         distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "dist", dist);
         dist.setLabel("Pedal");
         dist.setValueToStringFunction(zeroToTen);
+        dist.setTooltip("A one-knob distortion pedal. Fully bypassed at 0.");
 
         inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
         inGain.setLabel("Preamp");
+        inGain.setTooltip("Preamp gain stage. In Channel mode, is bypassed at 0.\n\nAlt/Option-click to enable Auto Gain.");
         inGain.autoGain.store(*a.getRawParameterValue("preampAutoGain"));
         inGain.onAltClick = [&](bool state)
         {
@@ -154,6 +157,7 @@ struct AmpControls : Component, private Timer
 
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
+        outGain.setTooltip("Power amp stage. In Channel mode, fully bypassed at 0.\n\nAlt/Option-click to enable Auto Gain.");
         outGain.autoGain.store(*a.getRawParameterValue("powerampAutoGain"));
         outGain.onAltClick = [&](bool state)
         {
@@ -168,6 +172,7 @@ struct AmpControls : Component, private Timer
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
         hiGain.setButtonText("Boost");
+        hiGain.setTooltip("Boost for the preamp stage. In addition to adding volume, it also adds new tubes to the circuit.");
 
         addAndMakeVisible(power);
         powerAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "ampOn", power);

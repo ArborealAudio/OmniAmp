@@ -11,7 +11,7 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), cabComponent(p.apvts.getRawParameterValue("cabType")), reverbComp(p.apvts), menu(p.apvts, 200), presetMenu(p.apvts), dl(false), tooltip(this)
+    : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), cabComponent(p.apvts.getRawParameterValue("cabType")), reverbComp(p.apvts), menu(p.apvts, 200), presetMenu(p.apvts), dl(false), tooltip(this, 1000)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)128 * 1024000);
@@ -87,12 +87,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(width);
     widthAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "width", width);
     width.setLabel("Width");
+    width.setTooltip("Standard stereo width control for widening the stereo image. This happens *before* the amp.");
     width.setValueToStringFunction([](float val)
                                    { String s(val * 100, 0); return s + "%"; });
 
     addAndMakeVisible(midSide);
     msAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "m/s", midSide);
     midSide.setButtonText(midSide.getToggleState() ? "M/S" : "Stereo");
+    midSide.setTooltip("Toggle for Stereo and Mid/Side processing.\n\nIn Stereo mode, Left and Right channels will be processed independently in the amp. In Mid/Side mode, the middle of the stereo image will be separated from the sides and then processed independently.\n\nThis is useful if you want to do Mid/Side compression or saturation, which can create a more spacious stereo image.");
     midSide.onStateChange = [&]
     { midSide.setButtonText(midSide.getToggleState() ? "M/S" : "Stereo"); };
 
