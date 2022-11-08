@@ -7,7 +7,7 @@ struct MSMatrix
     template <typename T>
     inline static void msEncode (dsp::AudioBlock<T>& block, float sideGain = 1.f)
     {
-        jassert(isPositiveAndGreaterThan(block.getNumChannels(), 1));
+        jassert(block.getNumChannels() > 1);
 
         T* L = block.getChannelPointer(0);
         T* R = block.getChannelPointer(1);
@@ -25,7 +25,7 @@ struct MSMatrix
     template <typename T>
     inline static void msDecode (dsp::AudioBlock<T>& block)
     {
-        jassert(isPositiveAndGreaterThan(block.getNumChannels(), 1));
+        jassert(block.getNumChannels() > 1);
 
         T* mid = block.getChannelPointer(0);
         T* side = block.getChannelPointer(1);
