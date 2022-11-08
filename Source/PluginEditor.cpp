@@ -27,6 +27,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 #endif
 
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
+    logo->setInterceptsMouseClicks(true, false);
 
     auto lastWidth = readConfigFile("size");
     if (lastWidth <= 0)
@@ -131,6 +132,17 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         activation.setVisible(!result);
         p.lockProcessing(!result);
     };
+
+    addChildComponent(splash);
+    splash.centreWithSize(250, 350);
+    splash.setPluginWrapperType(p.wrapperType);
+    splash.onLogoClick = [&]
+    {
+        if (!splash.isVisible()) {
+            splash.setImage(createComponentSnapshot(splash.getBounds()));
+            splash.setVisible(true);
+        }
+    };
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -151,10 +163,11 @@ void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
     g.fillAll(Colour(TOP_TRIM));
     
-    auto top = getLocalBounds().withTrimmedBottom(getHeight() / 3);
-    auto trimmedTop = top.removeFromTop(getHeight() * 0.12f);
+    auto trimmedTop = getLocalBounds().removeFromTop(getHeight() * 0.12f);
 
-    logo->drawWithin(g, trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).reduced(5).toFloat(), RectanglePlacement::centred, 1.f);
+    logoBounds = trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).toFloat();
+
+    logo->drawWithin(g, logoBounds.reduced(5.f), RectanglePlacement::centred, 1.f);
 }
 
 void GammaAudioProcessorEditor::resized()
@@ -166,14 +179,14 @@ void GammaAudioProcessorEditor::resized()
     auto bottomSection = bounds.removeFromBottom(h * 0.285f).reduced(1);
     auto ampSection = bounds.removeFromBottom(h * 0.285f).reduced(1);
 
-    topSection.removeFromLeft(w / 12); // section where logo is drawn
     auto topSectionThird = topSection.getWidth() / 3;
     auto topKnobs = topSection.removeFromLeft(topSectionThird);
+    topKnobs.removeFromLeft(w / 12); // section where logo is drawn
     auto titleSection = topSection.removeFromLeft(topSectionThird);
     auto presetSection = topSection.removeFromLeft(topSection.getWidth() * 0.66);
 
     pluginTitle.setBounds(titleSection);
-    presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.25));
+    presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.3f));
     menu.setBounds(w - (w * 0.25f), h * 0.03f, w * 0.25f, h / 3.f);
 
     auto knobThird = topKnobs.getWidth() / 3;
@@ -191,6 +204,8 @@ void GammaAudioProcessorEditor::resized()
     reverbComp.setBounds(bottomSection);
 
     dl.centreWithSize(300, 200);
+
+    splash.centreWithSize(250, 350);
 
     activation.centreWithSize(300, 200);
 

@@ -23,6 +23,29 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+    bool hitTest(int x, int y) override
+    {
+        auto leftClick = ModifierKeys::currentModifiers.isLeftButtonDown();
+
+        if (logoBounds.contains(x, y) && leftClick) {
+            if (splash.onLogoClick)
+                splash.onLogoClick();
+            
+            return true;
+        }
+        else if (splash.isVisible()) {
+            if (splash.getBounds().contains(x, y))
+                return splash.hitTest(x, y);
+            else if (leftClick) {
+                splash.setVisible(false);
+                return true;
+            }
+            else
+                return false;
+        }
+        else
+            return AudioProcessorEditor::hitTest(x, y);
+    }
 
     void resetWindowSize() noexcept;
     void checkUpdate() noexcept;
@@ -32,6 +55,7 @@ private:
     GammaAudioProcessor& audioProcessor;
 
     std::unique_ptr<Drawable> logo;
+    Rectangle<float> logoBounds;
 
     TopComponent top;
 
@@ -54,6 +78,8 @@ private:
     PresetComp presetMenu;
 
     DownloadManager dl;
+
+    Splash splash;
 
     ActivationComponent activation;
 
