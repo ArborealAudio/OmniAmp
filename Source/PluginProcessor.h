@@ -105,6 +105,8 @@ public:
         }
     }
 
+    bool loadedWIthNoState = true;
+
     // call this from the UI if activation fails and processing should suspend
     void lockProcessing(bool shouldBeLocked)
     {

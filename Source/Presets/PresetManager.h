@@ -31,7 +31,7 @@ struct PresetManager
 
     StringArray loadUserPresetList()
     {
-        userPresets = userDir.findChildFiles(2, false, "*.aap");
+        userPresets = userDir.findChildFiles(2, true, "*.aap");
 
         StringArray names;
 
@@ -123,8 +123,8 @@ struct PresetManager
         apvts.replaceState(newstate);
     }
 
-    File userDir{ File::getSpecialLocation(File::SpecialLocationType::userApplicationDataDirectory)
-        .getFullPathName() + "/Arboreal Audio/Gamma/Presets/User Presets" };
+    File userDir{ File::getSpecialLocation(File::userApplicationDataDirectory)
+        .getFullPathName() + "/Arboreal Audio/Gamma/Presets/User_presets" };
 
 private:
     AudioProcessorValueTreeState& apvts;

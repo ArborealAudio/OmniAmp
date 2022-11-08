@@ -340,6 +340,8 @@ void GammaAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
     auto xml = getXmlFromBinary(data, sizeInBytes);
     if (xml != nullptr)
         apvts.replaceState(ValueTree::fromXml(*xml));
+
+    loadedWIthNoState = false;
 }
 
 //==============================================================================

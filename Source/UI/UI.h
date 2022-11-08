@@ -117,3 +117,4 @@ namespace Blur
 #include "DownloadManager.h"
 #include "../Presets/PresetComp.h"
 #include "Splash.h"
+#include "Init.h"

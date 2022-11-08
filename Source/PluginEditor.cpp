@@ -11,7 +11,14 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p), top(p.audioSource, p.apvts), ampControls(p.getActiveGRSource(), p.apvts), cabComponent(p.apvts.getRawParameterValue("cabType")), reverbComp(p.apvts), menu(p.apvts, 200), presetMenu(p.apvts), dl(false), tooltip(this, 1000)
+    : AudioProcessorEditor(&p), audioProcessor(p),
+    top(p.audioSource, p.apvts),
+    ampControls(p.getActiveGRSource(), p.apvts),
+    cabComponent(p.apvts.getRawParameterValue("cabType")),
+    reverbComp(p.apvts),
+    menu(p.apvts, 200),
+    presetMenu(p.apvts),
+    dl(false), tooltip(this, 1000)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)128 * 1024000);
@@ -143,6 +150,18 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
             splash.setVisible(true);
         }
     };
+
+    if (p.loadedWIthNoState) {
+        init.setImage(createComponentSnapshot(getLocalBounds()));
+        addAndMakeVisible(init);
+        init.centreWithSize(500, 350);
+    }
+    init.guitar.onClick = [&]
+    { presetMenu.setPresetWithChange("Default Guitar"); init.setVisible(false); };
+    init.bass.onClick = [&]
+    { presetMenu.setPresetWithChange("Default Bass"); init.setVisible(false); };
+    init.channel.onClick = [&]
+    { presetMenu.setPresetWithChange("Default Channel"); init.setVisible(false); };
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -208,6 +227,8 @@ void GammaAudioProcessorEditor::resized()
     splash.centreWithSize(250, 350);
 
     activation.centreWithSize(300, 200);
+
+    init.centreWithSize(500, 350);
 
     MessageManager::callAsync([&]{writeConfigFile("size", getWidth());});
 }

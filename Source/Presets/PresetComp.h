@@ -86,10 +86,16 @@ struct PresetComp : Component
         return currentPreset;
     }
 
-    void setCurrentPreset(String newPreset) noexcept
+    void setCurrentPreset(const String& newPreset) noexcept
     {
         currentPreset = newPreset;
         box.setText(currentPreset, NotificationType::dontSendNotification);
+    }
+
+    void setPresetWithChange(const String& newPreset) noexcept
+    {
+        currentPreset = newPreset;
+        box.setText(currentPreset, NotificationType::sendNotificationAsync);
     }
 
     void savePreset() noexcept

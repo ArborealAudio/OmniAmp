@@ -11,4 +11,5 @@ PRIVATE
     Menu.h
     UI_Top.h
     DownloadManager.h
-    Splash.h)
+    Splash.h
+    Init.h)
