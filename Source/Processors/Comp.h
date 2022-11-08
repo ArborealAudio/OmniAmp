@@ -95,22 +95,24 @@ struct OptoComp
     void setComp(double newComp)
     {
         /*force static threshold if amp mode & post position*/
-        if (*position && type != ProcessorType::Channel) {
-            setThreshold(-24.0);
-            return;
-        }
-
-        double c_comp = jmap(newComp, 1.0, 6.0);
+        // if (*position && type != ProcessorType::Channel) {
+        //     setThreshold(-24.0);
+        //     return;
+        // }
 
         switch (type)
         {
         case ProcessorType::Guitar:
-        case ProcessorType::Bass:
-            threshold.store(std::pow(10.0, -30.0 * 0.05)); /* static threshold at -36dB */
+        case ProcessorType::Bass: {
+            // auto thresh_scale = c_comp / 3.0;
+            double c_comp = jmap(newComp, 1.0, 3.0);
+            threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
             break;
+            }
         case ProcessorType::Channel: {
-            auto thresh_scale = c_comp / 2.0;
-            threshold.store(std::pow(10.0, (-18.0 * thresh_scale) * 0.05)); /* start at -18dB and scale down 3x */
+            // auto thresh_scale = c_comp / 2.0;
+            double c_comp = jmap(newComp, 1.0, 3.0);
+            threshold.store(std::pow(10.0, (-9.0 * c_comp) * 0.05)); /* start at -9dB and scale down 3x */
             break;
             }
         }
@@ -184,7 +186,6 @@ private:
 
         // just in case
         lastComp = comp;
-        last_c = c_comp;
     }
 
     /* mono or unlinked stereo */
@@ -194,12 +195,7 @@ private:
         T last_c = jmap(lastComp, (T)1.0, (T)6.0);
 
         auto inc = (comp - lastComp) / numSamples;
-        if (inc == 0.0)
-            lastComp = comp;
-
         auto c_inc = (c_comp - last_c) / numSamples;
-        if (c_inc == 0.0)
-            last_c = c_comp;
 
         for (int i = 0; i < numSamples; ++i)
         {
@@ -217,6 +213,9 @@ private:
             lastComp += inc;
             last_c += c_inc;
         }
+
+        // just in case
+        lastComp = comp;
     }
 
     /*returns gain reduction multiplier*/
@@ -259,15 +258,18 @@ private:
         {
         case ProcessorType::Guitar:
         case ProcessorType::Bass:
-            x *= c_comp * gr; /* c_comp functions like a recursive input gain, amplifying the output, which is also the sidechain */
+            if (c_comp <= 2.f)
+                x *= gr;
+            else
+                x *= (c_comp / 2.0) * gr;
             break;
         case ProcessorType::Channel:
             if (c_comp <= 4.f)
                 x *= gr;
             else
                 x *= (c_comp / 4.0) * gr;
-            break; /* if > 4, start applying recursive gain, maxing at 2 */
-        }
+            break;
+        } /*apply recursive gains to the sidechain if comp is high enough*/
 
         xm[ch] = x;
 
@@ -279,7 +281,7 @@ private:
             auto bp = hp[ch].processSample(x);
             bp = lp[ch].processSample(bp);
 
-            x += bp * (comp * 2.0); /* use comp as gain for bp signal, this also kind of doubles as a filtered output gain */
+            x += bp * (comp * 1.5); /* use comp as gain for bp signal, this also kind of doubles as a filtered output gain */
             break;
         }
         case ProcessorType::Channel:
