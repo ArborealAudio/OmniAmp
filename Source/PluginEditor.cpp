@@ -68,18 +68,21 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(inGain);
     inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
     inGain.setLabel("Input");
+    inGain.setTooltip("Input gain before all processing, useful for increasing or decreasing headroom before the amp.");
     inGain.setValueToStringFunction([](float val)
-                                     { String str(val, 1); str += "dB"; return str; });
+                                    { String str(val, 1); str += "dB"; return str; });
 
     addAndMakeVisible(outGain);
     outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
     outGain.setLabel("Output");
+    outGain.setTooltip("Output gain after all processing");
     outGain.setValueToStringFunction([](float val)
                                      { String str(val, 1); str += "dB"; return str; });
 
     addAndMakeVisible(gate);
     gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
     gate.setLabel("Gate");
+    gate.setTooltip("Simple noise gate before the amp.");
     gate.setValueToStringFunction([](float val)
                                   { if (val < -95.f) return String("Off");
                                     if (val >= -95.f) return String(val, 1); });
