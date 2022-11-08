@@ -140,12 +140,12 @@ private:
     Processors::CabType lastCab;
 
 #if USE_SIMD
-    Processors::Enhancer<vec> hfEnhancer{apvts, Processors::Enhancer<vec>::Type::HF};
-    Processors::Enhancer<vec> lfEnhancer{apvts, Processors::Enhancer<vec>::Type::LF};
+    Processors::Enhancer<vec, Processors::EnhancerType::HF> hfEnhancer{apvts};
+    Processors::Enhancer<vec, Processors::EnhancerType::LF> lfEnhancer{apvts};
     Processors::FDNCab<vec> cab;
 #else
-    Processors::Enhancer<double> hfEnhancer{apvts, Processors::Enhancer<double>::Type::HF};
-    Processors::Enhancer<double> lfEnhancer{apvts, Processors::Enhancer<double>::Type::LF};
+    Processors::Enhancer<double, Processors::EnhancerType::HF> hfEnhancer{apvts};
+    Processors::Enhancer<double, Processors::EnhancerType::LF> lfEnhancer{apvts};
     Processors::FDNCab<double> cab;
 #endif
 
