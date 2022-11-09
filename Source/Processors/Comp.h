@@ -112,7 +112,7 @@ struct OptoComp
         case ProcessorType::Channel: {
             // auto thresh_scale = c_comp / 2.0;
             double c_comp = jmap(newComp, 1.0, 3.0);
-            threshold.store(std::pow(10.0, (-9.0 * c_comp) * 0.05)); /* start at -9dB and scale down 3x */
+            threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
             break;
             }
         }
