@@ -365,13 +365,13 @@ struct AmpControls : Component, private Timer
         grMeter.setBounds(grMeterBounds.reduced(10));
 
         auto hiGainBounds = bounds.removeFromLeft(w);
-        hiGain.setSize(50, 30);
+        hiGain.setSize(getWidth() * 0.07f, getHeight() * 0.15f);
         hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
 
         auto modeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.5);
         auto powerBounds = bounds.reduced(w * 0.1);
 
-        mode.setSize(100, 40);
+        mode.setSize(getWidth() * 0.125f, getHeight() * 0.15f);
         mode.setCentrePosition(modeBounds.getCentreX(), modeBounds.getCentreY());
 
         power.setSize(powerBounds.getHeight(), powerBounds.getHeight());
