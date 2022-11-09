@@ -7,7 +7,6 @@ struct PowerButton : TextButton
     PowerButton()
     {
         setClickingTogglesState(true);
-        // setBufferedToImage(true);
     }
 
     void paint(Graphics &g) override
@@ -19,11 +18,8 @@ struct PowerButton : TextButton
         auto drawPowerIcon = [&](Graphics& gc)
         {
             gc.setColour(icon);
-            gc.drawEllipse(b.reduced(padding * 2).toFloat(), 5.f);
-            gc.fillRoundedRectangle(b.getCentreX() - 2.5f, padding, 5.f, b.getCentreY() - padding, 2.f);
-
-            // gc.setColour(s_backgnd);
-            // gc.drawRoundedRectangle(b.getCentreX() - 3.f, padding, 6.f, b.getCentreY() - padding, 2.f, 2.f);
+            gc.drawEllipse(b.reduced(padding * 2).toFloat(), 3.f);
+            gc.fillRoundedRectangle(b.getCentreX() - 1.5f, padding, 3.f, b.getCentreY() - padding, 2.f);
         };
 
         if (isMouseOver()) {
@@ -373,7 +369,7 @@ struct AmpControls : Component, private Timer
         hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
 
         auto modeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.5);
-        auto powerBounds = bounds;
+        auto powerBounds = bounds.reduced(w * 0.1);
 
         mode.setSize(100, 40);
         mode.setCentrePosition(modeBounds.getCentreX(), modeBounds.getCentreY());
