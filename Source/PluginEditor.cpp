@@ -177,7 +177,7 @@ void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
     g.fillAll(Colour(TOP_TRIM));
     
-    auto trimmedTop = getLocalBounds().removeFromTop(getHeight() * 0.12f);
+    auto trimmedTop = getLocalBounds().removeFromTop(getHeight() * 0.15f);
 
     logoBounds = trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).toFloat();
 
@@ -189,7 +189,7 @@ void GammaAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
     const auto w = getWidth();
     const auto h = getHeight();
-    auto topSection = bounds.removeFromTop(h * 0.12f);
+    auto topSection = bounds.removeFromTop(h * 0.15f);
     auto bottomSection = bounds.removeFromBottom(h * 0.285f).reduced(1);
     auto ampSection = bounds.removeFromBottom(h * 0.285f).reduced(1);
 
