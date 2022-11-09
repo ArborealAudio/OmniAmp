@@ -26,7 +26,7 @@ struct TopComponent : Component
 
         addAndMakeVisible(hfEnhance);
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfEnhance", hfEnhance);
-        hfEnhance.setTooltip("A saturating, hi-end boost after the amp and before the cab and reverb. The frequency is calibrated depending on the amp's mode.\n\nAlt/Option-click to enable Auto Gain.");
+        hfEnhance.setTooltip("A saturating, hi-end boost after the amp and before the cab and reverb.\n\nAlt/Option-click to enable Auto Gain.");
         hfEnhance.setColor(Colours::white, Colours::wheat);
         hfEnhance.autoGain.store(*apvts.getRawParameterValue("hfEnhanceAuto"));
         hfEnhance.onAltClick = [&](bool state)
@@ -50,6 +50,15 @@ struct TopComponent : Component
         g.drawRoundedRectangle(bounds, 5.f, 2.f);
 
         mesh->drawWithin(g, bounds.reduced(1.f), RectanglePlacement::fillDestination, 0.7f);
+
+        g.setFont(getHeight() * 0.1f);
+        g.setColour(Colours::white);
+
+        auto LFLabel = bounds.withTrimmedRight(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).toNearestInt();
+        g.drawFittedText("LF", LFLabel, Justification::centredTop, 1);
+
+        auto HFLabel = bounds.withTrimmedLeft(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).toNearestInt();
+        g.drawFittedText("HF", HFLabel, Justification::centredTop, 1);
     }
 
     void resized() override
