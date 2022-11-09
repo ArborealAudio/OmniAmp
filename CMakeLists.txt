@@ -70,7 +70,10 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/amp_mesh_2.svg"
     "Resources/logo.svg"
     "Resources/LiberationSans-Regular.ttf"
-    "Resources/Hamburger_icon.svg")
+    "Resources/Hamburger_icon.svg"
+    "Resources/Presets/Default Bass.aap"
+    "Resources/Presets/Default Guitar.aap"
+    "Resources/Presets/Default Channel.aap")
 
 # -fPIC flag mainly for Linux
 set_target_properties(BinaryData PROPERTIES
