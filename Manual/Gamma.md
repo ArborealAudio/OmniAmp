@@ -1,3 +1,7 @@
+<img title="" src="../Resources/logo.svg" alt="logo.svg" width="50" data-align="center">
+
+Arboreal Audio presents:
+
 # Gamma
 
 ## The Everything Amp
