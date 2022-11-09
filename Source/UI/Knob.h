@@ -197,7 +197,7 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
 struct Knob : Slider
 {
-    Knob(KnobType t) : lnf(t), autoGain(false)
+    Knob(KnobType t) : lnf(t)
     {
         setLookAndFeel(&lnf);
         lnf.autoGain = &autoGain;
@@ -250,7 +250,7 @@ struct Knob : Slider
         lnf.accentColor = newAccentColor;
     }
 
-    std::atomic<bool> autoGain;
+    std::atomic<bool> autoGain = false;
 
 private:
     KnobLookAndFeel lnf;
