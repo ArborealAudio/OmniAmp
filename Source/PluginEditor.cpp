@@ -197,11 +197,11 @@ void GammaAudioProcessorEditor::resized()
     auto topKnobs = topSection.removeFromLeft(topSectionThird);
     topKnobs.removeFromLeft(w / 12); // section where logo is drawn
     auto titleSection = topSection.removeFromLeft(topSectionThird);
-    auto presetSection = topSection.removeFromLeft(topSection.getWidth() * 0.66);
+    auto presetSection = topSection.removeFromLeft(topSection.getWidth() * 0.66); // leave right third for menu
 
     pluginTitle.setBounds(titleSection);
-    presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.3f));
-    menu.setBounds(w - (w * 0.25f), h * 0.03f, w * 0.25f, h / 3.f);
+    presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.35f));
+    menu.setBounds(w - (w * 0.25f), presetMenu.getY(), w * 0.25f, h / 3.f); /*...sickening*/
 
     auto knobThird = topKnobs.getWidth() / 3;
     auto knobHalf = topKnobs.getHeight() / 2;
