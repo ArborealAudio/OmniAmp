@@ -111,7 +111,7 @@ class MenuComponent : public Component
 
             renderHQ.setButtonText("Render HQ");
             renderHQ.setClickingTogglesState(true);
-            renderHQ.setTooltip("Enable 4x oversampling when rendering using high-quality filters.");
+            renderHQ.setTooltip("Enable 4x oversampling when rendering. Useful if you want to save some CPU while mixing.");
 
             compLink.setButtonText("Comp Stereo Link");
             compLink.setClickingTogglesState(true);
@@ -119,7 +119,7 @@ class MenuComponent : public Component
 
             compPos.setButtonText("Comp Pos: ");
             compPos.setClickingTogglesState(true);
-            compPos.setTooltip("Position in the signal chain for the compressor. Pre will place it at the very beginning, and Post will be after the amp, and before the cab and reverb.");
+            compPos.setTooltip("Position in the signal chain for the compressor. Pre will place it at the very beginning, and Post will be after the amp, and before the enhancers, cab and reverb.");
 
             windowSize.setButtonText("Default UI size");
             windowSize.setClickingTogglesState(false);
@@ -198,9 +198,8 @@ public:
         };
 
         addAndMakeVisible(panel);
-        panel.setColour(SidePanel::ColourIds::backgroundColour, Colours::white);
         panel.setContent(&list, false);
-        panel.setShadowWidth(0);
+        panel.setShadowWidth(10);
 
         list.onItemClick = [&](CommandID id, bool state)
         {
