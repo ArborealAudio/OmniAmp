@@ -21,15 +21,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     dl(false), tooltip(this, 1000)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
-    opengl.setImageCacheSize((size_t)128 * 1024000);
+    opengl.setImageCacheSize((size_t)64 * 1024000);
     if (readConfigFile("openGL")) {
         opengl.detach();
         opengl.attachTo(*this);
-        DBG("init opengl: " << 1 << ", w/ cache size: " << opengl.getImageCacheSize());
-    }
-    else
-    {
-        DBG("init openGL: " << 0);
     }
 #endif
 
