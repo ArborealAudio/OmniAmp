@@ -55,8 +55,8 @@ private:
 
 struct AmpControls : Component, private Timer
 {
-    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) : vts(a),
-    grMeter(vs, a.getRawParameterValue("comp"))
+    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) :
+    vts(a), grMeter(vs, a.getRawParameterValue("comp"))
     {
         for (auto& k : getKnobs())
             addAndMakeVisible(*k);
@@ -117,7 +117,7 @@ struct AmpControls : Component, private Timer
         bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
         bass.setLabel("Bass");
         bass.setTooltip(eqTooltip);
-        bass.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
+        bass.autoGain = *a.getRawParameterValue("eqAutoGain");
         bass.onAltClick = [&](bool state)
         {
             if (*a.getRawParameterValue("mode") < 2) return;
@@ -131,7 +131,7 @@ struct AmpControls : Component, private Timer
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
         mid.setTooltip(eqTooltip);
-        mid.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
+        mid.autoGain = *a.getRawParameterValue("eqAutoGain");
         mid.onAltClick = [&](bool state)
         {
             if (*a.getRawParameterValue("mode") < 2) return;
@@ -145,7 +145,7 @@ struct AmpControls : Component, private Timer
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
         treble.setTooltip(eqTooltip);
-        treble.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
+        treble.autoGain = *a.getRawParameterValue("eqAutoGain");
         treble.onAltClick = [&](bool state)
         {
             if (*a.getRawParameterValue("mode") < 2) return;
@@ -344,7 +344,7 @@ struct AmpControls : Component, private Timer
 
         auto toneControls = bass.getBounds().getUnion(mid.getBounds()).getUnion(treble.getBounds());
         
-        if (bass.autoGain.load() || mid.autoGain.load() || treble.autoGain.load())
+        if ((bass.autoGain.load() || mid.autoGain.load() || treble.autoGain.load()) && lastMode > 1)
             paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom() + 3, toneControls.getWidth(), 10));
         
         if (outGain.autoGain.load())
