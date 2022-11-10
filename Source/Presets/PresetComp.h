@@ -8,7 +8,7 @@
 
 #pragma once
 
-struct PresetComp : Component
+struct PresetComp : Component, private Timer
 {
     PresetComp(AudioProcessorValueTreeState& vts) : manager(vts)
     {
@@ -20,6 +20,13 @@ struct PresetComp : Component
 
         addChildComponent(editor);
         editor.setJustification(Justification::centredLeft);
+
+        startTimerHz(2);
+    }
+
+    ~PresetComp()
+    {
+        stopTimer();
     }
 
     void loadPresets()
@@ -133,7 +140,7 @@ struct PresetComp : Component
 
             if (manager.savePreset(name, manager.userDir)) {
                 loadPresets();
-                setCurrentPreset(name);
+                setPresetWithChange(name);
             }
             else
                 box.setText("invalid name!", NotificationType::dontSendNotification);
@@ -146,29 +153,32 @@ struct PresetComp : Component
         auto idx = box.getSelectedItemIndex();
         auto preset = box.getItemText(idx);
 
-        // if (!presetModified) {
-            if (id < 1000 && id > 0) {
+        if (id < 1000 && id > 0) {
 
-                if (id <= factoryPresetSize) {
-                    if (manager.loadPreset(preset, true))
-                        box.setText(preset, NotificationType::sendNotificationSync);
-                    else
-                        box.setText("preset not found", NotificationType::dontSendNotification);
-                }
-                else {
-                    if (manager.loadPreset(preset, false))
-                        box.setText(preset, NotificationType::sendNotificationSync);
-                    else
-                        box.setText("preset not found", NotificationType::dontSendNotification);
-                }
-
-                currentPreset = preset;
+            if (id <= factoryPresetSize) {
+                if (manager.loadPreset(preset, true))
+                    box.setText(preset, NotificationType::sendNotificationSync);
+                else
+                    box.setText("preset not found", NotificationType::dontSendNotification);
             }
-            else
-                box.setText(currentPreset, NotificationType::dontSendNotification);
-        // }
-        // else
-        //     box.setText(preset, NotificationType::dontSendNotification);
+            else {
+                if (manager.loadPreset(preset, false))
+                    box.setText(preset, NotificationType::sendNotificationSync);
+                else
+                    box.setText("preset not found", NotificationType::dontSendNotification);
+            }
+
+            currentPreset = preset;
+        }
+        else
+            box.setText(currentPreset, NotificationType::dontSendNotification);
+    }
+
+    void timerCallback() override
+    {
+        if (manager.hasStateChanged() && currentPreset != "") {
+            box.setText(currentPreset + "*", NotificationType::dontSendNotification);
+        }
     }
 
     void resized() override
