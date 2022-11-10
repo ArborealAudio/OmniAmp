@@ -52,7 +52,7 @@ public:
         Blur::blurImage<4, true>(img);
     }
 
-    InitButton guitar{"Guitar"}, bass{"Bass"}, channel{"Channel"};
+    InitButton guitar{"Guitar"}, bass{"Bass"}, channel{"Anything"};
 
 private:
     Image img;
