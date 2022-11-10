@@ -332,6 +332,7 @@ void GammaAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
     auto state = apvts.copyState();
     auto xml = state.createXml();
+    xml->setAttribute("Preset", currentPreset);
     copyXmlToBinary(*xml, destData);
 }
 
@@ -340,6 +341,8 @@ void GammaAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
     auto xml = getXmlFromBinary(data, sizeInBytes);
     if (xml != nullptr)
         apvts.replaceState(ValueTree::fromXml(*xml));
+
+    currentPreset = xml->getStringAttribute("Preset");
 
     loadedWIthNoState = false;
 }
