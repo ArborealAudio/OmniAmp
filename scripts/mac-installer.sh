@@ -4,17 +4,21 @@ set -e
 
 name=$1
 version=$2
+build=$3
+[ $build = "" ] && $build = "Release"
 
-[ ! -d "~/${name}_pkg/$version" ] && mkdir -p ~/${name}_pkg/$version
+parent_dir=~/${name}_pkg/$version
+
+[ ! -d "$parent_dir" ] && mkdir -p $parent_dir
 
 echo "Copying binaries..."
 
-cp -r ../build/${name}_artefacts/Release/AU ~/${name}_pkg/$version/Components
-cp -r ../build/${name}_artefacts/Release/VST ~/${name}_pkg/$version/VST
-cp -r ../build/${name}_artefacts/Release/VST3 ~/${name}_pkg/$version/VST3
-cp ../manual/${name}.pdf ~/${name}_pkg/$version/${name}_manual.pdf
+cp -r ../build/${name}_artefacts/$build/AU $parent_dir/Components
+cp -r ../build/${name}_artefacts/$build/VST $parent_dir/VST
+cp -r ../build/${name}_artefacts/$build/VST3 $parent_dir/VST3
+cp ../manual/${name}.pdf $parent_dir/${name}_manual.pdf
 
-cd ~/${name}_pkg/$version
+cd $parent_dir
 
 echo "Signing binaries..."
 
