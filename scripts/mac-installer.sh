@@ -1,5 +1,7 @@
 # codesign & set up files in the appropriate folder for packaging
 
+set -e
+
 name=$1
 version=$2
 
