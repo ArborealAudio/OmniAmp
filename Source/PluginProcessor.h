@@ -105,7 +105,9 @@ public:
         }
     }
 
-    bool loadedWIthNoState = true;
+    std::atomic<bool> loadedWIthNoState = true;
+
+    String currentPreset = "";
 
     // call this from the UI if activation fails and processing should suspend
     void lockProcessing(bool shouldBeLocked)
