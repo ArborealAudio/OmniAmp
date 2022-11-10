@@ -15,8 +15,6 @@ struct PresetComp : Component
         addAndMakeVisible(box);
         box.setJustificationType(Justification::centredLeft);
         box.setTextWhenNothingSelected("Presets");
-        box.onChange = [&]
-        { valueChanged(); };
 
         loadPresets();
 
@@ -172,9 +170,6 @@ struct PresetComp : Component
         // else
         //     box.setText(preset, NotificationType::dontSendNotification);
     }
-
-    void paint(Graphics& g) override
-    {}
 
     void resized() override
     {
