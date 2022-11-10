@@ -67,6 +67,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 #endif
 
     addAndMakeVisible(presetMenu);
+    presetMenu.setCurrentPreset(p.currentPreset);
+    presetMenu.box.onChange = [&] {
+        presetMenu.valueChanged();
+        p.currentPreset = presetMenu.getCurrentPreset();
+    };
 
     addAndMakeVisible(inGain);
     inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
@@ -146,17 +151,19 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         }
     };
 
+    addChildComponent(init);
+
     if (p.loadedWIthNoState) {
         init.setImage(createComponentSnapshot(getLocalBounds()));
-        addAndMakeVisible(init);
+        init.setVisible(true);
         init.centreWithSize(500, 350);
     }
     init.guitar.onClick = [&]
-    { presetMenu.setPresetWithChange("Default Guitar"); init.setVisible(false); };
+    { presetMenu.setPresetWithChange("Default Guitar"); p.loadedWIthNoState = false; init.setVisible(false); };
     init.bass.onClick = [&]
-    { presetMenu.setPresetWithChange("Default Bass"); init.setVisible(false); };
+    { presetMenu.setPresetWithChange("Default Bass"); p.loadedWIthNoState = false; init.setVisible(false); };
     init.channel.onClick = [&]
-    { presetMenu.setPresetWithChange("Default Channel"); init.setVisible(false); };
+    { presetMenu.setPresetWithChange("Default Channel"); p.loadedWIthNoState = false; init.setVisible(false); };
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
