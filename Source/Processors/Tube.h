@@ -10,6 +10,7 @@
 
 #pragma once
 
+/*a generic tube emulator for Class A and B simulation, with a dynamic bias*/
 template <typename T>
 struct Tube
 {
@@ -158,6 +159,7 @@ private:
     T xm1[2]{ 0.0 }, ym1[2]{ 0.0 };
 };
 
+/*a different tube emultaor for triodes, with parameterized bias levels & Stateful saturation*/
 template <typename T>
 struct AVTriode
 {
