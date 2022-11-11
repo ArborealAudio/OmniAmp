@@ -174,6 +174,8 @@ In the upper right is a collapsible menu for maintaining some of Gamma's more ad
 
 ## Acknowledgements
 
+Programming, DSP, and design: Alex Riccio
+
 This plugin would not have been possible without the research and open-source contributions of the following:
 
 - Jatin Chowdhury | https://github.com/Chowdhury-DSP/chowdsp_wdf (c) 2022, Chowdhury-DSP <sup>1</sup>| https://chowdsp.com/
