@@ -176,9 +176,8 @@ struct PresetComp : Component, private Timer
 
     void timerCallback() override
     {
-        if (manager.hasStateChanged() && currentPreset != "") {
+        if (manager.hasStateChanged() && currentPreset != "")
             box.setText(currentPreset + "*", NotificationType::dontSendNotification);
-        }
     }
 
     void resized() override
