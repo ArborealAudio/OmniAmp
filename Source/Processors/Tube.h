@@ -72,7 +72,7 @@ private:
 
     inline void processSamples(T* in, int ch, size_t numSamples, T gp, T gn)
     {
-        for (int i = 0; i < numSamples; ++i)
+        for (size_t i = 0; i < numSamples; ++i)
         {
             in[i] -= processEnvelopeDetector(in[i], ch);
 
@@ -101,7 +101,7 @@ private:
 
     inline void processSamplesClassBSIMD(T* in, int ch, size_t numSamples, T gp, T gn)
     {
-        for (int i = 0; i < numSamples; ++i)
+        for (size_t i = 0; i < numSamples; ++i)
         {            
             in[i] -= 1.2 * processEnvelopeDetectorSIMD(in[i], ch);
 
