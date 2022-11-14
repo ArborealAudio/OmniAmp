@@ -10,6 +10,7 @@
 
 #pragma once
 
+/*a generic tube emulator for Class A and B simulation, with a dynamic bias*/
 template <typename T>
 struct Tube
 {
@@ -72,7 +73,7 @@ private:
 
     inline void processSamples(T* in, int ch, size_t numSamples, T gp, T gn)
     {
-        for (int i = 0; i < numSamples; ++i)
+        for (size_t i = 0; i < numSamples; ++i)
         {
             in[i] -= processEnvelopeDetector(in[i], ch);
 
@@ -101,7 +102,7 @@ private:
 
     inline void processSamplesClassBSIMD(T* in, int ch, size_t numSamples, T gp, T gn)
     {
-        for (int i = 0; i < numSamples; ++i)
+        for (size_t i = 0; i < numSamples; ++i)
         {            
             in[i] -= 1.2 * processEnvelopeDetectorSIMD(in[i], ch);
 
@@ -158,6 +159,7 @@ private:
     T xm1[2]{ 0.0 }, ym1[2]{ 0.0 };
 };
 
+/*a different tube emultaor for triodes, with parameterized bias levels & Stateful saturation*/
 template <typename T>
 struct AVTriode
 {
@@ -181,28 +183,46 @@ struct AVTriode
 
     inline void processSamples(T* x, size_t ch, size_t numSamples, T gp, T gn)
     {
+        auto inc_p = (gp - lastGp) / numSamples;
+        auto inc_n = (gn - lastGn) / numSamples;
+
         for (size_t i = 0; i < numSamples; ++i)
         {
-            auto f1 = (1.f / gp) * std::tanh(gp * x[i]) * y_m[ch];
-            auto f2 = (1.f / gn) * std::atan(gn * x[i]) * (1.f - y_m[ch]);
+            auto f1 = (1.f / lastGp) * std::tanh(lastGp * x[i]) * y_m[ch];
+            auto f2 = (1.f / lastGn) * std::atan(lastGn * x[i]) * (1.f - y_m[ch]);
+
+            lastGp += inc_p;
+            lastGn += inc_n;
 
             auto y = sc_hp.processSample(ch, f1 + f2);
             y_m[ch] = y;
             x[i] = y;
         }
+
+        lastGp = gp;
+        lastGn = gn;
     }
 
     inline void processSamplesSIMD(T* x, size_t numSamples, T gp, T gn)
     {
+        auto inc_p = (gp - lastGp) / numSamples;
+        auto inc_n = (gn - lastGn) / numSamples;
+
         for (size_t i = 0; i < numSamples; ++i)
         {
-            auto f1 = (1.0 / gp) * xsimd::tanh(gp * x[i]) * y_m[0];
-            auto f2 = (1.0 / gn) * xsimd::atan(gn * x[i]) * (1.0 - y_m[0]);
+            auto f1 = (1.0 / lastGp) * xsimd::tanh(lastGp * x[i]) * y_m[0];
+            auto f2 = (1.0 / lastGn) * xsimd::atan(lastGn * x[i]) * (1.0 - y_m[0]);
+
+            lastGp += inc_p;
+            lastGn += inc_n;
 
             auto y = sc_hp.processSample(0, f1 + f2);
             y_m[0] = y;
             x[i] = y;
         }
+
+        lastGp = gp;
+        lastGn = gn;
     }
 
     void processBlock(dsp::AudioBlock<double>& block, T gp, T gn)
@@ -230,157 +250,6 @@ private:
     std::vector<T> y_m;
 
     strix::SVTFilter<T> sc_hp;
-};
 
-struct DZTube
-{
-    DZTube(float mu, float gamma, float xi, float G, float Gg, float C, float Cg, float Ig0,
-        bool kFollow) :
-        mu(mu), gamma(gamma), xi(xi), G(G), Gg(Gg), C(C), Cg(Cg), Ig0(Ig0), kFollow(kFollow)
-    {}
-
-    inline float processIk(float Vg)
-    {
-        auto log = std::log10(1.f + std::exp(C * (1.f / mu) * 325.f * Vg)) * (1.f / C);
-        return G * std::pow(log, gamma);
-    }
-
-    inline float processIg(float Vg)
-    {
-        auto log = std::log10(1.f + std::exp(Cg * Vg)) * (1.f / Cg);
-        return Gg * std::pow(log, xi) + Ig0;
-    }
-
-    inline float processSample(float x)
-    {
-        auto Ik = processIk(x);
-        auto Ig = processIg(x);
-
-        return kFollow ? Ik * 250.f : (Ik - Ig) * -250.f;
-    }
-
-    void processBuffer(AudioBuffer<float>& buffer)
-    {
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-        {
-            auto in = buffer.getWritePointer(ch);
-            for (int i = 0; i < buffer.getNumSamples(); ++i)
-            {
-                in[i] = processSample(in[i]);
-
-                x1 = in[i];
-                in[i] = x1 - xm[ch] + r * ym[ch];
-                xm[ch] = x1;
-                ym[ch] = in[i];
-            }
-        }
-    }
-
-private:
-    float mu, gamma, xi, G, Gg, C, Cg, Ig0;
-    float xm[2]{ 0.f, 0.f }, ym[2]{ 0.f, 0.f }, x1;
-    const float r = 1.0 - (1.0 / 800.0);
-    bool kFollow = false;
-};
-
-struct KorenTriode
-{
-    KorenTriode(float mu, float KG1, float Ep, float kp, float Kvb, float X) :
-        mu(mu), KG1(KG1), Ep(Ep), kp(kp), Kvb(Kvb), X(X)
-    {}
-
-    inline void processE1(float Vin)
-    {
-        float Epkp = Ep / kp;
-        float log = std::log10(1.f + std::exp(kp * (1.f / mu + (Vin / std::sqrt(Kvb + Ep * Ep)))));
-        E1 = Epkp * log;
-    }
-
-    inline float processPlateCurrent()
-    {
-        return std::pow(E1, X) * (1.f + E1 >= 0.f ? 1.f : -1.f);
-    }
-
-    inline float processSample(float x)
-    {
-        processE1(x);
-        auto Ip = processPlateCurrent();
-
-        return -(Ip * 0.7);
-    }
-
-    void processBuffer(AudioBuffer<float>& buffer)
-    {
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-        {
-            auto in = buffer.getWritePointer(ch);
-            for (int i = 0; i < buffer.getNumSamples(); ++i)
-            {
-                in[i] = processSample(in[i]);
-
-                x1 = in[i];
-                in[i] = x1 - xm[ch] + r * ym[ch];
-                xm[ch] = x1;
-                ym[ch] = in[i];
-            }
-        }
-    }
-
-private:
-    float mu, KG1, Ep, kp, Kvb, E1 = 0.f, X;
-    float xm[2]{ 0.f, 0.f }, ym[2]{ 0.f, 0.f }, x1 = 0.f;
-    const float r = 1.0 - (1.0 / 800.0);
-};
-
-struct KorenPentode
-{
-    KorenPentode(float mu, float X, float KG1, float KG2, float Kp, float Kvb, float Vg2) :
-        mu(mu), X(X), KG1(KG1), KG2(KG2), Kp(Kp), Kvb(Kvb), Vg2(Vg2)
-    {}
-
-    inline void processE1(float Vg)
-    {
-        auto log = std::log10(1.f + std::exp(Kp * (1.f / mu + (Vg / Vg2))));
-        E1 = (Vg2 / Kp) * log;
-    }
-
-    inline float processIp()
-    {
-        auto first = std::pow(E1, X) / KG1;
-        auto second = 1.f + E1 >= 0.f ? 1.f : -1.f;
-        auto third = std::atan(30.f / Kvb);
-
-        return first * second * third;
-    }
-
-    inline float processSample(float x)
-    {
-        processE1(35.f * x);
-        return processIp();
-    }
-
-    void processBuffer(AudioBuffer<float>& buffer)
-    {
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-        {
-            auto in = buffer.getWritePointer(ch);
-            for (int i = 0; i < buffer.getNumSamples(); ++i)
-            {
-                auto xp = -processSample(-in[i]);
-                auto xn = processSample(in[i]);
-
-                in[i] = (xn + xp) / 2.f;
-
-                /*x1 = in[i];
-                in[i] = x1 - xm[ch] + r * ym[ch];
-                xm[ch] = x1;
-                ym[ch] = in[i];*/
-            }
-        }
-    }
-
-private:
-    float mu, X, KG1, KG2, Kp, Kvb, E1 = 0.f, Vg2;
-    float xm[2]{ 0.f, 0.f }, ym[2]{ 0.f, 0.f }, x1 = 0.f;
-    const float r = 1.0 - (1.0 / 800.0);
+    T lastGp = 1.0, lastGn = 1.0;
 };

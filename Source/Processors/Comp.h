@@ -13,7 +13,7 @@
 template <typename T>
 struct OptoComp
 {
-    OptoComp(ProcessorType t, strix::VolumeMeterSource& s) : type(t), grSource(s)
+    OptoComp(ProcessorType t, strix::VolumeMeterSource& s, std::atomic<float>* pos) : type(t), position(pos), grSource(s)
     {}
 
     void prepare(const dsp::ProcessSpec& spec)
@@ -22,7 +22,8 @@ struct OptoComp
 
         grSource.prepare(spec);
 
-        switch (type) {
+        switch (type)
+        {
         case ProcessorType::Guitar:
             sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 200.0, 1.02);
             sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 3500.0, 0.8);
@@ -90,19 +91,44 @@ struct OptoComp
             l.reset();
     }
 
-    void setThreshold(double newComp)
+    // set threshold based on comp param
+    void setComp(double newComp)
     {
-        double c_comp = jmap(newComp, 1.0, 6.0);
+        /*force static threshold if amp mode & post position*/
+        // if (*position && type != ProcessorType::Channel) {
+        //     setThreshold(-24.0);
+        //     return;
+        // }
 
         switch (type)
         {
         case ProcessorType::Guitar:
+        case ProcessorType::Bass: {
+            // auto thresh_scale = c_comp / 3.0;
+            double c_comp = jmap(newComp, 1.0, 3.0);
+            threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
+            break;
+            }
+        case ProcessorType::Channel: {
+            // auto thresh_scale = c_comp / 2.0;
+            double c_comp = jmap(newComp, 1.0, 3.0);
+            threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
+            break;
+            }
+        }
+    }
+
+    // set threshold directly in dB
+    void setThreshold(double newThresh)
+    {
+        switch (type)
+        {
+        case ProcessorType::Guitar:
         case ProcessorType::Bass:
-            threshold.store(std::pow(10.0, -36.0 * 0.05)); /* static threshold at -36dB */
+            threshold.store(std::pow(10.0, newThresh * 0.05)); /* static threshold at -36dB */
             break;
         case ProcessorType::Channel: {
-            auto thresh_scale = c_comp / 2.0;
-            threshold.store(std::pow(10.0, (-18.0 * thresh_scale) * 0.05)); /* start at -18dB and scale down 3x */
+            threshold.store(std::pow(10.0, newThresh * 0.05)); /* start at -18dB and scale down 3x */
             break;
             }
         }
@@ -133,6 +159,10 @@ private:
     inline void processStereo(T *inL, T *inR, T comp, int numSamples)
     {
         T c_comp = jmap(comp, (T)1.0, (T)6.0);
+        T last_c = jmap(lastComp, (T)1.0, (T)6.0);
+
+        auto inc = (comp - lastComp) / numSamples;
+        auto c_inc = (c_comp - last_c) / numSamples;
 
         for (int i = 0; i < numSamples; ++i)
         {
@@ -147,15 +177,25 @@ private:
 
             auto gr = computeGR(0, max);
 
-            postComp(inL[i], 0, gr, comp, c_comp);
-            postComp(inR[i], 1, gr, comp, c_comp);
+            postComp(inL[i], 0, gr, lastComp, last_c);
+            postComp(inR[i], 1, gr, lastComp, last_c);
+
+            lastComp += inc;
+            last_c += c_inc;
         }
+
+        // just in case
+        lastComp = comp;
     }
 
     /* mono or unlinked stereo */
     inline void processUnlinked(T *in, int ch, T comp, int numSamples)
     {
         T c_comp = jmap(comp, (T)1.0, (T)6.0);
+        T last_c = jmap(lastComp, (T)1.0, (T)6.0);
+
+        auto inc = (comp - lastComp) / numSamples;
+        auto c_inc = (c_comp - last_c) / numSamples;
 
         for (int i = 0; i < numSamples; ++i)
         {
@@ -168,8 +208,14 @@ private:
 
             auto gr = computeGR(ch, x);
 
-            postComp(in[i], ch, gr, comp, c_comp);
+            postComp(in[i], ch, gr, lastComp, last_c);
+
+            lastComp += inc;
+            last_c += c_inc;
         }
+
+        // just in case
+        lastComp = comp;
     }
 
     /*returns gain reduction multiplier*/
@@ -183,7 +229,7 @@ private:
         T att_time = jlimit(0.005, 0.05, (1.0 / x) * 0.015);
 
         T att = std::exp(-1.0 / (att_time * lastSR));
-        T rel = std::exp(-1.0 / (0.6 * lastGR[ch] * lastSR));
+        T rel = std::exp(-1.0 / (0.5 * (0.5 * lastGR[ch]) * lastSR));
 
         if (env > lastEnv[ch])
         {
@@ -200,7 +246,7 @@ private:
         auto gr = std::pow(10.0, gr_db * 0.05);
         lastGR[ch] = gr;
 
-        grSource.measureGR(lastGR[0]); // TODO: this should average btw L&R if unlinked stereo
+        grSource.measureGR(lastGR[0]); // TODO: this should average btw L&R if unlinked stereo. Maybe move it to the higher-level block call
 
         return gr;
     }
@@ -212,15 +258,18 @@ private:
         {
         case ProcessorType::Guitar:
         case ProcessorType::Bass:
-            x *= c_comp * gr; /* c_comp functions like a recursive input gain, amplifying the output, which is also the sidechain */
+            if (c_comp <= 2.f)
+                x *= gr;
+            else
+                x *= (c_comp / 2.0) * gr;
             break;
         case ProcessorType::Channel:
             if (c_comp <= 4.f)
                 x *= gr;
             else
                 x *= (c_comp / 4.0) * gr;
-            break; /* if > 4, start applying recursive gain, maxing at 2 */
-        }
+            break;
+        } /*apply recursive gains to the sidechain if comp is high enough*/
 
         xm[ch] = x;
 
@@ -232,7 +281,7 @@ private:
             auto bp = hp[ch].processSample(x);
             bp = lp[ch].processSample(bp);
 
-            x += bp * (comp * 2.0); /* use comp as gain for bp signal, this also kind of doubles as a filtered output gain */
+            x += bp * (comp * 1.5); /* use comp as gain for bp signal, this also kind of doubles as a filtered output gain */
             break;
         }
         case ProcessorType::Channel:
@@ -244,7 +293,10 @@ private:
 
     T lastSR = 44100.0;
 
-    std::atomic<float> threshold = std::pow(10.0, -18.0 * 0.05);
+    std::atomic<float> threshold = std::pow(10.0, -18.0 * 0.05),
+    *position = nullptr;
+
+    double lastComp = 0.0;
 
     T lastEnv[2]{0.0}, lastGR[2]{0.0}, xm[2]{0.0};
 

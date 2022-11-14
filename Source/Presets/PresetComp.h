@@ -8,20 +8,25 @@
 
 #pragma once
 
-struct PresetComp : Component
+struct PresetComp : Component, private Timer
 {
     PresetComp(AudioProcessorValueTreeState& vts) : manager(vts)
     {
         addAndMakeVisible(box);
         box.setJustificationType(Justification::centredLeft);
         box.setTextWhenNothingSelected("Presets");
-        box.onChange = [&]
-        { valueChanged(); };
 
         loadPresets();
 
         addChildComponent(editor);
         editor.setJustification(Justification::centredLeft);
+
+        startTimerHz(2);
+    }
+
+    ~PresetComp()
+    {
+        stopTimer();
     }
 
     void loadPresets()
@@ -86,10 +91,16 @@ struct PresetComp : Component
         return currentPreset;
     }
 
-    void setCurrentPreset(String newPreset) noexcept
+    void setCurrentPreset(const String& newPreset) noexcept
     {
         currentPreset = newPreset;
-        box.setText(currentPreset);
+        box.setText(currentPreset, NotificationType::dontSendNotification);
+    }
+
+    void setPresetWithChange(const String& newPreset) noexcept
+    {
+        currentPreset = newPreset;
+        box.setText(currentPreset, NotificationType::sendNotificationAsync);
     }
 
     void savePreset() noexcept
@@ -110,14 +121,8 @@ struct PresetComp : Component
 
         editor.onFocusLost = [&]
         {
-#if JUCE_WINDOWS
-            editor.clear(); editor.setVisible(false);
-#elif JUCE_MAC
-            // if (editor.onReturnKey)
-            //     editor.onReturnKey();
+            editor.clear();
             editor.setVisible(false);
-            setCurrentPreset(editor.getText());
-#endif
         };
 
         editor.onEscapeKey = [&] { editor.clear(); editor.setVisible(false); };
@@ -135,7 +140,7 @@ struct PresetComp : Component
 
             if (manager.savePreset(name, manager.userDir)) {
                 loadPresets();
-                setCurrentPreset(name);
+                setPresetWithChange(name);
             }
             else
                 box.setText("invalid name!", NotificationType::dontSendNotification);
@@ -148,33 +153,32 @@ struct PresetComp : Component
         auto idx = box.getSelectedItemIndex();
         auto preset = box.getItemText(idx);
 
-        // if (!presetModified) {
-            if (id < 1000 && id > 0) {
+        if (id < 1000 && id > 0) {
 
-                if (id <= factoryPresetSize) {
-                    if (manager.loadPreset(preset, true))
-                        box.setText(preset, NotificationType::sendNotificationSync);
-                    else
-                        box.setText("preset not found", NotificationType::dontSendNotification);
-                }
-                else {
-                    if (manager.loadPreset(preset, false))
-                        box.setText(preset, NotificationType::sendNotificationSync);
-                    else
-                        box.setText("preset not found", NotificationType::dontSendNotification);
-                }
-
-                currentPreset = preset;
+            if (id <= factoryPresetSize) {
+                if (manager.loadPreset(preset, true))
+                    box.setText(preset, NotificationType::sendNotificationSync);
+                else
+                    box.setText("preset not found", NotificationType::dontSendNotification);
             }
-            else
-                box.setText(currentPreset, NotificationType::dontSendNotification);
-        // }
-        // else
-        //     box.setText(preset, NotificationType::dontSendNotification);
+            else {
+                if (manager.loadPreset(preset, false))
+                    box.setText(preset, NotificationType::sendNotificationSync);
+                else
+                    box.setText("preset not found", NotificationType::dontSendNotification);
+            }
+
+            currentPreset = preset;
+        }
+        else
+            box.setText(currentPreset, NotificationType::dontSendNotification);
     }
 
-    void paint(Graphics& g) override
-    {}
+    void timerCallback() override
+    {
+        if (manager.hasStateChanged() && currentPreset != "")
+            box.setText(currentPreset + "*", NotificationType::dontSendNotification);
+    }
 
     void resized() override
     {

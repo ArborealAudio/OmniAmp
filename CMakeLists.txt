@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(Gamma VERSION 0.3)
+project(Gamma VERSION 0.5)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -41,7 +41,8 @@ juce_generate_juce_header(Gamma)
 target_sources(Gamma
     PRIVATE
         Source/PluginEditor.cpp
-        Source/PluginProcessor.cpp)
+        Source/PluginProcessor.cpp
+        Source/Activation.hpp)
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
@@ -49,8 +50,8 @@ add_subdirectory(Source/Presets)
 add_subdirectory(modules/chowdsp_wdf)
 
 juce_add_modules(
-    "$ENV{HOME}/modules/Gin/modules/gin"
-    "$ENV{HOME}/modules/Gin/modules/gin_gui"
+    "modules/gin/modules/gin"
+    "modules/gin/modules/gin_gui"
     "$ENV{HOME}/modules/Arbor_modules")
 
 target_compile_definitions(Gamma
@@ -69,7 +70,10 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/amp_mesh_2.svg"
     "Resources/logo.svg"
     "Resources/LiberationSans-Regular.ttf"
-    "Resources/Hamburger_icon.svg")
+    "Resources/Hamburger_icon.svg"
+    "Resources/Presets/Default Bass.aap"
+    "Resources/Presets/Default Guitar.aap"
+    "Resources/Presets/Default Channel.aap")
 
 # -fPIC flag mainly for Linux
 set_target_properties(BinaryData PROPERTIES
@@ -81,6 +85,7 @@ target_link_libraries(Gamma
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_opengl
+        juce::juce_cryptography
         gin
         gin_gui
         Arbor_modules

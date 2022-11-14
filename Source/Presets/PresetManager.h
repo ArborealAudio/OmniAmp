@@ -8,19 +8,42 @@
 
 #pragma once
 
-struct PresetManager
+struct PresetManager : private AudioProcessorValueTreeState::Listener
 {
     PresetManager(AudioProcessorValueTreeState& vts) : apvts(vts)
     {
         if (!userDir.isDirectory())
             userDir.createDirectory();
+
+        for (auto* param : apvts.processor.getParameters())
+        {
+            if (const auto p = dynamic_cast<RangedAudioParameter*>(param))
+                if (p->paramID != "hq" && p->paramID != "renderHQ")
+                    apvts.addParameterListener(p->paramID, this);
+        }
+    }
+
+    ~PresetManager()
+    {
+        for (auto* param : apvts.processor.getParameters())
+        {
+            if (const auto p = dynamic_cast<RangedAudioParameter*>(param))
+                if (p->paramID != "hq" && p->paramID != "renderHQ")
+                    apvts.removeParameterListener(p->paramID, this);
+        }
+    }
+
+    void parameterChanged(const String&, float)
+    {
+        if (!stateChanged)
+            stateChanged = true;
     }
 
     StringArray loadFactoryPresetList()
     {
         StringArray names;
 
-        for (int i = 0; i < 12; ++i)
+        for (int i = 0; i < BinaryData::namedResourceListSize; ++i)
         {
             if (String(BinaryData::originalFilenames[i]).endsWith(".aap"))
                 names.set(i, String(BinaryData::originalFilenames[i]).upToFirstOccurrenceOf(".", false, false));
@@ -31,7 +54,7 @@ struct PresetManager
 
     StringArray loadUserPresetList()
     {
-        userPresets = userDir.findChildFiles(2, false, "*.aap");
+        userPresets = userDir.findChildFiles(2, true, "*.aap");
 
         StringArray names;
 
@@ -55,7 +78,7 @@ struct PresetManager
         if (xml->isValidXmlName(filename))
             xml->setTagName(filename);
         else
-            xml->setTagName(filename.removeCharacters("\"#@,;:<>*^|?\\/ "));
+            xml->setTagName(filename.removeCharacters("\"#@,;:<>*^|!?\\/ "));
 
         return xml->writeTo(file);
     }
@@ -78,7 +101,7 @@ struct PresetManager
 
             auto xml = parseXML(file);
             DBG(xml->toString());
-            if (!xml->hasTagName(filename.removeCharacters("\"#@,;:<>*^|?\\/ ")))
+            if (!xml->hasTagName(filename.removeCharacters("\"#@,;:<>*^|!?\\/ ")))
                 return false;
 
             newstate = ValueTree::fromXml(*xml);
@@ -107,11 +130,15 @@ struct PresetManager
         //     jassertfalse;
 
         apvts.replaceState(newstate);
+
+        stateChanged = false;
         
         return true;
     }
 
-    String getStateAsString()
+    bool hasStateChanged() { return stateChanged; }
+
+    String getStateAsString() const
     {
         auto xml = apvts.state.createXml();
         return xml->toString();
@@ -123,11 +150,13 @@ struct PresetManager
         apvts.replaceState(newstate);
     }
 
-    File userDir{ File::getSpecialLocation(File::SpecialLocationType::userApplicationDataDirectory)
-        .getFullPathName() + "/Arboreal Audio/Gamma/Presets/User Presets" };
+    File userDir{ File::getSpecialLocation(File::userApplicationDataDirectory)
+        .getFullPathName() + "/Arboreal Audio/Gamma/Presets/User_presets" };
 
 private:
     AudioProcessorValueTreeState& apvts;
+
+    bool stateChanged = false;
 
     Array<File> factoryPresets;
     Array<File> userPresets;

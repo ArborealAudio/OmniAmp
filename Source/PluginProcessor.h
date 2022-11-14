@@ -18,8 +18,8 @@
         #endif
     #endif
 #endif
-#ifndef PRODUCTION_BUILD // use this, if otherwise not defined, to label the plugin as production or not
-    #define PRODUCTION_BUILD 0
+#ifndef PRODUCTION_BUILD // use this to control production build parameter
+    #define PRODUCTION_BUILD 1
 #endif
 
 #include <JuceHeader.h>
@@ -28,6 +28,10 @@
 #include "Presets/PresetManager.h"
 #include "UI/UI.h"
 #include "UI/SineWave.hpp"
+#if PRODUCTION_BUILD
+    #define BETA_BUILD 1
+#endif
+#include "Activation.hpp"
 
 //==============================================================================
 /**
@@ -101,10 +105,22 @@ public:
         }
     }
 
+    std::atomic<bool> loadedWIthNoState = true;
+
+    String currentPreset = "";
+
+    // call this from the UI if activation fails and processing should suspend
+    void lockProcessing(bool shouldBeLocked)
+    {
+        suspendProcessing(shouldBeLocked);
+    }
+
 private:
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
     std::atomic<float> *inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
+
+    float lastInGain = 1.f, lastOutGain = 1.f;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -125,15 +141,15 @@ private:
 
     AudioBuffer<double> doubleBuffer;
 
-    Processors::CabType currentCab = Processors::CabType::small;
+    Processors::CabType lastCab;
 
 #if USE_SIMD
-    Processors::Enhancer<vec> hfEnhancer{apvts, Processors::Enhancer<vec>::Type::HF};
-    Processors::Enhancer<vec> lfEnhancer{apvts, Processors::Enhancer<vec>::Type::LF};
+    Processors::Enhancer<vec, Processors::EnhancerType::HF> hfEnhancer{apvts};
+    Processors::Enhancer<vec, Processors::EnhancerType::LF> lfEnhancer{apvts};
     Processors::FDNCab<vec> cab;
 #else
-    Processors::Enhancer<double> hfEnhancer{apvts, Processors::Enhancer<double>::Type::HF};
-    Processors::Enhancer<double> lfEnhancer{apvts, Processors::Enhancer<double>::Type::LF};
+    Processors::Enhancer<double, Processors::EnhancerType::HF> hfEnhancer{apvts};
+    Processors::Enhancer<double, Processors::EnhancerType::LF> lfEnhancer{apvts};
     Processors::FDNCab<double> cab;
 #endif
 
@@ -152,8 +168,37 @@ private:
 
     void setOversampleIndex();
 
+    void onModeSwitch()
+    {
+        if (currentMode == Mode::Channel) {
+            apvts.getParameterAsValue("cabType") = 0;
+            apvts.getParameterAsValue("preampGain") = 0.f;
+            apvts.getParameterAsValue("powerampGain") = 0.f;
+        }
+        else {
+            apvts.getParameterAsValue("cabType") = lastCab + 1;
+            apvts.getParameterAsValue("preampGain") = 0.5f;
+            apvts.getParameterAsValue("powerampGain") = 0.5f;
+        }
+    }
+
+    // lastGain is a reference so it can be directly changed by this function
+    inline void applySmoothedGain(AudioBuffer<double>& buffer, float currentGain, float& lastGain)
+    {
+        if (currentGain == lastGain)
+        {
+            buffer.applyGain(currentGain);
+            lastGain = currentGain;
+        }
+        else
+        {
+            buffer.applyGainRamp(0, buffer.getNumSamples(), lastGain, currentGain);
+            lastGain = currentGain;
+        }
+    }
+
     // expects stereo in and out
-    void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)
+    void processDoubleBuffer(AudioBuffer<double> &buffer)
     {
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
@@ -163,7 +208,8 @@ private:
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
 
-        block.multiplyBy(inGain_raw);
+        // apply input gain
+        applySmoothedGain(buffer, inGain_raw, lastInGain);
 
         bool ms = (bool)*apvts.getRawParameterValue("m/s");
         float width = *apvts.getRawParameterValue("width");
@@ -220,7 +266,8 @@ private:
         if (*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
 
-        buffer.applyGain(outGain_raw);
+        // apply output gain
+        applySmoothedGain(buffer, outGain_raw, lastOutGain);
     }
 
     //==============================================================================

@@ -2,11 +2,11 @@
 
 #pragma once
 
-struct EnhancerSaturation
+namespace EnhancerSaturation
 {
     // higher values of k = harder clipping
     // lower values can attenuate the signal a bit
-    inline static void process(dsp::AudioBlock<double>& block, double gp, double gn, double k)
+    inline void process(dsp::AudioBlock<double>& block, double gp, double gn, double k)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -21,7 +21,7 @@ struct EnhancerSaturation
         }
     }
 
-    inline static void process(strix::AudioBlock<vec>& block, vec gp, vec gn, vec k)
+    inline void process(strix::AudioBlock<vec>& block, vec gp, vec gn, vec k)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -36,16 +36,16 @@ struct EnhancerSaturation
     }
 };
 
-template <typename T>
+enum EnhancerType
+{
+    LF,
+    HF
+};
+
+template <typename T, EnhancerType type>
 struct Enhancer
 {
-    enum Type
-    {
-        LF,
-        HF
-    };
-
-    Enhancer(AudioProcessorValueTreeState& a, Type t) : type(t), apvts(a)
+    Enhancer(AudioProcessorValueTreeState& a) : apvts(a)
     {
         lfAutoGain = apvts.getRawParameterValue("lfEnhanceAuto");
         hfAutoGain = apvts.getRawParameterValue("hfEnhanceAuto");
@@ -153,17 +153,10 @@ struct Enhancer
 
         auto processBlock = Block(wetBuffer).getSubBlock(0, block.getNumSamples());
 
-        switch (type)
-        {
-        case LF:
+        if (type == EnhancerType::LF)
             processLF(processBlock, enhance);
-            break;
-        case HF:
+        else
             processHF(processBlock, enhance);
-            break;
-        default:
-            break;
-        }
 
         auto dest = block.getChannelPointer(0);
         auto src = processBlock.getChannelPointer(0);
@@ -189,7 +182,7 @@ private:
         auto gain = jmap(enhance, 1.0, 4.0);
         double autoGain = 1.0;
 
-        block.multiplyBy(gain);
+        SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
 
         EnhancerSaturation::process(block, 1.0, 1.0, 1.0);
         block.multiplyBy(2.0);
@@ -200,7 +193,7 @@ private:
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = hp2[0].processSample(inL[i]);
 
-        block.multiplyBy(enhance * autoGain);
+        SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), enhance * autoGain, lastAutoGain);
     }
 
     template <typename Block>
@@ -214,7 +207,7 @@ private:
         auto gain = jmap(enhance, 1.0, 2.0);
         double autoGain = 1.0;
 
-        block.multiplyBy(gain);
+        SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
 
         EnhancerSaturation::process(block, 1.0, 2.0, 4.0);
 
@@ -224,17 +217,18 @@ private:
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = lp2[0].processSample(inL[i]);
 
-        block.multiplyBy(enhance * autoGain);
+        SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), enhance * autoGain, lastAutoGain);
     }
 
     double SR = 44100.0;
     std::atomic<bool> needUpdate = false;
 
-    Type type;
     Processors::ProcessorType mode;
 
     AudioProcessorValueTreeState &apvts;
     std::atomic<float> *hfAutoGain, *lfAutoGain;
+
+    double lastGain = 0.0, lastAutoGain = 1.0;
 
     std::vector<dsp::IIR::Filter<T>> lp1, lp2, hp1, hp2;
 #if USE_SIMD

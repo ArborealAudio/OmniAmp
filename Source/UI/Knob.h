@@ -27,11 +27,15 @@ struct KnobLookAndFeel : LookAndFeel_V4
     {
         label = std::make_unique<String>("");
         getDefaultLookAndFeel().setDefaultSansSerifTypeface(getCustomFont());
+        /*this just happens to be the spot where we set the global font*/
     }
 
     void drawRotarySlider(Graphics& g, int x, int y, int width, int height, float sliderPos,
     const float rotaryStartAngle, const float rotaryEndAngle, Slider& slider) override
     {
+        // g.setFont(jlimit(12.f, 18.f, 0.1f * height)); /*try to set variable font height*/
+        g.setFont(14.f);
+
         switch (type)
         {
         case Regular: {
@@ -193,14 +197,14 @@ struct KnobLookAndFeel : LookAndFeel_V4
 
 struct Knob : Slider
 {
-    Knob(KnobType t) : lnf(t), autoGain(false)
+    Knob(KnobType t) : lnf(t)
     {
         setLookAndFeel(&lnf);
         lnf.autoGain = &autoGain;
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
 
-        setPaintingIsUnclipped(true);
+        // setPaintingIsUnclipped(true);
         setBufferedToImage(true);
     }
     ~Knob()
@@ -246,7 +250,7 @@ struct Knob : Slider
         lnf.accentColor = newAccentColor;
     }
 
-    std::atomic<bool> autoGain;
+    std::atomic<bool> autoGain = false;
 
 private:
     KnobLookAndFeel lnf;
