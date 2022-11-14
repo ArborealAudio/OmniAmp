@@ -50,8 +50,8 @@ add_subdirectory(Source/Presets)
 add_subdirectory(modules/chowdsp_wdf)
 
 juce_add_modules(
-    "$ENV{HOME}/modules/Gin/modules/gin"
-    "$ENV{HOME}/modules/Gin/modules/gin_gui"
+    "modules/Gin/modules/gin"
+    "modules/Gin/modules/gin_gui"
     "$ENV{HOME}/modules/Arbor_modules")
 
 target_compile_definitions(Gamma
