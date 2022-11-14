@@ -12,7 +12,7 @@
 
 const String versionURL
 #if PRODUCTION_BUILD
-{ "https://arborealaudio.com/wp-content/versions/Gamma-latest.json" };
+{ "https://arborealaudio.com/versions/Gamma-latest.json" };
 #else
 { "https://arborealaudio.com/versions/test/Gamma-latest.json" };
 #endif
