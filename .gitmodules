@@ -7,3 +7,6 @@
 [submodule "scripts"]
 	path = scripts
 	url = https://github.com/ArborealAudio/scripts
+[submodule "modules/gin"]
+	path = modules/gin
+	url = https://github.com/FigBug/gin
