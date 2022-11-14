@@ -10,4 +10,6 @@ PRIVATE
     ReverbComponent.h
     Menu.h
     UI_Top.h
-    DownloadManager.h)
+    DownloadManager.h
+    Splash.h
+    Init.h)

@@ -107,15 +107,19 @@ class MenuComponent : public Component
 
             HQ.setButtonText("HQ");
             HQ.setClickingTogglesState(true);
+            HQ.setTooltip("Enable 4x oversampling with minimal latency.");
 
             renderHQ.setButtonText("Render HQ");
             renderHQ.setClickingTogglesState(true);
+            renderHQ.setTooltip("Enable 4x oversampling when rendering. Useful if you want to save some CPU while mixing.");
 
             compLink.setButtonText("Comp Stereo Link");
             compLink.setClickingTogglesState(true);
+            compLink.setTooltip("Stereo linking for Opto compressor. When linked, the maximum amplitude of either channel will be used for the compression. When unlinked, each channel will be compressed independently.");
 
             compPos.setButtonText("Comp Pos: ");
             compPos.setClickingTogglesState(true);
+            compPos.setTooltip("Position in the signal chain for the compressor. Pre will place it at the very beginning, and Post will be after the amp, and before the enhancers, cab and reverb.");
 
             windowSize.setButtonText("Default UI size");
             windowSize.setClickingTogglesState(false);
@@ -194,9 +198,8 @@ public:
         };
 
         addAndMakeVisible(panel);
-        panel.setColour(SidePanel::ColourIds::backgroundColour, Colours::white);
         panel.setContent(&list, false);
-        panel.setShadowWidth(0);
+        panel.setShadowWidth(10);
 
         list.onItemClick = [&](CommandID id, bool state)
         {

@@ -2,9 +2,61 @@
 
 #pragma once
 
+struct PowerButton : TextButton
+{
+    PowerButton()
+    {
+        setClickingTogglesState(true);
+    }
+
+    void paint(Graphics &g) override
+    {
+        Colour icon, s_backgnd = background;
+        auto b = getLocalBounds();
+        auto padding = b.getHeight() * 0.1f;
+
+        auto drawPowerIcon = [&](Graphics& gc)
+        {
+            gc.setColour(icon);
+            gc.drawEllipse(b.reduced(padding * 2).toFloat(), 3.f);
+            gc.fillRoundedRectangle(b.getCentreX() - 1.5f, padding, 3.f, b.getCentreY() - padding, 2.f);
+        };
+
+        if (isMouseOver()) {
+            s_backgnd = background.contrasting(0.2f);
+            g.setColour(s_backgnd);
+            g.fillEllipse(b.reduced(padding).toFloat());
+        }
+
+        if (!getToggleState())
+            icon = s_backgnd.contrasting(0.2f);
+        else {
+            icon = Colours::white;
+            Image blur(Image::PixelFormat::ARGB, getWidth(), getHeight(), true);
+            Graphics g_blur(blur);
+
+            drawPowerIcon(g_blur);
+            gin::applyStackBlur(blur, 5);
+
+            g.drawImage(blur, getLocalBounds().toFloat(), RectanglePlacement::centred);
+        }
+
+        drawPowerIcon(g);
+    }
+
+    void setBackgroundColor(Colour newColor)
+    {
+        background = newColor;
+    }
+
+private:
+    Colour background;
+};
+
 struct AmpControls : Component, private Timer
 {
-    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) : vts(a), grMeter(vs, a.getRawParameterValue("comp"))
+    AmpControls(strix::VolumeMeterSource& vs, AudioProcessorValueTreeState& a) :
+    vts(a), grMeter(vs, a.getRawParameterValue("comp"))
     {
         for (auto& k : getKnobs())
             addAndMakeVisible(*k);
@@ -42,13 +94,16 @@ struct AmpControls : Component, private Timer
         compAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "comp", comp);
         comp.setLabel("Opto");
         comp.setValueToStringFunction(percent);
+        comp.setTooltip("An opto-style compressor, with program-dependent attack and release. Increasing values give more compression and sustain, and can also boost the volume going into the amp.");
 
         distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "dist", dist);
         dist.setLabel("Pedal");
         dist.setValueToStringFunction(zeroToTen);
+        dist.setTooltip("A one-knob distortion pedal. Fully bypassed at 0.");
 
         inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
         inGain.setLabel("Preamp");
+        inGain.setTooltip("Preamp gain stage. In Channel mode, is bypassed at 0.\n\nAlt/Option-click to enable Auto Gain.");
         inGain.autoGain.store(*a.getRawParameterValue("preampAutoGain"));
         inGain.onAltClick = [&](bool state)
         {
@@ -57,9 +112,12 @@ struct AmpControls : Component, private Timer
         };
         inGain.setValueToStringFunction(zeroToTen);
 
+        String eqTooltip = "EQ section of the amp. In Channel mode, the EQ knobs will cut below 50% and add above 50%.\n\nIn Guitar & Bass mode, these controls will work like a traditional amp tone stack.\n\nIn Channel mode, Alt/Option-click will enable frequency-weighted Auto Gain.";
+
         bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
         bass.setLabel("Bass");
-        bass.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
+        bass.setTooltip(eqTooltip);
+        bass.autoGain = *a.getRawParameterValue("eqAutoGain");
         bass.onAltClick = [&](bool state)
         {
             if (*a.getRawParameterValue("mode") < 2) return;
@@ -72,7 +130,8 @@ struct AmpControls : Component, private Timer
 
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
-        mid.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
+        mid.setTooltip(eqTooltip);
+        mid.autoGain = *a.getRawParameterValue("eqAutoGain");
         mid.onAltClick = [&](bool state)
         {
             if (*a.getRawParameterValue("mode") < 2) return;
@@ -85,7 +144,8 @@ struct AmpControls : Component, private Timer
 
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
-        treble.autoGain.store(*a.getRawParameterValue("eqAutoGain"));
+        treble.setTooltip(eqTooltip);
+        treble.autoGain = *a.getRawParameterValue("eqAutoGain");
         treble.onAltClick = [&](bool state)
         {
             if (*a.getRawParameterValue("mode") < 2) return;
@@ -98,6 +158,7 @@ struct AmpControls : Component, private Timer
 
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
+        outGain.setTooltip("Power amp stage. In Channel mode, fully bypassed at 0.\n\nAlt/Option-click to enable Auto Gain.");
         outGain.autoGain.store(*a.getRawParameterValue("powerampAutoGain"));
         outGain.onAltClick = [&](bool state)
         {
@@ -112,6 +173,10 @@ struct AmpControls : Component, private Timer
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
         hiGain.setButtonText("Boost");
+        hiGain.setTooltip("Boost for the preamp stage. In addition to adding volume, it also adds new tubes to the circuit.");
+
+        addAndMakeVisible(power);
+        powerAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "ampOn", power);
 
         grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
         grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
@@ -128,6 +193,11 @@ struct AmpControls : Component, private Timer
 
     void timerCallback() override
     {
+        if (*vts.getRawParameterValue("ampOn"))
+            grMeter.setState(vts.getRawParameterValue("comp"));
+        else
+            grMeter.setState(vts.getRawParameterValue("ampOn"));
+
         if (*mode_p == lastMode)
             return;
 
@@ -172,77 +242,78 @@ struct AmpControls : Component, private Timer
         switch (m)
         {
         case 0:
+            backgroundColor = Colour(AMP_COLOR).darker(0.1f);
+            secondaryColor = backgroundColor.contrasting(0.5f);
             for (auto& k : getKnobs())
             {
                 if (k == &comp)
-                    k->setColor(Colours::wheat, Colours::grey);
+                    k->setColor(Colours::wheat, secondaryColor);
                 else if (k == &dist)
-                    k->setColor(Colours::azure, Colours::grey);
+                    k->setColor(Colours::azure, secondaryColor);
                 else
-                    k->setColor(Colours::antiquewhite, Colours::grey);
+                    k->setColor(Colours::antiquewhite, secondaryColor);
                 k->repaint();
             }
-            backgroundColor = Colour(AMP_COLOR);
-            secondaryColor = Colours::grey;
             break;
         case 1:
-            for (auto& k : getKnobs())
-            {
-                if (k == &comp)
-                    k->setColor(Colours::wheat.withMultipliedLightness(0.25f), Colours::lightgrey);
-                else if (k == &dist)
-                    k->setColor(Colours::azure.withMultipliedLightness(0.25f), Colours::lightgrey);
-                else
-                    k->setColor(Colours::black, Colours::lightgrey);
-                k->repaint();
-            }
             backgroundColor = Colours::slategrey;
             secondaryColor = Colours::lightgrey;
+            for (auto& k : getKnobs())
+            {
+                if (k == &comp)
+                    k->setColor(Colours::wheat.withMultipliedLightness(0.25f), secondaryColor);
+                else if (k == &dist)
+                    k->setColor(Colours::azure.withMultipliedLightness(0.25f), secondaryColor);
+                else
+                    k->setColor(Colours::black, secondaryColor);
+                k->repaint();
+            }
             break;
         case 2:
+            backgroundColor = Colours::darkgrey;
+            secondaryColor = Colours::oldlace;
             for (auto& k : getKnobs())
             {
                 if (k == &comp)
-                    k->setColor(Colours::wheat, Colours::oldlace);
+                    k->setColor(Colours::wheat, secondaryColor);
                 else if (k == &dist)
-                    k->setColor(Colours::azure, Colours::oldlace);
+                    k->setColor(Colours::azure, secondaryColor);
                 else if (k == &bass)
-                    k->setColor(Colours::forestgreen, Colours::oldlace);
+                    k->setColor(Colours::forestgreen, secondaryColor);
                 else if (k == &mid)
-                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), Colours::oldlace);
+                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), secondaryColor);
                 else if (k == &treble)
-                    k->setColor(Colours::crimson, Colours::oldlace);
+                    k->setColor(Colours::crimson, secondaryColor);
                 else
-                    k->setColor(Colours::slategrey, Colours::oldlace);
+                    k->setColor(Colours::slategrey, secondaryColor);
 
                 k->repaint();
             }
-            backgroundColor = Colours::darkgrey;
-            secondaryColor = Colours::oldlace;
             break;
         default:
+            backgroundColor = Colours::darkgrey;
+            secondaryColor = Colours::oldlace;
             for (auto& k : getKnobs())
             {
                 if (k == &comp)
-                    k->setColor(Colours::wheat, Colours::oldlace);
+                    k->setColor(Colours::wheat, secondaryColor);
                 else if (k == &dist)
-                    k->setColor(Colours::azure, Colours::oldlace);
+                    k->setColor(Colours::azure, secondaryColor);
                 else if (k == &bass)
-                    k->setColor(Colours::forestgreen, Colours::oldlace);
+                    k->setColor(Colours::forestgreen, secondaryColor);
                 else if (k == &mid)
-                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), Colours::oldlace);
+                    k->setColor(Colours::blue.withMultipliedSaturation(0.5f), secondaryColor);
                 else if (k == &treble)
-                    k->setColor(Colours::crimson, Colours::oldlace);
+                    k->setColor(Colours::crimson, secondaryColor);
                 else
-                    k->setColor(Colours::slategrey, Colours::oldlace);
+                    k->setColor(Colours::slategrey, secondaryColor);
 
                 k->repaint();
             }
-            backgroundColor = Colours::darkgrey;
-            secondaryColor = Colours::oldlace;
             break;
         };
-        
+
+        power.setBackgroundColor(backgroundColor);
     }
 
     void paint(Graphics& g) override
@@ -273,7 +344,7 @@ struct AmpControls : Component, private Timer
 
         auto toneControls = bass.getBounds().getUnion(mid.getBounds()).getUnion(treble.getBounds());
         
-        if (bass.autoGain.load() || mid.autoGain.load() || treble.autoGain.load())
+        if ((bass.autoGain.load() || mid.autoGain.load() || treble.autoGain.load()) && lastMode > 1)
             paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom() + 3, toneControls.getWidth(), 10));
         
         if (outGain.autoGain.load())
@@ -290,15 +361,21 @@ struct AmpControls : Component, private Timer
         for (auto& k : getKnobs())
             k->setBounds(mb.removeFromLeft(w).reduced(5));
 
-        auto leftSide = bounds.removeFromLeft(w * 2);
+        auto grMeterBounds = bounds.removeFromLeft(w * 2);
+        grMeter.setBounds(grMeterBounds.reduced(10));
 
-        mode.setSize(100, 40);
-        mode.setCentrePosition(bounds.getCentreX(), bounds.getBottom() - 25);
+        auto hiGainBounds = bounds.removeFromLeft(w);
+        hiGain.setSize(getWidth() * 0.07f, getHeight() * 0.15f);
+        hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
 
-        hiGain.setSize(50, 30);
-        hiGain.setCentrePosition(inGain.getBounds().getCentreX(), mode.getBounds().getCentreY());
+        auto modeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.5);
+        auto powerBounds = bounds.reduced(w * 0.1);
 
-        grMeter.setBounds(leftSide.reduced(10));
+        mode.setSize(getWidth() * 0.125f, getHeight() * 0.15f);
+        mode.setCentrePosition(modeBounds.getCentreX(), modeBounds.getCentreY());
+
+        power.setSize(powerBounds.getHeight(), powerBounds.getHeight());
+        power.setCentrePosition(powerBounds.getCentreX(), powerBounds.getCentreY());
     }
 
 private:
@@ -311,7 +388,9 @@ private:
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach;
 
     LightButton hiGain;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach, powerAttach;
+
+    PowerButton power;
 
     strix::VolumeMeterComponent grMeter;
 

@@ -68,9 +68,9 @@ struct AudioSource
         for (int i = 0; i < 6; ++i)
         {
             if (src[i].size() > 0)
-                b_rms[i] = 2.0 * std::sqrt(std::accumulate(src[i].begin(), src[i].end(), 0.f) / (float)src[i].size());
+                b_rms[i] = std::sqrt(std::accumulate(src[i].begin(), src[i].end(), 0.f) / (float)src[i].size());
             else
-                b_rms[i] = 2.0 * std::sqrt(sum[i]);
+                b_rms[i] = std::sqrt(sum[i]);
         }
 
         return b_rms;
@@ -127,8 +127,10 @@ struct SineWaveComponent : Component, Timer
     void paint(Graphics& g) override
     {
         g.setColour(Colour(TOP_TRIM).withAlpha(0.9f));
-        g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.f);
+        g.fillRoundedRectangle(getLocalBounds().toFloat(), getHeight() * 0.1f);
         drawSineWave(g);
+        g.setColour(Colour(DEEP_BLUE));
+        g.drawRoundedRectangle(getLocalBounds().reduced(1).toFloat(), getHeight() * 0.1f, 2.f);
     }
 
     inline void drawSineWave(Graphics& g)
