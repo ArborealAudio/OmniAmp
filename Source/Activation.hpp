@@ -42,8 +42,10 @@ struct ActivationComponent : Component
 {
     ActivationComponent()
     {
+        m_betaLive = checkSite();
+        if (!isBetaLive())
+            return;
         addAndMakeVisible(editor);
-        // editor.grabKeyboardFocus();
         editor.onReturnKey = [&] {
             checkInput();
         };
@@ -83,6 +85,13 @@ struct ActivationComponent : Component
         g.setColour(Colours::darkslategrey);
         g.fillRoundedRectangle(getLocalBounds().reduced(5).toFloat(), 10.f);
 
+        if (!isBetaLive()) {
+            g.setFont(22.f);
+            g.setColour(Colours::white);
+            g.drawFittedText("The beta period has ended. Thank you for participating.", getLocalBounds().reduced(getWidth() * 0.1f), Justification::centred, 3);
+            return;
+        }
+
         g.setFont(22.f);
         g.setColour(Colours::white);
         g.drawFittedText("Please enter your license key:", getLocalBounds().removeFromTop(getHeight() * 0.3f), Justification::centred, 3);
@@ -100,6 +109,8 @@ struct ActivationComponent : Component
         submit.setBounds(b.removeFromBottom(h * 0.3f).reduced(50, 10));
     }
 
+    var isBetaLive() {return (var)m_betaLive;}
+
     bool readFile()
     {
         File config {File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
@@ -112,19 +123,22 @@ struct ActivationComponent : Component
 
         auto key = xml->getStringAttribute("Key");
         auto result = check.compareHash(key);
+        if (result)
+            result = checkSite(); /*double-check site, just in case*/
+
         if (onActivationCheck)
             onActivationCheck(result);
         return result;
     }
 
 private:
+    bool m_betaLive = false;
+
     HashChecker check;
 
     TextEditor editor;
 
     TextButton submit{"Submit"};
-
-    std::atomic<bool> lastResult;
 
     void writeFile(const char* key)
     {
@@ -140,5 +154,17 @@ private:
 
         xml->setAttribute("Key", key);
         xml->writeTo(config);
+    }
+
+    var checkSite()
+    {
+        auto url = URL("https://arborealaudio.com/.netlify/functions/beta-check");
+
+        if (auto stream = url.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress).withExtraHeaders("name: Gamma\nkey: ArauGammBeta")))
+        {
+            auto response = stream->readEntireStreamAsString();
+
+            return response == "true";
+        }
     }
 };

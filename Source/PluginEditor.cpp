@@ -131,6 +131,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(activation);
     activation.centreWithSize(300, 200);
+    if (!activation.isBetaLive())
+        this->setEnabled(false);
     auto activated = activation.readFile();
     activation.setVisible(!activated);
     p.lockProcessing(!activated);
