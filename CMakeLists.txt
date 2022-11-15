@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(Gamma VERSION 0.5)
-
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -22,12 +22,13 @@ endif()
 
 juce_add_plugin(Gamma
     COMPANY_NAME "Arboreal Audio"
+    COMPANY_COPYRIGHT "(c) 2022 Arboreal Audio, LLC"
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Arau
     PLUGIN_CODE Gamm
     FORMATS ${JUCE_FORMATS}
     VST2_CATEGORY kPlugCategEffect
-    VST3_CATEGORY Fx
+    VST3_CATEGORY Fx Distortion
     AU_MAIN_TYPE kAudioUnitType_Effect
     PRODUCT_NAME "Gamma"
     HARDENED_RUNTIME_ENABLE TRUE)
@@ -60,7 +61,6 @@ target_compile_definitions(Gamma
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
-        JUCE_REPORT_APP_USAGE=0
         JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
 
 juce_add_binary_data(BinaryData SOURCES
