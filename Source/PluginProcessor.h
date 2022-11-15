@@ -168,20 +168,6 @@ private:
 
     void setOversampleIndex();
 
-    void onModeSwitch()
-    {
-        if (currentMode == Mode::Channel) {
-            apvts.getParameterAsValue("cabType") = 0;
-            apvts.getParameterAsValue("preampGain") = 0.f;
-            apvts.getParameterAsValue("powerampGain") = 0.f;
-        }
-        else {
-            apvts.getParameterAsValue("cabType") = lastCab + 1;
-            apvts.getParameterAsValue("preampGain") = 0.5f;
-            apvts.getParameterAsValue("powerampGain") = 0.5f;
-        }
-    }
-
     // lastGain is a reference so it can be directly changed by this function
     inline void applySmoothedGain(AudioBuffer<double>& buffer, float currentGain, float& lastGain)
     {
