@@ -9,20 +9,40 @@ class MXRDistWDF
 public:
     MXRDistWDF() = default;
 
-    void prepare (double sampleRate)
+    void prepare (const dsp::ProcessSpec& spec)
     {
-        C1.prepare ((T) sampleRate);
+        auto sampleRate = spec.sampleRate;
+        C1.prepare((T)sampleRate);
         C2.prepare ((T) sampleRate);
         C3.prepare ((T) sampleRate);
         C4.prepare ((T) sampleRate);
         C5.prepare ((T) sampleRate);
 
         Vb.setVoltage ((T)4.5f);
+
+        dist.reset(sampleRate, 0.005);
+        updateParams();
+
+        dcBlock.prepare(spec);
+        dcBlock.setCutoffFreq(10.0);
+        dcBlock.setType(strix::FilterType::highpass);
+
+        HeapBlock<char> heap{spec.maximumBlockSize, true};
+        strix::AudioBlock<T> block(heap, spec.numChannels, spec.maximumBlockSize);
+        block.fill(0.0);
+        processBlock(block);
     }
 
-    void setParams (T distParam)
+    /*set the target value for the distortion param*/
+    void setParams (double distParam)
     {
-        ResDist_R3.setResistanceValue (distParam * rDistVal + R3Val);
+        dist.setTargetValue(distParam);
+    }
+
+    /*update the distortion param from smoothed value*/
+    void updateParams()
+    {
+        ResDist_R3.setResistanceValue (dist.getNextValue() * rDistVal + R3Val);
     }
 
     inline T processSample (T x)
@@ -36,25 +56,55 @@ public:
     }
     
     /*for reg doubles currently just one channel, copies L->R*/
-    inline void processBlock(dsp::AudioBlock<T> &block)
+    void processBlock(dsp::AudioBlock<T> &block)
     {
         auto L = block.getChannelPointer(0);
         auto R = L;
         if (block.getNumChannels() > 1)
             R = block.getChannelPointer(1);
 
+        if (dist.isSmoothing())
+        {
+            for (auto i = 0; i < block.getNumSamples(); ++i)
+            {
+                updateParams();
+                L[i] = processSample(L[i]);
+                L[i] = dcBlock.processSample(0, L[i]);
+            }
+            return;
+        }
+
+        updateParams();
+
         for (auto i = 0; i < block.getNumSamples(); ++i)
         {
             L[i] = processSample(L[i]);
+            L[i] = dcBlock.processSample(0, L[i]);
         }
     }
 
-    inline void processBlock(strix::AudioBlock<T> &block)
+    void processBlock(strix::AudioBlock<T> &block)
     {
         auto in = block.getChannelPointer(0);
 
+        if (dist.isSmoothing())
+        {
+            for (auto i = 0; i < block.getNumSamples(); ++i)
+            {
+                updateParams();
+                in[i] = processSample(in[i]);
+                in[i] = dcBlock.processSample(0, in[i]);
+            }
+            return;
+        }
+
+        updateParams();
+
         for (auto i = 0; i < block.getNumSamples(); ++i)
+        {
             in[i] = processSample(in[i]);
+            in[i] = dcBlock.processSample(0, in[i]);
+        }
     }
 
 private:
@@ -118,6 +168,10 @@ private:
     WDFT::WDFParallelT<T, decltype (C5), decltype (P4)> P3 { C5, P4 };
 
     WDFT::DiodePairT<T, decltype (P3), WDFT::DiodeQuality::Best> DP { P3, 2.52e-9f, 25.85e-3f * 1.75f };
+
+    SmoothedValue<double> dist;
+
+    strix::SVTFilter<T> dcBlock;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MXRDistWDF)
 };
