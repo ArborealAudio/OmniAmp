@@ -23,7 +23,7 @@
 #endif
 
 #include <JuceHeader.h>
-#include "../modules/chowdsp_wdf/include/chowdsp_wdf/chowdsp_wdf.h"
+#include <chowdsp_wdf/chowdsp_wdf.h>
 #include "Processors/Processors.h"
 #include "Presets/PresetManager.h"
 #include "UI/UI.h"
@@ -105,8 +105,6 @@ public:
         }
     }
 
-    std::atomic<bool> loadedWIthNoState = true;
-
     String currentPreset = "";
 
     // call this from the UI if activation fails and processing should suspend
@@ -140,8 +138,6 @@ private:
     size_t os_index = 0;
 
     AudioBuffer<double> doubleBuffer;
-
-    Processors::CabType lastCab;
 
 #if USE_SIMD
     Processors::Enhancer<vec, Processors::EnhancerType::HF> hfEnhancer{apvts};
