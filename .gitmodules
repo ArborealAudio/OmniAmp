@@ -10,3 +10,6 @@
 [submodule "modules/gin"]
 	path = modules/gin
 	url = https://github.com/FigBug/gin
+[submodule "modules/juce"]
+	path = modules/juce
+	url = https://github.com/juce-framework/juce
