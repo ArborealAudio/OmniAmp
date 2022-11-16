@@ -170,7 +170,7 @@ protected:
 
         comp.prepare(spec);
 
-        mxr.prepare(spec.sampleRate);
+        mxr.prepare(spec);
 
         for (auto& t : triode)
             t.prepare(spec);
@@ -180,7 +180,6 @@ protected:
 
         pentode.prepare(spec);
 
-        // updateSIMD = true;
         simd.setInterleavedBlockSize(spec.numChannels, spec.maximumBlockSize);
     }
 
@@ -228,9 +227,9 @@ struct Guitar : Processor
     Guitar(AudioProcessorValueTreeState& a, strix::VolumeMeterSource& s) : Processor(a, ProcessorType::Guitar, s)
     {
     #if USE_SIMD
-        toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)1e6, (vec)20e3, (vec)65e3);
+        toneStack = std::make_unique<ToneStackNodal<vec>>(eqCoeffs);
     #else
-        toneStack = std::make_unique<ToneStackNodal<double>>(0.25e-9, 25e-9, 22e-9, 300e3, 1e6, 20e3, 65e3);
+        toneStack = std::make_unique<ToneStackNodal<double>>(eqCoeffs);
     #endif
         triode.resize(4);
     }
@@ -277,7 +276,7 @@ struct Guitar : Processor
         if (*hiGain)
             triode[3].processBlock(processBlock, 2.0, 4.0);
 
-        processBlock.multiplyBy(out_raw * 6.0);
+        processBlock.multiplyBy(out_raw/*  * 6.0 */);
 
         pentode.processBlockClassB(processBlock, 0.6, 0.6);
 
@@ -297,8 +296,10 @@ struct Guitar : Processor
 private:
 #if USE_SIMD
     GuitarPreFilter<vec> gtrPre;
+    ToneStackNodal<vec>::Coeffs eqCoeffs{(vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)1e6, (vec)20e3, (vec)65e3};
 #else
     GuitarPreFilter<double> gtrPre;
+    ToneStackNodal<vec>::Coeffs eqCoeffs{0.25e-9, 25e-9, 22e-9, 300e3, 1e6, 20e3, 65e3};
 #endif
 };
 
@@ -307,9 +308,9 @@ struct Bass : Processor
     Bass(AudioProcessorValueTreeState& a, strix::VolumeMeterSource& s) : Processor(a, ProcessorType::Bass, s)
     {
     #if USE_SIMD
-        toneStack = std::make_unique<ToneStackNodal<vec>>((vec)0.5e-9, (vec)10e-9, (vec)10e-9, (vec)250e3, (vec)0.5e6, (vec)100e3, (vec)200e3);
+        toneStack = std::make_unique<ToneStackNodal<vec>>(eqCoeffs);
     #else
-        toneStack = std::make_unique<ToneStackNodal<double>>(0.5e-9, 10e-9, 10e-9, 250e3, 0.5e6, 100e3, 200e3);
+        toneStack = std::make_unique<ToneStackNodal<double>>(eqCoeffs);
     #endif
         triode.resize(4);
     }
@@ -397,8 +398,10 @@ struct Bass : Processor
 private:
 #if USE_SIMD
     dsp::IIR::Filter<vec> scoop;
+    ToneStackNodal<vec>::Coeffs eqCoeffs{(vec)0.5e-9, (vec)10e-9, (vec)10e-9, (vec)250e3, (vec)0.5e6, (vec)100e3, (vec)200e3};
 #else
     dsp::IIR::Filter<double> scoop;
+    ToneStackNodal<vec>::Coeffs eqCoeffs{0.5e-9, 10e-9, 10e-9, 250e3, 0.5e6, 100e3, 200e3};
 #endif
 };
 
@@ -468,7 +471,6 @@ struct Channel : Processor
     {
         T gain_raw = jmap(inGain->load(), 1.f, 4.f);
         T out_raw = jmap(outGain->load(), 1.f, 4.f);
-        double pre_lim = jmap(inGain->load(), 0.5f, 1.f);
 
 #if USE_SIMD
         vec autoGain = 1.0;
@@ -491,7 +493,8 @@ struct Channel : Processor
         processBlock.multiplyBy(gain_raw);
 
         if (*inGain > 0.f) {
-            triode[0].processBlock(processBlock, pre_lim, 2.f * inGain->load());
+            double pre_lim = jmap(inGain->load(), 0.5f, 1.f);
+            triode[0].processBlock(processBlock, pre_lim, 2.f * pre_lim);
             if (*hiGain)
                 triode[1].processBlock(processBlock, pre_lim, gain_raw);
         }
@@ -505,7 +508,7 @@ struct Channel : Processor
             autoGain *= getEQAutoGain();
 
         if (*outGain > 0.f) {
-            processBlock.multiplyBy(out_raw * 6.f);
+            processBlock.multiplyBy(out_raw);
 
             if (!*hiGain)
                 pentode.processBlockClassB(processBlock, 0.4f, 0.4f);
