@@ -153,19 +153,19 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         }
     };
 
-    addChildComponent(init);
+    // addChildComponent(init);
 
-    if (p.loadedWIthNoState) {
-        init.setImage(createComponentSnapshot(getLocalBounds()));
-        init.setVisible(true);
-        init.centreWithSize(500, 350);
-    }
-    init.guitar.onClick = [&]
-    { presetMenu.setPresetWithChange("Default Guitar"); p.loadedWIthNoState = false; init.setVisible(false); };
-    init.bass.onClick = [&]
-    { presetMenu.setPresetWithChange("Default Bass"); p.loadedWIthNoState = false; init.setVisible(false); };
-    init.channel.onClick = [&]
-    { presetMenu.setPresetWithChange("Default Channel"); p.loadedWIthNoState = false; init.setVisible(false); };
+    // if (p.loadedWIthNoState) {
+    //     init.setImage(createComponentSnapshot(getLocalBounds()));
+    //     init.setVisible(true);
+    //     init.centreWithSize(500, 350);
+    // }
+    // init.guitar.onClick = [&]
+    // { presetMenu.setPresetWithChange("Default Guitar"); p.loadedWIthNoState = false; init.setVisible(false); };
+    // init.bass.onClick = [&]
+    // { presetMenu.setPresetWithChange("Default Bass"); p.loadedWIthNoState = false; init.setVisible(false); };
+    // init.channel.onClick = [&]
+    // { presetMenu.setPresetWithChange("Default Channel"); p.loadedWIthNoState = false; init.setVisible(false); };
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -232,7 +232,7 @@ void GammaAudioProcessorEditor::resized()
 
     activation.centreWithSize(300, 200);
 
-    init.centreWithSize(500, 350);
+    // init.centreWithSize(500, 350);
 
     MessageManager::callAsync([&]{writeConfigFile("size", getWidth());});
 }

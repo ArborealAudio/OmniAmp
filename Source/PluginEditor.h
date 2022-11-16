@@ -43,12 +43,12 @@ public:
             else
                 return false;
         }
-        else if (init.isVisible()) {
-            if (init.getBounds().contains(x, y))
-                return init.hitTest(x, y);
-            else
-                return false;
-        }
+        // else if (init.isVisible()) {
+        //     if (init.getBounds().contains(x, y))
+        //         return init.hitTest(x, y);
+        //     else
+        //         return false;
+        // }
         else
             return AudioProcessorEditor::hitTest(x, y);
     }
@@ -89,7 +89,7 @@ private:
 
     ActivationComponent activation;
 
-    InitComponent init;
+    // InitComponent init;
 
 #if JUCE_WINDOWS || JUCE_LINUX
     OpenGLContext opengl;
