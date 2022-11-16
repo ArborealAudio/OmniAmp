@@ -206,7 +206,6 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         lfEnhancer.setMode((Processors::ProcessorType)currentMode);
         hfEnhancer.setMode((Processors::ProcessorType)currentMode);
         lfEnhancer.flagUpdate(true);
-        // onModeSwitch(); // leaving this out atm. Figure out between-mode functionality
     }
     else if (parameterID == "bass")
     {
@@ -236,7 +235,6 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     }
     else if (parameterID == "cabType") {
         cab.setCabType((int)newValue);
-        // lastCab = (Processors::CabType)(newValue - 1);
     }
     else if (parameterID == "reverbType")
         reverb.changeRoomType((Processors::ReverbType)newValue);
@@ -344,7 +342,7 @@ void GammaAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 
     currentPreset = xml->getStringAttribute("Preset");
 
-    loadedWIthNoState = false;
+    // loadedWIthNoState = false;
 }
 
 //==============================================================================
