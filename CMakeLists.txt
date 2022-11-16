@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(Gamma VERSION 0.5)
+project(Gamma VERSION 0.6)
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,7 +48,7 @@ target_sources(Gamma
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
 add_subdirectory(Source/Presets)
-add_subdirectory(modules/chowdsp_wdf)
+target_include_directories(Gamma PRIVATE "modules/chowdsp_wdf/include")
 
 juce_add_modules(
     "modules/gin/modules/gin"
@@ -89,7 +89,6 @@ target_link_libraries(Gamma
         gin
         gin_gui
         Arbor_modules
-        chowdsp_wdf
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
