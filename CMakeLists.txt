@@ -5,7 +5,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(JUCE CONFIG REQUIRED)
+add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 
 juce_set_vst2_sdk_path("$ENV{HOME}/vst2_sdk")
