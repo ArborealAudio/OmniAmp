@@ -31,7 +31,7 @@ struct PresetComp : Component, private Timer
 
     void loadPresets()
     {
-        PopupMenu::Item save{ "save" }, saveAs{ "save as" }, copy{ "copy state" }, paste{"paste state"}, presetDir{"open preset folder"};
+        PopupMenu::Item save{ "save" }, saveAs{ "save as" }, copy{ "copy preset" }, paste{"paste preset"}, presetDir{"open preset folder"};
 
         auto menu = box.getRootMenu();
         menu->clear();
