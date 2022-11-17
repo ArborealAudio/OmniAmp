@@ -173,7 +173,7 @@ private:
             max = sc_hp[0].processSample(max);
             max = sc_lp[0].processSample(max);
 
-            max = std::tanh(max);
+            max = strix::fast_tanh(max);
 
             auto gr = computeGR(0, max);
 
@@ -204,7 +204,7 @@ private:
             x = sc_hp[ch].processSample(x);
             x = sc_lp[ch].processSample(x);
 
-            x = std::tanh(x);
+            x = strix::fast_tanh(x);
 
             auto gr = computeGR(ch, x);
 
