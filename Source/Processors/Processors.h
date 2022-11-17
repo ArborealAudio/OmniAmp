@@ -17,7 +17,8 @@ struct SmoothGain
     /// @tparam T sample type
     /// @param lastGain reference to gain state which can be update if needed
     /// @param updateGain whether or not to update the gain state, true by default
-    inline static void applySmoothGain(T *in, size_t numSamples, double currentGain, double& lastGain, bool updateGain = true)
+    template <typename FloatType>
+    inline static void applySmoothGain(T *in, size_t numSamples, FloatType currentGain, FloatType& lastGain, bool updateGain = true)
     {
         if (lastGain == currentGain)
         {
@@ -42,8 +43,8 @@ struct SmoothGain
     /// @tparam T sample type
     /// @param lastGain reference to gain state which can be update if needed
     /// @param updateGain whether or not to update the gain state, true by default
-    template <typename Block>
-    inline static void applySmoothGain(Block& block, double currentGain, double& lastGain, bool updateGain = true)
+    template <typename Block, typename FloatType>
+    inline static void applySmoothGain(Block& block, FloatType currentGain, FloatType& lastGain, bool updateGain = true)
     {
         if (lastGain == currentGain)
         {
@@ -85,7 +86,6 @@ enum class ProcessorType
 #include "Cab.h"
 #include "DistPlus.h"
 #include "Room.h"
-#include "MSMatrix.h"
 
 struct Processor : AudioProcessorValueTreeState::Listener
 {
