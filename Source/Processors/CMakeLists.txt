@@ -9,5 +9,4 @@ PRIVATE
     Enhancer.h
     Cab.h
     DistPlus.h
-    Room.h
-    MSMatrix.h)
+    Room.h)
