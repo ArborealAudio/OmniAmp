@@ -185,22 +185,28 @@ private:
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
 
+        if (*apvts.getRawParameterValue("gainLink"))
+            outGain_raw *= 1.0 / inGain_raw;
+
         dsp::AudioBlock<double> block(buffer);
 
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
 
-        // apply input gain
-        applySmoothedGain(buffer, inGain_raw, lastInGain);
+        SmoothGain<float>::applySmoothGain(block, inGain_raw, lastInGain);
 
         bool ms = (bool)*apvts.getRawParameterValue("m/s");
-        float width = *apvts.getRawParameterValue("width");
 
         if (ms && block.getNumChannels() > 1)
-            Processors::MSMatrix::msEncode(block);
+            strix::MSMatrix::msEncode(block);
 
-        if (block.getNumChannels() > 1 && width != 1.f)
-            Processors::Balance::processBalance(block, width, ms);
+        float stereoEmph = *apvts.getRawParameterValue("stereoEmphasis");
+
+        if (stereoEmph != 1.f) {
+            if (stereoEmph == 0.f)
+                stereoEmph = 0.01f;
+            strix::Balance::processBalance(block, stereoEmph, ms);
+        }
 
         auto osBlock = oversample[os_index].processSamplesUp(block);
 
@@ -242,14 +248,24 @@ private:
         simd.deinterleaveBlock(processBlock);
 #endif
 
-        if (ms && block.getNumChannels() > 1)
-            Processors::MSMatrix::msDecode(block);
+        if (ms && block.getNumChannels() > 1) {
+            strix::MSMatrix::msDecode(block);
+            ms = false;
+        }
 
         if (*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
 
         // apply output gain
-        applySmoothedGain(buffer, outGain_raw, lastOutGain);
+        SmoothGain<float>::applySmoothGain(block, outGain_raw, lastOutGain);
+
+        if (stereoEmph != 1.f)
+            strix::Balance::processBalance(block, 1.f / stereoEmph, ms);
+
+        float width = *apvts.getRawParameterValue("width");
+
+        if (block.getNumChannels() > 1 && width != 1.f)
+            strix::Balance::processBalance(block, width, ms);
     }
 
     //==============================================================================
