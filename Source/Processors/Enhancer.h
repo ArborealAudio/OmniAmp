@@ -182,7 +182,7 @@ private:
         auto gain = jmap(enhance, 1.0, 4.0);
         double autoGain = 1.0;
 
-        SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
+        strix::SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
 
         EnhancerSaturation::process(block, 1.0, 1.0, 1.0);
         block.multiplyBy(2.0);
@@ -193,7 +193,7 @@ private:
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = hp2[0].processSample(inL[i]);
 
-        SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), enhance * autoGain, lastAutoGain);
+        strix::SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), enhance * autoGain, lastAutoGain);
     }
 
     template <typename Block>
@@ -207,7 +207,7 @@ private:
         auto gain = jmap(enhance, 1.0, 2.0);
         double autoGain = 1.0;
 
-        SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
+        strix::SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
 
         EnhancerSaturation::process(block, 1.0, 2.0, 4.0);
 
@@ -217,7 +217,7 @@ private:
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = lp2[0].processSample(inL[i]);
 
-        SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), enhance * autoGain, lastAutoGain);
+        strix::SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), enhance * autoGain, lastAutoGain);
     }
 
     double SR = 44100.0;
