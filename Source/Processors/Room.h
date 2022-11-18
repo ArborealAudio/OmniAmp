@@ -32,11 +32,12 @@ class Room
         }
 
         // Expects an array of N channels worth of samples
-        static void processHouseholder(double *ch)
+        template <typename T>
+        static void processHouseholder(T *ch)
         {
-            const double h_mult = -2.0 / (double)size;
+            const T h_mult = -2.0 / (T)size;
 
-            double sum = 0.0;
+            T sum = 0.0;
             for (int j = 0; j < size; ++j)
                 sum += ch[j];
 
@@ -46,21 +47,8 @@ class Room
                 ch[j] += sum;
         }
 
-        static void processHouseholder(vec *ch)
-        {
-            const vec h_mult = -2.0 / (vec)size;
-
-            vec sum = 0.0;
-            for (int j = 0; j < size; ++j)
-                sum += ch[j];
-
-            sum *= h_mult;
-
-            for (int j = 0; j < size; ++j)
-                ch[j] += sum;
-        }
-
-        static inline void recursive(double *data)
+        template <typename T>
+        static inline void recursive(T *data)
         {
             if (size <= 1)
                 return;
@@ -71,26 +59,8 @@ class Room
 
             for (int i = 0; i < hSize; ++i)
             {
-                double a = data[i];
-                double b = data[i + hSize];
-                data[i] = a + b;
-                data[i + hSize] = a - b;
-            }
-        }
-
-        static inline void recursive(vec *data)
-        {
-            if (size <= 1)
-                return;
-            const int hSize = size / 2;
-
-            MixMatrix<hSize>::recursive(data);
-            MixMatrix<hSize>::recursive(data + hSize);
-
-            for (int i = 0; i < hSize; ++i)
-            {
-                vec a = data[i];
-                vec b = data[i + hSize];
+                T a = data[i];
+                T b = data[i + hSize];
                 data[i] = a + b;
                 data[i + hSize] = a - b;
             }
@@ -100,7 +70,6 @@ class Room
     template <typename T>
     struct Diffuser
     {
-
         float delayRange;
 
         /**
@@ -139,11 +108,11 @@ class Room
         }
 
         // expects a block of N channels
-        void process(dsp::AudioBlock<double> &block)
+        void process(dsp::AudioBlock<T> &block)
         {
             for (auto i = 0; i < block.getNumSamples(); ++i)
             {
-                std::vector<double> vec;
+                std::vector<T> vec;
 
                 for (auto ch = 0; ch < channels; ++ch)
                 {
@@ -241,11 +210,12 @@ class Room
                 o.reset();
         }
 
-        void process(dsp::AudioBlock<double> &block)
+        template <typename Block>
+        void process(Block &block)
         {
             for (int i = 0; i < block.getNumSamples(); ++i)
             {
-                std::vector<double> delayed;
+                std::vector<T> delayed;
 
                 for (int ch = 0; ch < channels; ++ch)
                 {
@@ -270,42 +240,13 @@ class Room
             }
         }
 
-        void process(strix::AudioBlock<vec> &block)
-        {
-            for (int i = 0; i < block.getNumSamples(); ++i)
-            {
-                std::vector<vec> delayed;
-
-                for (int ch = 0; ch < channels; ++ch)
-                {
-                    auto mod = osc[ch].processSample(delaySamples[ch]);
-                    auto dtime = delaySamples[ch] - (0.2 * mod);
-                    auto d = delays[ch].popSample(0, dtime);
-                    d = lp.processSample(ch, d);
-                    d = hp.processSample(ch, d);
-                    delayed.push_back(d);
-                }
-
-                MixMatrix<channels>::processHouseholder(delayed.data());
-
-                for (int ch = 0; ch < channels; ++ch)
-                {
-                    auto in = block.getChannelPointer(ch)[i];
-                    auto sum = in + delayed[ch] * decayGain;
-                    delays[ch].pushSample(0, sum);
-
-                    block.setSample(ch, i, delayed[ch]);
-                }
-            }
-        }
-
-        double delayMs = 150.0;
-        double decayGain = 0.85;
+        T delayMs = 150.0;
+        T decayGain = 0.85;
 
         /*A fraction of Nyquist, where the lowpass will be placed in the feedback path*/
-        double dampening = 1.0;
+        T dampening = 1.0;
 
-        double modFreq = 1.0;
+        T modFreq = 1.0;
 
     private:
         // static constexpr size_t channels = channels;
@@ -602,7 +543,7 @@ public:
         else
             mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(0));
 
-        buf.makeCopyOf(usBuf);
+        buf.makeCopyOf(usBuf, true);
     }
 };
 
