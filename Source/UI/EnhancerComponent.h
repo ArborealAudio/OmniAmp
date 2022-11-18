@@ -1,8 +1,11 @@
-/* UI_Top.h */
+/**
+ * EnhancerComponent.h
+ * Component for managing enhancers & associated UI, along with the visualizer
+*/
 
-struct TopComponent : Component
+struct EnhancerComponent : Component
 {
-    TopComponent(strix::AudioSource& s, AudioProcessorValueTreeState& apvts) : wave(s)
+    EnhancerComponent(strix::AudioSource& s, AudioProcessorValueTreeState& apvts) : wave(s)
     {
         mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
 
@@ -49,7 +52,14 @@ struct TopComponent : Component
         g.setColour(Colours::grey);
         g.drawRoundedRectangle(bounds, 5.f, 2.f);
 
-        mesh->drawWithin(g, bounds.reduced(1.f), RectanglePlacement::fillDestination, 0.7f);
+        Image img(Image::PixelFormat::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+        Graphics img_g(img);
+
+        mesh->drawWithin(img_g, bounds.reduced(1.f), RectanglePlacement::fillDestination, 0.7f);
+
+        Blur::blurImage<1, true>(img);
+
+        g.drawImage(img, bounds);
 
         g.setFont(getHeight() * 0.1f);
         g.setColour(Colours::white);

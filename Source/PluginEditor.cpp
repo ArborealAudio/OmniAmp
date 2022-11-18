@@ -12,17 +12,18 @@
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
-    top(p.audioSource, p.apvts),
-    ampControls(p.getActiveGRSource(), p.apvts),
-    cabComponent(p.apvts.getRawParameterValue("cabType")),
-    reverbComp(p.apvts),
-    menu(p.apvts, 200),
-    presetMenu(p.apvts),
-    dl(false), tooltip(this, 1000)
+      top(p.audioSource, p.apvts),
+      ampControls(p.getActiveGRSource(), p.apvts),
+      cabComponent(p.apvts.getRawParameterValue("cabType")),
+      reverbComp(p.apvts),
+      menu(p.apvts, 200),
+      presetMenu(p.apvts),
+      dl(false), tooltip(this, 1000)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
-    if (readConfigFile("openGL")) {
+    if (readConfigFile("openGL"))
+    {
         opengl.detach();
         opengl.attachTo(*this);
     }
@@ -51,7 +52,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     pluginTitle.setJustificationType(Justification::centred);
 
     addAndMakeVisible(menu);
-    menu.windowResizeCallback = [&] { resetWindowSize(); };
+    menu.windowResizeCallback = [&]
+    { resetWindowSize(); };
     menu.checkUpdateCallback = [&]
     { dl.setVisible(dl.checkForUpdate()); };
 #if JUCE_WINDOWS || JUCE_LINUX
@@ -68,7 +70,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addAndMakeVisible(presetMenu);
     presetMenu.setCurrentPreset(p.currentPreset);
-    presetMenu.box.onChange = [&] {
+    presetMenu.box.onChange = [&]
+    {
         presetMenu.valueChanged();
         p.currentPreset = presetMenu.getCurrentPreset();
     };
@@ -144,28 +147,15 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
-    splash.setPluginWrapperType(p.wrapperType);
+    splash.setPluginWrapperType(p.getWrapperTypeString());
     splash.onLogoClick = [&]
     {
-        if (!splash.isVisible()) {
+        if (!splash.isVisible())
+        {
             splash.setImage(createComponentSnapshot(splash.getBounds()));
             splash.setVisible(true);
         }
     };
-
-    // addChildComponent(init);
-
-    // if (p.loadedWIthNoState) {
-    //     init.setImage(createComponentSnapshot(getLocalBounds()));
-    //     init.setVisible(true);
-    //     init.centreWithSize(500, 350);
-    // }
-    // init.guitar.onClick = [&]
-    // { presetMenu.setPresetWithChange("Default Guitar"); p.loadedWIthNoState = false; init.setVisible(false); };
-    // init.bass.onClick = [&]
-    // { presetMenu.setPresetWithChange("Default Bass"); p.loadedWIthNoState = false; init.setVisible(false); };
-    // init.channel.onClick = [&]
-    // { presetMenu.setPresetWithChange("Default Channel"); p.loadedWIthNoState = false; init.setVisible(false); };
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -185,23 +175,24 @@ void GammaAudioProcessorEditor::resetWindowSize() noexcept
 void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
     g.fillAll(Colour(TOP_TRIM));
-    
     auto trimmedTop = getLocalBounds().removeFromTop(getHeight() * 0.15f);
-
     logoBounds = trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).toFloat();
-
     logo->drawWithin(g, logoBounds.reduced(5.f), RectanglePlacement::centred, 1.f);
 }
 
 void GammaAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
-    const auto w = getWidth();
-    const auto h = getHeight();
+    auto w = getWidth();
+    auto h = getHeight();
     auto topSection = bounds.removeFromTop(h * 0.15f);
-    auto bottomSection = bounds.removeFromBottom(h * 0.285f).reduced(1);
-    auto ampSection = bounds.removeFromBottom(h * 0.285f).reduced(1);
+    auto mainHeight = bounds.getHeight();
+    auto enhancerSection = bounds.removeFromBottom(mainHeight * 0.25f).reduced(1);
+    auto cabVerbSection = bounds.removeFromBottom(mainHeight * 0.25f).reduced(1);
+    auto ampSection = bounds.removeFromBottom(mainHeight * 0.75f).reduced(1);
+    auto preSection = bounds;
 
+    /* set bounds of top controls */
     auto topSectionThird = topSection.getWidth() / 3;
     auto topKnobs = topSection.removeFromLeft(topSectionThird);
     topKnobs.removeFromLeft(w / 12); // section where logo is drawn
@@ -221,10 +212,11 @@ void GammaAudioProcessorEditor::resized()
     midSide.setBounds(knobsBottom.removeFromLeft(knobsBottom.getWidth() * 0.5).reduced(0, knobHalf * 0.15f));
     width.setBounds(knobsBottom);
 
-    top.setBounds(bounds);
+    
+    top.setBounds(enhancerSection);
     ampControls.setBounds(ampSection);
-    cabComponent.setBounds(bottomSection.removeFromLeft(w * 0.66f));
-    reverbComp.setBounds(bottomSection);
+    cabComponent.setBounds(cabVerbSection.removeFromLeft(w * 0.66f));
+    reverbComp.setBounds(cabVerbSection);
 
     dl.centreWithSize(300, 200);
 
@@ -232,7 +224,6 @@ void GammaAudioProcessorEditor::resized()
 
     activation.centreWithSize(300, 200);
 
-    // init.centreWithSize(500, 350);
-
-    MessageManager::callAsync([&]{writeConfigFile("size", getWidth());});
+    MessageManager::callAsync([&]
+                              { writeConfigFile("size", getWidth()); });
 }
