@@ -113,7 +113,7 @@ namespace Blur
 #include "CabComponent.h"
 #include "ReverbComponent.h"
 #include "Menu.h"
-#include "UI_Top.h"
+#include "EnhancerComponent.h"
 #include "DownloadManager.h"
 #include "../Presets/PresetComp.h"
 #include "Splash.h"

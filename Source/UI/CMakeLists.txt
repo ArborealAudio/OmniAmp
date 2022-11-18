@@ -9,7 +9,7 @@ PRIVATE
     CabComponent.h
     ReverbComponent.h
     Menu.h
-    UI_Top.h
+    EnhancerComponent.h
     DownloadManager.h
     Splash.h
     Init.h)
