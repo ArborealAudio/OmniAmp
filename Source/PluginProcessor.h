@@ -37,7 +37,8 @@
 /**
  */
 class GammaAudioProcessor : public juce::AudioProcessor,
-                            public AudioProcessorValueTreeState::Listener
+                            public AudioProcessorValueTreeState::Listener,
+                            public clap_juce_extensions::clap_properties
 {
 public:
     //==============================================================================
@@ -111,6 +112,14 @@ public:
     void lockProcessing(bool shouldBeLocked)
     {
         suspendProcessing(shouldBeLocked);
+    }
+
+    String getWrapperTypeString()
+    {
+        if (wrapperType == wrapperType_Undefined && is_clap)
+            return "CLAP";
+    
+        return juce::AudioProcessor::getWrapperTypeDescription (wrapperType);
     }
 
 private:

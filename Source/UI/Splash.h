@@ -46,14 +46,10 @@ struct Splash : Component
 
         logo->drawWithin(g, logoBounds, RectanglePlacement::yTop, 1.f);
 
-        auto wrapperStr = AudioProcessor::getWrapperTypeDescription(currentWrapper);
-        if (currentWrapper == AudioProcessor::wrapperType_Undefined)
-            wrapperStr = "CLAP";
-
         g.setFont(16.f);
         Time time(Time::getCurrentTime());
         g.drawFittedText("v" + String(ProjectInfo::versionString) + 
-            "\n" + wrapperStr +
+            "\n" + currentWrapper +
             "\n(c) Arboreal Audio " + String(time.getYear()),
             b.toNearestInt(),
             Justification::centred, 3, 1.f);
@@ -68,7 +64,7 @@ struct Splash : Component
         repaint();
     }
 
-    void setPluginWrapperType(AudioProcessor::WrapperType type)
+    void setPluginWrapperType(const String& type)
     {
         currentWrapper = type;
     }
@@ -83,5 +79,5 @@ private:
 
     std::unique_ptr<Drawable> logo;
 
-    AudioProcessor::WrapperType currentWrapper;
+    String currentWrapper;
 };
