@@ -344,8 +344,7 @@ bool GammaAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor *GammaAudioProcessor::createEditor()
 {
-    // return new GammaAudioProcessorEditor(*this);
-    return new GenericAudioProcessorEditor(*this);
+    return new GammaAudioProcessorEditor(*this);
 }
 
 //==============================================================================
