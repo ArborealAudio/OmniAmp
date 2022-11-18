@@ -35,6 +35,7 @@ juce_add_plugin(Gamma
 
 clap_juce_extensions_plugin(TARGET Gamma
     CLAP_ID "com.ArborealAudio.Gamma.clap"
+    CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 32
     CLAP_FEATURES amp "channel strip" guitar bass)
 
 juce_generate_juce_header(Gamma)
