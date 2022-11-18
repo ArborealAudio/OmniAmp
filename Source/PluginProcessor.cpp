@@ -173,6 +173,12 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     reverb.prepare(spec);
     reverb.changeRoomType((Processors::ReverbType)apvts.getRawParameterValue("reverbType")->load());
 
+    mixer.prepare(spec);
+    mixer.setMixingRule(dsp::DryWetMixingRule::linear);
+
+    doubler.prepare(spec);
+    doubler.setDelayTime(18);
+
     audioSource.prepare(spec);
 
     doubleBuffer.setSize(2, samplesPerBlock);
@@ -189,6 +195,10 @@ void GammaAudioProcessor::releaseResources()
     lfEnhancer.reset();
     cab.reset();
     reverb.reset();
+    emphasisIn.reset();
+    emphasisOut.reset();
+    doubler.reset();
+    mixer.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -334,7 +344,8 @@ bool GammaAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor *GammaAudioProcessor::createEditor()
 {
-    return new GammaAudioProcessorEditor(*this);
+    // return new GammaAudioProcessorEditor(*this);
+    return new GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -374,7 +385,9 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("m/s", 1), "Stereo/MS", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("width", 1), "Width", 0.f, 2.f, 1.f));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("stereoEmphasis", 1), "Stereo Emphasis", 0.f, 2.f, 1.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("stereoEmphasis", 1), "Stereo Emphasis", 0.1f, 10.f, 1.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("doubler", 1), "Doubler", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mix", 1), "Mix", 0.f, 1.f, 1.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("ampOn", 1), "Amp On/Off", true));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("preampAutoGain", 1), "Preamp Auto Gain", false));

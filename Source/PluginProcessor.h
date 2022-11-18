@@ -118,7 +118,7 @@ private:
 
     std::atomic<float> *inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
-    float lastInGain = 1.f, lastOutGain = 1.f;
+    float lastInGain = 1.f, lastOutGain = 1.f, lastWidth = 1.f, lastEmph = 0.f;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -151,6 +151,12 @@ private:
 
     Processors::ReverbManager reverb;
 
+    strix::Balance emphasisIn, emphasisOut;
+
+    strix::MonoToStereo<double> doubler;
+
+    dsp::DryWetMixer<double> mixer{8};
+
     strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
 
     enum Mode
@@ -164,21 +170,6 @@ private:
 
     void setOversampleIndex();
 
-    // lastGain is a reference so it can be directly changed by this function
-    inline void applySmoothedGain(AudioBuffer<double>& buffer, float currentGain, float& lastGain)
-    {
-        if (currentGain == lastGain)
-        {
-            buffer.applyGain(currentGain);
-            lastGain = currentGain;
-        }
-        else
-        {
-            buffer.applyGainRamp(0, buffer.getNumSamples(), lastGain, currentGain);
-            lastGain = currentGain;
-        }
-    }
-
     // expects stereo in and out
     void processDoubleBuffer(AudioBuffer<double> &buffer)
     {
@@ -190,22 +181,30 @@ private:
 
         dsp::AudioBlock<double> block(buffer);
 
+        mixer.pushDrySamples(block);
+
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
 
-        SmoothGain<float>::applySmoothGain(block, inGain_raw, lastInGain);
+        /*apply input gain*/
+        strix::SmoothGain<float>::applySmoothGain(block, inGain_raw, lastInGain);
 
+        double dubAmt = *apvts.getRawParameterValue("doubler");
+        if (dubAmt && block.getNumChannels() > 1)
+            doubler.process(block, dubAmt);
+
+        /* M/S encode if necessary */
         bool ms = (bool)*apvts.getRawParameterValue("m/s");
 
         if (ms && block.getNumChannels() > 1)
             strix::MSMatrix::msEncode(block);
 
+        /* Input Stereo Emphasis */
         float stereoEmph = *apvts.getRawParameterValue("stereoEmphasis");
 
         if (stereoEmph != 1.f) {
-            if (stereoEmph == 0.f)
-                stereoEmph = 0.01f;
-            strix::Balance::processBalance(block, stereoEmph, ms);
+            stereoEmph = jmax(stereoEmph, 0.5f);
+            emphasisIn.process(block, stereoEmph, ms);
         }
 
         auto osBlock = oversample[os_index].processSamplesUp(block);
@@ -228,7 +227,9 @@ private:
 
         oversample[os_index].processSamplesDown(block);
 
-        setLatencySamples(oversample[os_index].getLatencyInSamples());
+        auto latency = oversample[os_index].getLatencyInSamples();
+
+        setLatencySamples(latency);
 
 #if USE_SIMD
         auto&& processBlock = simd.interleaveBlock(block);
@@ -248,24 +249,27 @@ private:
         simd.deinterleaveBlock(processBlock);
 #endif
 
-        if (ms && block.getNumChannels() > 1) {
+        /* Output Stereo Emphasis */
+        if (stereoEmph != 1.f)
+            emphasisOut.process(block, 1.f / stereoEmph, ms);
+
+        if (ms && block.getNumChannels() > 1)
             strix::MSMatrix::msDecode(block);
-            ms = false;
-        }
 
         if (*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
 
         // apply output gain
-        SmoothGain<float>::applySmoothGain(block, outGain_raw, lastOutGain);
-
-        if (stereoEmph != 1.f)
-            strix::Balance::processBalance(block, 1.f / stereoEmph, ms);
+        strix::SmoothGain<float>::applySmoothGain(block, outGain_raw, lastOutGain);
 
         float width = *apvts.getRawParameterValue("width");
 
         if (block.getNumChannels() > 1 && width != 1.f)
-            strix::Balance::processBalance(block, width, ms);
+            strix::Balance::processBalance(block, width, false, lastWidth);
+
+        mixer.setWetLatency(latency);
+        mixer.setWetMixProportion(*apvts.getRawParameterValue("mix"));
+        mixer.mixWetSamples(block);
     }
 
     //==============================================================================
