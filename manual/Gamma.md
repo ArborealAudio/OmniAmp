@@ -182,6 +182,8 @@ This plugin would not have been possible without the research and open-source co
 
 - Sam Schachter | https://github.com/schachtersam32/WaveDigitalFilters_Sharc
 
+- Aleksey Vaneev | For his informative KVR posts about tube simulation
+
 - xsimd | https://github.com/xtensor-stack/xsimd (c) 2016, Johan Mabille, Sylvain Corlay, Wolf Vollprecht and Martin Renou
   (c) 2016, QuantStack
   (c) 2018, Serge Guelton <sup>1</sup>
@@ -192,6 +194,10 @@ This plugin would not have been possible without the research and open-source co
 
 - Alexandre Bique and Paul Walker | [Free Audio/CLAP](https://github.com/free-audio) (c) 2021 Alexandre BIQUE
   (c) 2019-2020, Paul Walker <sup>2</sup>
+
+  And a huge thank-you to all beta testers:
+
+  Jatin Chowdhury, Florian Mrugalla, James Ure
 
 ### <sup>1</sup> BSD-3-Clause License
 
