@@ -47,31 +47,6 @@ struct GuitarPreFilter
             b.reset();
     }
 
-    void process(AudioBuffer<float>& buffer, bool hi)
-    {
-        if (hi) {
-            for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-            {
-                auto in = buffer.getWritePointer(ch);
-                for (int i = 0; i < buffer.getNumSamples(); ++i)
-                {
-                    in[i] = hiShelf[ch].processSample(in[i]);
-                    in[i] = sc_lp[ch].processSample(in[i]);
-                }
-            }
-        }
-        else {
-            for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-            {
-                auto in = buffer.getWritePointer(ch);
-                for (int i = 0; i < buffer.getNumSamples(); ++i)
-                {
-                    in[i] = bandPass[ch].processSample(in[i]);
-                }
-            }
-        }
-    }
-
     template <typename Block>
     void processBlock(Block& block, bool hi)
     {
