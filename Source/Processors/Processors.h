@@ -137,15 +137,15 @@ namespace Processors
 
         OptoComp<double> comp;
 #if USE_SIMD
-    MXRDistWDF<vec> mxr;
-    std::unique_ptr<ToneStackNodal<vec>> toneStack;
-    std::vector<AVTriode<vec>> triode;
-    Pentode<vec, PentodeType::Classic> pentode;
+        MXRDistWDF<vec> mxr;
+        std::unique_ptr<ToneStackNodal<vec>> toneStack;
+        std::vector<AVTriode<vec>> triode;
+        Pentode<vec, PentodeType::Classic> pentode;
 #else
-    MXRDistWDF<double> mxr;
-    std::unique_ptr<ToneStackNodal<double>> toneStack;
-    std::vector<AVTriode<double>> triode;
-    Pentode<double> pentode;
+        MXRDistWDF<double> mxr;
+        std::unique_ptr<ToneStackNodal<double>> toneStack;
+        std::vector<AVTriode<double>> triode;
+        Pentode<double> pentode;
 #endif
 
         std::atomic<float> *inGain, *inGainAuto, *outGain, *outGainAuto, *hiGain, *p_comp, *linked, *dist, *eqAutoGain;
@@ -155,9 +155,9 @@ namespace Processors
 
         std::atomic<bool> updateSIMD = false;
 
-    double SR = 44100.0;
-    int numSamples = 0, numChannels = 0;
-};
+        double SR = 44100.0;
+        int numSamples = 0, numChannels = 0;
+    };
 
     struct Guitar : Processor
     {
@@ -430,12 +430,13 @@ namespace Processors
 
             processBlock.multiplyBy(gain_raw);
 
-        if (*inGain > 0.f) {
-            double pre_lim = jmap(inGain->load(), 0.5f, 1.f);
-            triode[0].processBlock(processBlock, pre_lim, 0.5 * gain_raw);
-            if (*hiGain)
-                triode[1].processBlock(processBlock, pre_lim, gain_raw);
-        }
+            if (*inGain > 0.f)
+            {
+                double pre_lim = jmap(inGain->load(), 0.5f, 1.f);
+                triode[0].processBlock(processBlock, pre_lim, 0.5 * gain_raw);
+                if (*hiGain)
+                    triode[1].processBlock(processBlock, pre_lim, gain_raw);
+            }
 
             if (*inGainAuto)
                 autoGain *= 1.0 / std::sqrt(std::sqrt(gain_raw * gain_raw * gain_raw));
@@ -445,8 +446,9 @@ namespace Processors
             if (*eqAutoGain)
                 autoGain *= getEQAutoGain();
 
-        if (*outGain > 0.f) {
-            processBlock.multiplyBy(6.0 * out_raw);
+            if (*outGain > 0.f)
+            {
+                processBlock.multiplyBy(6.0 * out_raw);
 
                 if (!*hiGain)
                     pentode.processBlockClassB(processBlock, 0.4f, 0.4f);
