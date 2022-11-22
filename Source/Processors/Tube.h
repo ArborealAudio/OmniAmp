@@ -8,17 +8,25 @@
   ==============================================================================
 */
 
+enum PentodeType
+{
+    Classic,
+    Nu
+};
+
 #pragma once
 
-/*a generic tube emulator for Class A and B simulation, with a dynamic bias*/
-template <typename T>
-struct Tube
+/**
+ * A tube emulator for Class B simulation, with option for a dynamic bias & different saturation algorithms
+ */
+template <typename T, PentodeType type = Nu>
+struct Pentode
 {
-    Tube() = default;
+    Pentode() = default;
 
-    void prepare(const dsp::ProcessSpec& spec)
+    void prepare(const dsp::ProcessSpec &spec)
     {
-        for (auto& f : dcBlock)
+        for (auto &f : dcBlock)
         {
             f.prepare(spec);
             f.setCutoffFreq(10.0);
@@ -32,63 +40,83 @@ struct Tube
 
     void reset()
     {
-        for (auto& f : dcBlock)
+        for (auto &f : dcBlock)
             f.reset();
         sc_lp.reset();
     }
 
-    void processBlockClassB(dsp::AudioBlock<double>& block, T gp, T gn)
+    template <typename Block>
+    void processBlockClassB(Block &block, T gp, T gn)
     {
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
-
-            processSamplesClassB(in, ch, block.getNumSamples(), gp, gn);
+            if (type == PentodeType::Nu)
+                processSamplesNu(in, ch, block.getNumSamples(), gp, gn);
+            else
+                processSamplesClassic(in, ch, block.getNumSamples(), gp, gn);
         }
     }
 
-    void processBlockClassB(strix::AudioBlock<vec>& block, T gp, T gn)
-    {
-        auto in = block.getChannelPointer(0);
-
-        processSamplesClassB(in, 0, block.getNumSamples(), gp, gn);
-    }
-
 private:
-
-    void processSamplesClassB(T *in, int ch, size_t numSamples, T gp, T gn)
+    void processSamplesNu(T *in, int ch, size_t numSamples, T gp, T gn)
     {
         for (size_t i = 0; i < numSamples; ++i)
         {
             in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
 
-            T yn_pos = classicPentode(in[i], 1.70, 10.0, 1.01);
-            T yn_neg = classicPentode(in[i], 1.70, 1.01, 10.0);
+            in[i] = saturateAsym(in[i], gp, gp);
+
+            in[i] = dsp::FastMathApproximations::sinh(in[i]) / (T)6.0;
+        }
+    }
+
+    void processSamplesClassic(T* in, size_t ch, size_t numSamples, T gp, T gn)
+    {
+        for (size_t i = 0; i < numSamples; ++i)
+        {
+            in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
+
+            T yn_pos = classicPentode(in[i], 10.0, gp);
+            T yn_neg = classicPentode(in[i], gn, 10.0);
 
             dcBlock[0].processSample(ch, yn_pos);
             dcBlock[1].processSample(ch, yn_neg);
 
-            yn_pos = classicPentode(yn_pos, 2.0, 1.01, 1.01);
-            yn_neg = classicPentode(yn_neg, 2.0, 1.01, 1.01);
+            yn_pos = classicPentode(yn_pos, 1.01, 1.01);
+            yn_neg = classicPentode(yn_neg, 1.01, 1.01);
 
             in[i] = yn_pos + yn_neg;
-
             in[i] *= 0.5;
         }
     }
 
-    inline T classicPentode(T xn, T g, T Ln, T Lp)
+    inline T saturateAsym(T x, T gp, T gn)
     {
-    #if USE_SIMD
+#if USE_SIMD
+        xsimd::batch_bool<double> pos{x > 0.0};
+        return xsimd::select(pos, ((1.0 / gp) * strix::fast_tanh(gp * x)),
+                             ((1.0 / gn) * strix::fast_tanh(gn * x)));
+#else
+        if (x > 0.0)
+            return (1.0 / gp) * strix::fast_tanh(gp * x);
+        else
+            return (1.0 / gn) * strix::fast_tanh(gn * x);
+#endif
+    }
+
+    inline T classicPentode(T xn, T Ln, T Lp)
+    {
+#if USE_SIMD
         return xsimd::select(xn <= 0.0,
-        (g * xn) / (1.0 - ((g * xn) / Ln)),
-        (g * xn) / (1.0 + ((g * xn) / Lp)));
-    #else
+                             xn / (1.0 - (xn / Ln)),
+                             xn / (1.0 + (xn / Lp)));
+#else
         if (xn <= 0.0)
             return (g * xn) / (1.0 - ((g * xn) / Ln));
         else
             return (g * xn) / (1.0 + ((g * xn) / Lp));
-    #endif
+#endif
     }
 
     inline T processEnvelopeDetector(T x, int ch)
@@ -108,13 +136,15 @@ private:
     strix::SVTFilter<T> sc_lp;
 };
 
-/*a different tube emultaor for triodes, with parameterized bias levels & Stateful saturation*/
+/**
+ * A different tube emultaor for triodes, with parameterized bias levels & Stateful saturation
+ */
 template <typename T>
 struct AVTriode
 {
     AVTriode() = default;
 
-    void prepare(const dsp::ProcessSpec& spec)
+    void prepare(const dsp::ProcessSpec &spec)
     {
         y_m.resize(spec.numChannels);
 
@@ -130,7 +160,7 @@ struct AVTriode
         sc_hp.reset();
     }
 
-    inline void processSamples(T* x, size_t ch, size_t numSamples, T gp, T gn)
+    inline void processSamples(T *x, size_t ch, size_t numSamples, T gp, T gn)
     {
         auto inc_p = (gp - lastGp) / numSamples;
         auto inc_n = (gn - lastGn) / numSamples;
@@ -138,14 +168,17 @@ struct AVTriode
         for (size_t i = 0; i < numSamples; ++i)
         {
             auto f1 = (1.f / lastGp) * strix::fast_tanh(lastGp * x[i]) * y_m[ch];
-            auto f2 = (1.0 / lastGn) * strix::fast_tanh(lastGn * x[i]) * (1.0 - y_m[ch]);
+#if USE_SIMD
+            auto f2 = (1.f / lastGn) * xsimd::atan(lastGn * x[i]) * (1.0 - y_m[ch]);
+#else
+            auto f2 = (1.f / lastGn) * std::atan(lastGn * x[i]) * (1.0 - y_m[ch]);
+#endif
 
             lastGp += inc_p;
             lastGn += inc_n;
 
-            auto y = sc_hp.processSample(ch, f1 + f2);
-            y_m[ch] = y;
-            x[i] = y;
+            x[i] = f1 + f2;
+            y_m[ch] = sc_hp.processSample(ch, x[i]);
         }
 
         lastGp = gp;
@@ -153,7 +186,7 @@ struct AVTriode
     }
 
     template <typename Block>
-    void processBlock(Block& block, T gp, T gn)
+    void processBlock(Block &block, T gp, T gn)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
@@ -164,7 +197,6 @@ struct AVTriode
     }
 
 private:
-
     std::vector<T> y_m;
 
     strix::SVTFilter<T> sc_hp;
