@@ -133,12 +133,12 @@ protected:
     MXRDistWDF<vec> mxr;
     std::unique_ptr<ToneStackNodal<vec>> toneStack;
     std::vector<AVTriode<vec>> triode;
-    Tube<vec> pentode;
+    Pentode<vec, PentodeType::Classic> pentode;
 #else
     MXRDistWDF<double> mxr;
     std::unique_ptr<ToneStackNodal<double>> toneStack;
     std::vector<AVTriode<double>> triode;
-    Tube<double> pentode;
+    Pentode<double> pentode;
 #endif
 
     std::atomic<float> *inGain, *inGainAuto, *outGain, *outGainAuto, *hiGain, *p_comp, *linked, *dist, *eqAutoGain;
@@ -150,19 +150,6 @@ protected:
 
     double SR = 44100.0;
     int numSamples = 0, numChannels = 0;
-
-    // clip a simd batch
-    inline void clip(vec* in, size_t numSamples, double low, double hi)
-    {
-        for (size_t i = 0; i < numSamples; ++i)
-        {
-            auto p = xsimd::batch_bool<double>(in[i] > hi);
-            auto n = xsimd::batch_bool<double>(in[i] < low);
-
-            in[i] = xsimd::select(p, (vec)hi, in[i]);
-            in[i] = xsimd::select(n, (vec)low, in[i]);
-        }
-    }
 };
 
 struct Guitar : Processor
@@ -437,7 +424,7 @@ struct Channel : Processor
 
         if (*inGain > 0.f) {
             double pre_lim = jmap(inGain->load(), 0.5f, 1.f);
-            triode[0].processBlock(processBlock, pre_lim, 2.f * pre_lim);
+            triode[0].processBlock(processBlock, pre_lim, 0.5 * gain_raw);
             if (*hiGain)
                 triode[1].processBlock(processBlock, pre_lim, gain_raw);
         }
@@ -451,7 +438,7 @@ struct Channel : Processor
             autoGain *= getEQAutoGain();
 
         if (*outGain > 0.f) {
-            processBlock.multiplyBy(out_raw);
+            processBlock.multiplyBy(6.0 * out_raw);
 
             if (!*hiGain)
                 pentode.processBlockClassB(processBlock, 0.4f, 0.4f);
