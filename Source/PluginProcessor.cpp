@@ -43,6 +43,8 @@ GammaAudioProcessor::GammaAudioProcessor()
     apvts.addParameterListener("cabType", this);
     apvts.addParameterListener("reverbType", this);
     apvts.addParameterListener("hq", this);
+
+    LookAndFeel::getDefaultLookAndFeel().setDefaultSansSerifTypeface(getCustomFont());
 }
 
 GammaAudioProcessor::~GammaAudioProcessor()
@@ -124,7 +126,7 @@ void GammaAudioProcessor::changeProgramName(int index, const juce::String &newNa
 //==============================================================================
 void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    for (auto& o : oversample)
+    for (auto &o : oversample)
         o.initProcessing(samplesPerBlock);
 
     setOversampleIndex();
@@ -245,27 +247,32 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         bass.setDistParam(logval);
         channel.setDistParam(logval);
     }
-    else if (parameterID == "cabType") {
+    else if (parameterID == "cabType")
+    {
         cab.setCabType((int)newValue);
     }
     else if (parameterID == "reverbType")
         reverb.changeRoomType((Processors::ReverbType)newValue);
     else if (parameterID == "gate")
         gateProc.setThreshold(*gate);
-    else if (parameterID == "gainLink") {
-        if ((bool)newValue) {
+    else if (parameterID == "gainLink")
+    {
+        if ((bool)newValue)
+        {
             /*if we switched Link on, output = input + output*/
             apvts.getParameterAsValue("outputGain") = apvts.getRawParameterValue("outputGain")->load() + apvts.getRawParameterValue("inputGain")->load();
         }
-        else {
+        else
+        {
             /*if we switched Link off, output = output - input*/
             apvts.getParameterAsValue("outputGain") = apvts.getRawParameterValue("outputGain")->load() - apvts.getRawParameterValue("inputGain")->load();
         }
     }
-    else if (parameterID == "hq" || parameterID == "renderHQ") {
+    else if (parameterID == "hq" || parameterID == "renderHQ")
+    {
         setOversampleIndex();
         auto ovs_fac = oversample[os_index].getOversamplingFactor();
-        dsp::ProcessSpec osSpec {SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
+        dsp::ProcessSpec osSpec{SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
         suspendProcessing(true);
         guitar.prepare(osSpec);
         bass.prepare(osSpec);
@@ -293,7 +300,7 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
 
     doubleBuffer.makeCopyOf(buffer, true);
 
-    processDoubleBuffer(doubleBuffer);
+    processDoubleBuffer(doubleBuffer, doubleBuffer.getNumChannels() < 2);
 
     auto L = doubleBuffer.getReadPointer(0);
     auto outL = buffer.getWritePointer(0);
@@ -328,7 +335,7 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    processDoubleBuffer(buffer);
+    processDoubleBuffer(buffer, buffer.getNumChannels() < 2);
 
     if (totalNumInputChannels < totalNumOutputChannels)
         buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
@@ -384,18 +391,20 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("m/s", 1), "Stereo/MS", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("width", 1), "Width", 0.f, 2.f, 1.f));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("stereoEmphasis", 1), "Stereo Emphasis", 0.1f, 10.f, 1.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("stereoEmphasis", 1), "Stereo Emphasis", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("doubler", 1), "Doubler", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mix", 1), "Mix", 0.f, 1.f, 1.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("lfEmphasis", 1), "LF Emphasis", -12.f, 12.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("hfEmphasis", 1), "HF Emphasis", -12.f, 12.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("compLink", 1), "Comp Stereo Link", true));
+    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("compPos", 1), "Comp Pre/Post", false));
+    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("dist", 1), "Pedal Distortion", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("ampOn", 1), "Amp On/Off", true));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("preampAutoGain", 1), "Preamp Auto Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("powerampGain", 1), "Power Amp Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("powerampAutoGain", 1), "Power Amp Auto Gain", false));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("compLink", 1), "Comp Stereo Link", true));
-    params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("compPos", 1), "Comp Pre/Post", false));
-    params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("dist", 1), "Pedal Distortion", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<AudioParameterBool>(ParameterID("hiGain", 1), "High Gain", false));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("bass", 1), "Bass", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<AudioParameterFloat>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));
