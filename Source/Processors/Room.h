@@ -434,10 +434,10 @@ public:
     {
         numChannels = spec.numChannels;
 
-        usBuf.setSize(2, spec.maximumBlockSize * ratio);
+        usBuf.setSize(numChannels, spec.maximumBlockSize * ratio);
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
-        dsBuf.setSize(2, spec.maximumBlockSize);
+        dsBuf.setSize(numChannels, spec.maximumBlockSize);
 
         for (auto &d : diff)
             d.prepare(spec);
@@ -496,16 +496,16 @@ public:
 
     void process(AudioBuffer<double> &buf, float amt)
     {
+        auto numSamples = buf.getNumSamples();
+        auto hNumSamples = numSamples / ratio;
+
         if (numChannels > 1)
-            mix.pushDrySamples(dsp::AudioBlock<double>(buf));
+            mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSubBlock(0, numSamples));
         else
-            mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(0));
+            mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(0).getSubBlock(0, numSamples));
 
         dsBuf.clear();
         splitBuf.clear();
-
-        auto numSamples = buf.getNumSamples();
-        auto hNumSamples = numSamples / ratio;
 
         downsampleBuffer(buf, numSamples);
 
@@ -537,11 +537,10 @@ public:
         usBuf.applyGain(upMix.scalingFactor1());
 
         mix.setWetMixProportion(amt);
-
         if (numChannels > 1)
-            mix.mixWetSamples(dsp::AudioBlock<double>(usBuf));
+            mix.mixWetSamples(dsp::AudioBlock<double>(buf).getSubBlock(0, numSamples));
         else
-            mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(0));
+            mix.mixWetSamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(0).getSubBlock(0, numSamples));
 
         buf.makeCopyOf(usBuf, true);
     }
