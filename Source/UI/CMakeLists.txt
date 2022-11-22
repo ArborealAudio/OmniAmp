@@ -4,6 +4,7 @@ PRIVATE
     Knob.h
     ChoiceMenu.h
     Button.h
+    PreComponent.h
     AmpControls.h
     SineWave.hpp
     CabComponent.h
