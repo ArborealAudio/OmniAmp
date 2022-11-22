@@ -118,8 +118,8 @@ public:
     {
         if (wrapperType == wrapperType_Undefined && is_clap)
             return "CLAP";
-    
-        return juce::AudioProcessor::getWrapperTypeDescription (wrapperType);
+
+        return juce::AudioProcessor::getWrapperTypeDescription(wrapperType);
     }
 
 private:
@@ -143,7 +143,7 @@ private:
     Processors::Bass bass;
     Processors::Channel channel;
     std::array<dsp::Oversampling<double>, 2> oversample{dsp::Oversampling<double>(2),
-    dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR)};
+                                                        dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR)};
     size_t os_index = 0;
 
     AudioBuffer<double> doubleBuffer;
@@ -180,7 +180,7 @@ private:
     void setOversampleIndex();
 
     // expects stereo in and out
-    void processDoubleBuffer(AudioBuffer<double> &buffer)
+    void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)
     {
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
@@ -190,7 +190,7 @@ private:
 
         dsp::AudioBlock<double> block(buffer);
 
-        mixer.pushDrySamples(block);
+        mixer.pushDrySamples(block); /* causin' segfaults in auval. LORD we need a better solution! */
 
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
@@ -198,21 +198,17 @@ private:
         /*apply input gain*/
         strix::SmoothGain<float>::applySmoothGain(block, inGain_raw, lastInGain);
 
-        double dubAmt = *apvts.getRawParameterValue("doubler");
-        if (dubAmt && block.getNumChannels() > 1)
-            doubler.process(block, dubAmt);
-
         /* M/S encode if necessary */
         bool ms = (bool)*apvts.getRawParameterValue("m/s");
 
-        if (ms && block.getNumChannels() > 1)
+        if (ms && !mono)
             strix::MSMatrix::msEncode(block);
 
         /* Input Stereo Emphasis */
         float stereoEmph = *apvts.getRawParameterValue("stereoEmphasis");
-
-        if (stereoEmph != 1.f) {
-            stereoEmph = jmax(stereoEmph, 0.5f);
+        if ((bool)stereoEmph && !mono)
+        {
+            stereoEmph = jmap(stereoEmph, 0.1f, 10.f); /*create a range from -10 to 10*/
             emphasisIn.process(block, stereoEmph, ms);
         }
 
@@ -241,7 +237,7 @@ private:
         setLatencySamples(latency);
 
 #if USE_SIMD
-        auto&& processBlock = simd.interleaveBlock(block);
+        auto &&processBlock = simd.interleaveBlock(block);
 #else
         auto &&processBlock = block;
 #endif
@@ -259,11 +255,15 @@ private:
 #endif
 
         /* Output Stereo Emphasis */
-        if (stereoEmph != 1.f)
+        if ((bool)stereoEmph && !mono)
             emphasisOut.process(block, 1.f / stereoEmph, ms);
 
-        if (ms && block.getNumChannels() > 1)
+        if (ms && !mono)
             strix::MSMatrix::msDecode(block);
+
+        double dubAmt = *apvts.getRawParameterValue("doubler");
+        if (dubAmt && !mono)
+            doubler.process(block, dubAmt);
 
         if (*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
@@ -271,9 +271,7 @@ private:
         // apply output gain
         strix::SmoothGain<float>::applySmoothGain(block, outGain_raw, lastOutGain);
 
-        float width = *apvts.getRawParameterValue("width");
-
-        if (block.getNumChannels() > 1 && width != 1.f)
+        if (float width = *apvts.getRawParameterValue("width") != 1.f && !mono)
             strix::Balance::processBalance(block, width, false, lastWidth);
 
         mixer.setWetLatency(latency);
