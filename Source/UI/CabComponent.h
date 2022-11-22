@@ -44,8 +44,6 @@ class CabsComponent : public Component, private Timer
 
         void paint(Graphics &g) override
         {
-            g.setColour(Colours::grey);
-            g.drawRect(getLocalBounds());
         }
 
     private:
@@ -63,9 +61,10 @@ class CabsComponent : public Component, private Timer
     int lastType = 0;
 
 public:
-    /// @brief Constructor
-    /// @param type pointer to cab type parameter
-    CabsComponent(std::atomic<float>* type) : cabType(type)
+    /**
+     * @param type pointer to type parameter
+     */
+    CabsComponent(std::atomic<float> *type) : cabType(type)
     {
         addAndMakeVisible(cab[0]);
         cab[0].setDrawable(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize);
@@ -100,11 +99,16 @@ public:
         stopTimer();
     }
 
-    void paint(Graphics &g) override { g.fillAll(Colours::beige); }
+    void paint(Graphics &g) override
+    {
+        auto bounds = getLocalBounds().reduced(2).toFloat();
+        g.setColour(Colours::beige);
+        g.drawRoundedRectangle(bounds, 5.f, 3.f);
+    }
 
     /// @brief function for setting new parameter pointers if need be
     /// @param cabType pointer to cab type param
-    void setStatePointers(std::atomic<float>* cabType)
+    void setStatePointers(std::atomic<float> *cabType)
     {
         this->cabType = cabType;
     }

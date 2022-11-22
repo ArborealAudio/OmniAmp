@@ -140,10 +140,8 @@ public:
 
     void paint(Graphics &g) override
     {
-        ColourGradient gradient{Colour(0xff256184), (float)getLocalBounds().getCentreX(), (float)getLocalBounds().getCentreY(), Colour(0xff256184).withMultipliedBrightness(0.75f), 25.f, 25.f, true};
-
-        g.setGradientFill(gradient);
-        g.fillAll();
+        g.setColour(Colour(0xff256184));
+        g.drawRoundedRectangle(getLocalBounds().reduced(1).toFloat(), 5.f, 3.f);
     }
 
     void resized() override

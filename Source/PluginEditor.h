@@ -65,32 +65,36 @@ private:
     std::unique_ptr<Drawable> logo;
     Rectangle<float> logoBounds;
 
-    EnhancerComponent top;
-
     AmpControls ampControls;
 
-    Knob inGain{KnobType::Simple}, outGain{KnobType::Simple}, gate{KnobType::Simple}, width{KnobType::Simple},
-    emphasis{KnobType::Simple}, doubler{KnobType::Simple}, mix{KnobType::Simple};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach,
-    emphasisAttach, doublerAttach, mixAttach;
+    Knob gate{KnobType::Simple}, inGain{KnobType::Simple}, outGain{KnobType::Simple}, width{KnobType::Simple}, mix{KnobType::Simple};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach, mixAttach;
 
-    LightButton midSide;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> msAttach;
+    LightButton link;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> linkAttach;
 
+    std::vector<Component *> getTopComponents()
+    {
+        return {
+            &gate,
+            &inGain,
+            &link,
+            &outGain,
+            &width,
+            &mix};
+    }
+
+    PreComponent preComponent;
     CabsComponent cabComponent;
-
     ReverbComponent reverbComp;
+    EnhancerComponent enhancers;
 
     Label pluginTitle;
-
     MenuComponent menu;
-
     PresetComp presetMenu;
 
     DownloadManager dl;
-
     Splash splash;
-
     ActivationComponent activation;
 
 #if JUCE_WINDOWS || JUCE_LINUX
