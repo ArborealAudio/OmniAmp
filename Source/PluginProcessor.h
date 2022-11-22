@@ -23,6 +23,8 @@
 #endif
 
 #include <JuceHeader.h>
+#define _USE_MATH_DEFINES
+#include "math.h"
 #include <chowdsp_wdf/chowdsp_wdf.h>
 #include "Processors/Processors.h"
 #include "Presets/PresetManager.h"
