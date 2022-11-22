@@ -12,10 +12,11 @@
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
-      top(p.audioSource, p.apvts),
-      ampControls(p.getActiveGRSource(), p.apvts),
+      preComponent(p.getActiveGRSource(), p.apvts),
+      ampControls(p.apvts),
       cabComponent(p.apvts.getRawParameterValue("cabType")),
       reverbComp(p.apvts),
+      enhancers(p.audioSource, p.apvts),
       menu(p.apvts, 200),
       presetMenu(p.apvts),
       dl(false), tooltip(this, 1000)
@@ -39,7 +40,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addAndMakeVisible(pluginTitle);
     String title = "GAMMA";
-    Colour titleColor = Colours::beige;
+    Colour titleColor = Colours::antiquewhite;
 #if !PRODUCTION_BUILD
     title.append("\nDEV", 5);
     titleColor = Colours::red;
@@ -68,6 +69,13 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     };
 #endif
 
+    for (auto c : getTopComponents())
+    {
+        addAndMakeVisible(*c);
+        if (auto k = dynamic_cast<Knob *>(c))
+            k->setColor(Colours::antiquewhite, Colours::antiquewhite.withMultipliedLightness(1.5f));
+    }
+
     addAndMakeVisible(presetMenu);
     presetMenu.setCurrentPreset(p.currentPreset);
     presetMenu.box.onChange = [&]
@@ -76,54 +84,51 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         p.currentPreset = presetMenu.getCurrentPreset();
     };
 
-    addAndMakeVisible(inGain);
     inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
     inGain.setLabel("Input");
     inGain.setTooltip("Input gain before all processing, useful for increasing or decreasing headroom before the amp.");
     inGain.setValueToStringFunction([](float val)
                                     { String str(val, 1); str += "dB"; return str; });
 
-    addAndMakeVisible(outGain);
+    linkAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "gainLink", link);
+    link.setButtonText("Link");
+    link.setTooltip("Link Input and Output gains. Output gain can still be adjusted with linking on.");
+
     outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
     outGain.setLabel("Output");
     outGain.setTooltip("Output gain after all processing");
     outGain.setValueToStringFunction([](float val)
                                      { String str(val, 1); str += "dB"; return str; });
 
-    addAndMakeVisible(gate);
     gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
     gate.setLabel("Gate");
     gate.setTooltip("Simple noise gate before the amp.");
     gate.setValueToStringFunction([](float val)
                                   { if (val < -95.f) return String("Off");
-                                    if (val >= -95.f) return String(val, 1); });
+                                    if (val >= -95.f) return String(val, 1); else return String(""); });
 
-    addAndMakeVisible(width);
     widthAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "width", width);
     width.setLabel("Width");
-    width.setTooltip("Standard stereo width control for widening the stereo image. This happens *before* the amp.");
+    width.setTooltip("Standard stereo width control for widening the stereo image, after all processing.");
     width.setValueToStringFunction([](float val)
                                    { String s(val * 100, 0); return s + "%"; });
 
-    addAndMakeVisible(midSide);
-    msAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "m/s", midSide);
-    midSide.setButtonText(midSide.getToggleState() ? "M/S" : "Stereo");
-    midSide.setTooltip("Toggle for Stereo and Mid/Side processing.\n\nIn Stereo mode, Left and Right channels will be processed independently in the amp. In Mid/Side mode, the middle of the stereo image will be separated from the sides and then processed independently.\n\nThis is useful if you want to do Mid/Side compression or saturation, which can create a more spacious stereo image.");
-    midSide.onStateChange = [&]
-    { midSide.setButtonText(midSide.getToggleState() ? "M/S" : "Stereo"); };
+    mixAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "mix", mix);
+    mix.setLabel("Mix");
+    mix.setTooltip("Global dry/wet control.");
+    mix.setValueToStringFunction([](float val)
+                                 { String s(val * 100, 0); return s + "%"; });
 
-    addAndMakeVisible(top);
-
+    addAndMakeVisible(preComponent);
     addAndMakeVisible(ampControls);
-
     addAndMakeVisible(cabComponent);
     cabComponent.setState(*p.apvts.getRawParameterValue("cabType"));
     cabComponent.cabChanged = [&](int newType)
     {
         p.apvts.getParameterAsValue("cabType") = newType;
     };
-
     addAndMakeVisible(reverbComp);
+    addAndMakeVisible(enhancers);
 
     setResizable(true, true);
     getConstrainer()->setMinimumSize(550, 550);
@@ -189,39 +194,42 @@ void GammaAudioProcessorEditor::resized()
     auto mainHeight = bounds.getHeight();
     auto enhancerSection = bounds.removeFromBottom(mainHeight * 0.25f).reduced(1);
     auto cabVerbSection = bounds.removeFromBottom(mainHeight * 0.25f).reduced(1);
-    auto ampSection = bounds.removeFromBottom(mainHeight * 0.75f).reduced(1);
-    auto preSection = bounds;
+    auto ampSection = bounds.removeFromBottom(bounds.getHeight() * 0.66f).reduced(1);
+    auto preSection = bounds.reduced(1);
 
     /* set bounds of top controls */
-    auto topSectionThird = topSection.getWidth() / 3;
-    auto topKnobs = topSection.removeFromLeft(topSectionThird);
+    auto topSectionQtr = topSection.getWidth() / 4;
+    auto topKnobs = topSection.removeFromLeft(w * 0.5f - topSectionQtr * 0.5);
     topKnobs.removeFromLeft(w / 12); // section where logo is drawn
-    auto titleSection = topSection.removeFromLeft(topSectionThird);
-    auto presetSection = topSection.removeFromLeft(topSection.getWidth() * 0.66); // leave right third for menu
+    auto presetSection = topSection.removeFromRight(w * 0.5f - topSectionQtr * 0.5);
+    auto titleSection = topSection;
 
     pluginTitle.setBounds(titleSection);
     presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.35f));
     menu.setBounds(w - (w * 0.25f), presetMenu.getY(), w * 0.25f, h / 3.f); /*...sickening*/
 
-    auto knobThird = topKnobs.getWidth() / 3;
+    auto knobFrac = topKnobs.getWidth() / 4;
     auto knobHalf = topKnobs.getHeight() / 2;
-    auto knobsBottom = topKnobs.removeFromBottom(knobHalf).withSizeKeepingCentre(knobThird * 2.f, knobHalf);
-    inGain.setBounds(topKnobs.removeFromLeft(knobThird).reduced(5, 0));
-    outGain.setBounds(topKnobs.removeFromLeft(knobThird).reduced(5, 0));
-    gate.setBounds(topKnobs.reduced(5, 0));
-    midSide.setBounds(knobsBottom.removeFromLeft(knobsBottom.getWidth() * 0.5).reduced(0, knobHalf * 0.15f));
-    width.setBounds(knobsBottom);
+    auto knobsBottom = topKnobs.removeFromBottom(knobHalf);
+    auto topComponents = getTopComponents();
+    for (size_t i = 0; i < topComponents.size(); ++i)
+    {
+        auto c = topComponents[i];
+        if (i < 4)
+            c->setBounds(topKnobs.removeFromLeft(knobFrac));
+        else
+            c->setBounds(knobsBottom.removeFromLeft(knobFrac));
+    }
 
-    
-    top.setBounds(enhancerSection);
+    /* rest of UI */
     ampControls.setBounds(ampSection);
-    cabComponent.setBounds(cabVerbSection.removeFromLeft(w * 0.66f));
-    reverbComp.setBounds(cabVerbSection);
+    preComponent.setBounds(preSection);
+    cabComponent.setBounds(cabVerbSection.removeFromLeft(w * 0.66f).reduced(2));
+    reverbComp.setBounds(cabVerbSection.reduced(2));
+    enhancers.setBounds(enhancerSection);
 
     dl.centreWithSize(300, 200);
-
     splash.centreWithSize(250, 350);
-
     activation.centreWithSize(300, 200);
 
     MessageManager::callAsync([&]

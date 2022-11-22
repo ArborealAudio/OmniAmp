@@ -1,21 +1,31 @@
 /**
  * EnhancerComponent.h
  * Component for managing enhancers & associated UI, along with the visualizer
-*/
+ */
 
 struct EnhancerComponent : Component
 {
-    EnhancerComponent(strix::AudioSource& s, AudioProcessorValueTreeState& apvts) : wave(s)
+    EnhancerComponent(strix::AudioSource &s, AudioProcessorValueTreeState &apvts) : wave(s)
     {
         mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
 
         addAndMakeVisible(wave);
         wave.setInterceptsMouseClicks(false, false);
 
+        auto percent = [](float val)
+        {
+            auto str = String(static_cast<int>(val * 100));
+            str.append("%", 1);
+            return str;
+        };
+
         addAndMakeVisible(lfEnhance);
         lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "lfEnhance", lfEnhance);
         lfEnhance.setTooltip("A saturating, low-end boost after the amp and before the cab and reverb. The frequency is calibrated depending on the amp's mode.\n\nAlt/Option-click to enable Auto Gain.");
-        lfEnhance.setColor(Colours::black, Colours::whitesmoke);
+        lfEnhance.setLabel("LF Enhancer");
+        lfEnhance.setDefaultValue(apvts.getParameter("lfEnhance")->getDefaultValue());
+        lfEnhance.setValueToStringFunction(percent);
+        lfEnhance.setColor(Colours::black, Colours::antiquewhite);
         lfEnhance.autoGain.store(*apvts.getRawParameterValue("lfEnhanceAuto"));
         lfEnhance.onAltClick = [&](bool state)
         {
@@ -30,7 +40,10 @@ struct EnhancerComponent : Component
         addAndMakeVisible(hfEnhance);
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfEnhance", hfEnhance);
         hfEnhance.setTooltip("A saturating, hi-end boost after the amp and before the cab and reverb.\n\nAlt/Option-click to enable Auto Gain.");
-        hfEnhance.setColor(Colours::white, Colours::wheat);
+        hfEnhance.setLabel("HF Enhancer");
+        hfEnhance.setDefaultValue(apvts.getParameter("hfEnhance")->getDefaultValue());
+        hfEnhance.setValueToStringFunction(percent);
+        hfEnhance.setColor(Colours::black, Colours::antiquewhite);
         hfEnhance.autoGain.store(*apvts.getRawParameterValue("hfEnhanceAuto"));
         hfEnhance.onAltClick = [&](bool state)
         {
@@ -43,32 +56,30 @@ struct EnhancerComponent : Component
         hfInvert.setTooltip("Invert the high frequency enhancer. At low levels, this works more like a resonant high-pass, while at higher levels it adds a differently-voiced boost to the high-end.");
     }
 
-    void paint(Graphics& g) override
+    void paint(Graphics &g) override
     {
         auto bounds = getLocalBounds().reduced(1).toFloat();
 
-        g.setColour(background.withMultipliedLightness(0.5));
-        g.fillRoundedRectangle(bounds, 5.f);
+        // g.setColour(background.withMultipliedLightness(0.5));
+        // g.fillRoundedRectangle(bounds, 5.f);
         g.setColour(Colours::grey);
         g.drawRoundedRectangle(bounds, 5.f, 2.f);
 
-        Image img(Image::PixelFormat::ARGB, bounds.getWidth(), bounds.getHeight(), true);
-        Graphics img_g(img);
+        // Image img(Image::PixelFormat::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+        // Graphics img_g(img);
 
-        mesh->drawWithin(img_g, bounds.reduced(1.f), RectanglePlacement::fillDestination, 0.7f);
+        // mesh->drawWithin(img_g, bounds.reduced(1.f), RectanglePlacement::fillDestination, 0.7f);
 
-        Blur::blurImage<1, true>(img);
+        // Blur::blurImage<1, true>(img);
 
-        g.drawImage(img, bounds);
+        // g.drawImage(img, bounds);
 
         g.setFont(getHeight() * 0.1f);
         g.setColour(Colours::white);
-
         auto LFLabel = bounds.withTrimmedRight(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).toNearestInt();
-        g.drawFittedText("LF", LFLabel, Justification::centredTop, 1);
-
+        g.drawFittedText("Low Freq", LFLabel, Justification::centredTop, 1);
         auto HFLabel = bounds.withTrimmedLeft(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).toNearestInt();
-        g.drawFittedText("HF", HFLabel, Justification::centredTop, 1);
+        g.drawFittedText("Hi Freq", HFLabel, Justification::centredTop, 1);
     }
 
     void resized() override
@@ -78,7 +89,7 @@ struct EnhancerComponent : Component
         auto left = bounds.removeFromLeft(div);
         auto right = bounds.removeFromRight(div);
 
-        auto invHeight = left.getHeight() * 0.45;
+        auto invHeight = left.getHeight() * 0.33f;
 
         wave.setBounds(bounds.reduced(10, (float)bounds.getHeight() * 0.2f));
         lfInvert.setBounds(left.removeFromLeft(left.getWidth() * 0.2).reduced(0, invHeight));
@@ -90,7 +101,7 @@ struct EnhancerComponent : Component
 private:
     std::unique_ptr<Drawable> mesh;
 
-    Knob hfEnhance{KnobType::Enhancer}, lfEnhance{KnobType::Enhancer};
+    Knob hfEnhance{KnobType::Aux}, lfEnhance{KnobType::Aux};
     LightButton hfInvert, lfInvert;
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hfInvAttach, lfInvAttach;

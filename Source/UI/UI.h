@@ -108,6 +108,7 @@ namespace Blur
 #include "Button.h"
 #include "ChoiceMenu.h"
 #include "Knob.h"
+#include "PreComponent.h"
 #include "AmpControls.h"
 #include "SineWave.hpp"
 #include "CabComponent.h"

@@ -5,194 +5,9 @@
 
 enum KnobType
 {
-    Regular,
-    Enhancer,
+    Amp,
+    Aux,
     Simple
-};
-
-struct KnobLookAndFeel : LookAndFeel_V4
-{
-    KnobType type;
-
-    Colour baseColor = Colours::antiquewhite;
-    Colour accentColor = Colours::grey;
-
-    std::unique_ptr<String> label;
-
-    std::function<String(float)> valueToString = nullptr;
-
-    std::atomic<bool>* autoGain;
-
-    KnobLookAndFeel(KnobType newType) : type(newType)
-    {
-        label = std::make_unique<String>("");
-        getDefaultLookAndFeel().setDefaultSansSerifTypeface(getCustomFont());
-        /*this just happens to be the spot where we set the global font*/
-    }
-
-    void drawRotarySlider(Graphics& g, int x, int y, int width, int height, float sliderPos,
-    const float rotaryStartAngle, const float rotaryEndAngle, Slider& slider) override
-    {
-        // g.setFont(jlimit(12.f, 18.f, 0.1f * height)); /*try to set variable font height*/
-        g.setFont(14.f);
-
-        switch (type)
-        {
-        case Regular: {
-            width *= 0.75;
-            height *= 0.75;
-
-            auto radius = (float)jmin(width / 2, height / 2) - 4.f;
-            auto centerX = (float)slider.getLocalBounds().getCentreX();
-            auto centerY = (float)slider.getLocalBounds().getCentreY();
-            auto rx = centerX - radius;
-            auto ry = centerY - radius;
-            auto rw = radius * 2.f;
-            auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
-
-            /* draw ticks around knob */
-            for (int i = 0; i < 11; ++i)
-            {
-                Path p;
-                const auto tickRadius = (float)jmin(slider.getWidth() / 2, slider.getHeight() / 1) - 4.f;
-                const auto pointerLength = tickRadius * 0.25f;
-                const auto pointerThickness = 2.5f;
-                const auto tickAngle = rotaryStartAngle + (i / 10.f) * (rotaryEndAngle - rotaryStartAngle);
-                p.addRectangle(-pointerThickness * 0.5f, -tickRadius, pointerThickness, pointerLength);
-                p.applyTransform(AffineTransform::rotation(tickAngle).translated(centerX, centerY));
-
-                g.setColour(accentColor);
-                g.fillPath(p);
-            }
-
-            /* shadow & highlight */
-            Image shadow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
-            Image highlight{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
-            Graphics sg(shadow);
-            Graphics hg(highlight);
-            sg.setColour(Colours::black.withAlpha(0.5f));
-            hg.setColour(Colours::white.withAlpha(0.5f));
-            sg.fillEllipse(rx, ry, rw, rw);
-            hg.fillEllipse(rx, ry, rw, rw);
-
-            gin::applyStackBlur(shadow, 12);
-            gin::applyStackBlur(highlight, 12);
-
-            g.drawImageAt(shadow, x - 3, y + 3);
-            g.drawImageAt(highlight, x + 3, y - 3);
-
-            /* base knob */
-            g.setColour(baseColor);
-            g.fillEllipse(rx, ry, rw, rw);
-            g.setColour(accentColor);
-            g.drawEllipse(rx, ry, rw, rw, 3.f);
-
-            ColourGradient gradient{Colours::darkgrey.withAlpha(0.5f), (float)x, (float)y + height, Colour(0xe8e8e8).withAlpha(0.5f), (float)x + width, (float)y, false};
-            g.setGradientFill(gradient);
-            g.fillEllipse(rx, ry, rw, rw);
-
-            /* draw knob pointer */
-            Path p;
-            auto pointerLength = radius * 0.75f;
-            auto pointerThickness = 2.5f;
-            p.addRectangle(-pointerThickness * 0.5f, -radius * 0.8, pointerThickness, pointerLength);
-            p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
-
-            g.setColour(accentColor);
-            g.fillPath(p);
-
-            /* text */
-            String text;
-            if(slider.isMouseOverOrDragging() && valueToString)
-                text = valueToString(slider.getValue());
-            else if (label)
-                text = *label;
-
-            g.setColour(accentColor == Colours::oldlace ? accentColor : Colours::black);
-            g.drawText(text, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, false);
-            break;
-            }
-        case Enhancer: {
-            width *= 0.8;
-            height *= 0.8;
-
-            auto radius = (float)jmin(width / 2, height / 2) - 4.f;
-            auto centerX = (float)slider.getLocalBounds().getCentreX();
-            auto centerY = (float)slider.getLocalBounds().getCentreY();
-            auto rx = centerX - radius;
-            auto ry = centerY - radius;
-            auto rw = radius * 2.f;
-            auto angle = rotaryStartAngle * 0.8 + sliderPos * (rotaryEndAngle - rotaryStartAngle);
-
-            /* base background */
-            g.setColour(Colour(BACKGROUND_COLOR));
-            g.fillEllipse(rx, ry, rw, rw);
-
-            /* glow ring */
-            Image glow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
-            Graphics gg(glow);
-            gg.setColour(accentColor);
-            auto fac = 1.f + (15.f * sliderPos);
-            gg.drawEllipse(rx, ry, rw, rw, 1.f * fac);
-            gin::applyStackBlur(glow, 5);
-
-            g.drawImageAt(glow, 0, 0);
-
-            /* gradient overlay */
-            ColourGradient gradient{baseColor.withAlpha(0.f), centerX, centerY, baseColor, (float)x, (float)y, true};
-            g.setGradientFill(gradient);
-            g.fillEllipse(rx, ry, rw, rw);
-
-            /* knob thumb */
-            Path p;
-            auto ellipseWidth = radius * 0.25f;
-            p.addEllipse(rx + 2.f, -radius * 0.9, ellipseWidth, ellipseWidth);
-            p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
-            g.setColour(Colour(BACKGROUND_COLOR));
-            g.fillPath(p);
-
-            /* autogain label */
-            if (autoGain->load()) {
-                g.setColour(Colour(BACKGROUND_COLOR));
-                auto bounds = Rectangle<float>(centerX - rw / 4, centerY - 10, rw * 0.5f, 20);
-                g.fillRoundedRectangle(bounds, 5.f);
-                g.setColour(Colours::white);
-                g.drawFittedText("Auto", bounds.toNearestInt(), Justification::centred, 1);
-            }
-            break;
-            }
-        case Simple: {
-            width *= 0.75;
-            height *= 0.75;
-
-            auto radius = (float)jmin(width / 2, height / 2) - 4.f;
-            auto centerX = (float)slider.getLocalBounds().getCentreX();
-            auto centerY = (float)slider.getLocalBounds().getCentreY() - 5;
-            auto rx = centerX - radius;
-            auto ry = centerY - radius;
-            auto rw = radius * 2.f;
-            auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
-
-            g.setColour(slider.isMouseOverOrDragging() ? Colours::goldenrod.withSaturation(0.45f) : Colours::antiquewhite);
-            g.drawEllipse(rx, ry, rw, rw, 3.f);
-
-            Path p;
-            auto pointerLength = radius * 0.8f;
-            auto pointerThickness = 2.5f;
-            p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
-            p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
-
-            g.fillPath(p);
-
-            if (slider.isMouseOverOrDragging()) {
-                g.drawFittedText(valueToString(slider.getValue()), slider.getLocalBounds().removeFromBottom(height * 0.3), Justification::centred, 1);
-            }
-            else
-                g.drawFittedText(*label, slider.getLocalBounds().removeFromBottom(height * 0.3), Justification::centred, 1);
-            break;
-            }
-        }
-    }
 };
 
 struct Knob : Slider
@@ -204,12 +19,27 @@ struct Knob : Slider
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
 
-        // setPaintingIsUnclipped(true);
         setBufferedToImage(true);
     }
     ~Knob()
     {
         setLookAndFeel(nullptr);
+    }
+
+    /**
+     * Use this to set the default parameter value which the knob can report to its underlings
+     */
+    void setDefaultValue(float newDefault)
+    {
+        defaultValue = newDefault;
+    }
+
+    float getDefaultValue() { return defaultValue; }
+
+    void mouseDrag(const MouseEvent &e) override
+    {
+        e.source.enableUnboundedMouseMovement(true);
+        Slider::mouseDrag(e);
     }
 
     void setLabel(String newLabel)
@@ -218,14 +48,15 @@ struct Knob : Slider
         lnf.label = std::make_unique<String>(label);
     }
 
-    void mouseDown(const MouseEvent& event) override
+    void mouseDown(const MouseEvent &event) override
     {
         auto alt = event.mods.isAltDown();
         auto leftClick = event.mods.isLeftButtonDown();
 
         if (alt && leftClick)
         {
-            if (onAltClick) {
+            if (onAltClick)
+            {
                 autoGain.store(!autoGain.load());
                 onAltClick(autoGain.load());
             }
@@ -244,15 +75,170 @@ struct Knob : Slider
     }
 
     /* sets the base & accent colors for Regular-style knobs */
-    void setColor(Colour newBaseColor, Colour newAccentColor = Colours::grey)
+    void setColor(Colour newBaseColor, Colour newAccentColor = Colours::grey, Colour newTextColor = Colours::antiquewhite)
     {
         lnf.baseColor = newBaseColor;
         lnf.accentColor = newAccentColor;
+        lnf.textColor = newTextColor;
     }
 
     std::atomic<bool> autoGain = false;
 
 private:
+    struct KnobLookAndFeel : LookAndFeel_V4
+    {
+        KnobType type;
+
+        Colour baseColor = Colours::antiquewhite, accentColor = Colours::grey, textColor = Colours::black;
+
+        std::unique_ptr<String> label = nullptr;
+
+        std::function<String(float)> valueToString = nullptr;
+
+        std::atomic<bool> *autoGain;
+
+        KnobLookAndFeel(KnobType newType) : type(newType)
+        {
+            label = std::make_unique<String>("");
+        }
+
+        void drawRotarySlider(Graphics &g, int x, int y, int width, int height, float sliderPos,
+                              const float rotaryStartAngle, const float rotaryEndAngle, Slider &slider) override
+        {
+            // g.setFont(jlimit(12.f, 18.f, 0.1f * height)); /*try to set variable font height*/
+            g.setFont(14.f);
+
+            auto drawCustomSlider = [&](bool drawTicks = false, bool drawShadow = false, bool drawArc = false)
+            {
+                auto radius = (float)jmin(width / 2, height / 2) - 4.f;
+                auto centerX = (float)slider.getLocalBounds().getCentreX();
+                auto centerY = (float)slider.getLocalBounds().getCentreY();
+                auto rx = centerX - radius;
+                auto ry = centerY - radius;
+                auto rw = radius * 2.f;
+                auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+
+                if (drawTicks)
+                {
+                    /* draw ticks around knob */
+                    for (int i = 0; i < 11; ++i)
+                    {
+                        Path p;
+                        const auto tickRadius = (float)jmin(slider.getWidth() / 2, slider.getHeight() / 1) - 4.f;
+                        const auto pointerLength = tickRadius * 0.25f;
+                        const auto pointerThickness = 2.5f;
+                        const auto tickAngle = rotaryStartAngle + (i / 10.f) * (rotaryEndAngle - rotaryStartAngle);
+                        p.addRectangle(-pointerThickness * 0.5f, -tickRadius, pointerThickness, pointerLength);
+                        p.applyTransform(AffineTransform::rotation(tickAngle).translated(centerX, centerY));
+
+                        g.setColour(accentColor);
+                        g.fillPath(p);
+                    }
+                }
+                if (drawShadow)
+                {
+                    /* shadow & highlight */
+                    Image shadow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
+                    Image highlight{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
+                    Graphics sg(shadow);
+                    Graphics hg(highlight);
+                    sg.setColour(Colours::black.withAlpha(0.5f));
+                    hg.setColour(Colours::white.withAlpha(0.5f));
+                    sg.fillEllipse(rx, ry, rw, rw);
+                    hg.fillEllipse(rx, ry, rw, rw);
+
+                    gin::applyStackBlur(shadow, 12);
+                    gin::applyStackBlur(highlight, 12);
+
+                    g.drawImageAt(shadow, x - 3, y + 3);
+                    g.drawImageAt(highlight, x + 3, y - 3);
+                }
+
+                if (type == KnobType::Simple)
+                {
+                    g.setColour(slider.isMouseOverOrDragging() ? accentColor : baseColor);
+                    g.drawEllipse(rx, ry, rw, rw, 3.f);
+
+                    Path p;
+                    auto pointerLength = radius * 0.8f;
+                    auto pointerThickness = 2.5f;
+                    p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
+                    p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
+
+                    g.fillPath(p);
+                }
+                else
+                {
+                    /* base knob */
+                    g.setColour(baseColor);
+                    g.fillEllipse(rx, ry, rw, rw);
+                    g.setColour(accentColor);
+                    g.drawEllipse(rx, ry, rw, rw, 3.f);
+
+                    /* gradient overlay */
+                    ColourGradient gradient{Colours::darkgrey.withAlpha(0.5f), (float)x, (float)y + height, Colour(0xe8e8e8).withAlpha(0.5f), (float)x + width, (float)y, false};
+                    g.setGradientFill(gradient);
+                    g.fillEllipse(rx, ry, rw, rw);
+
+                    /* draw knob pointer */
+                    Path p;
+                    auto pointerLength = radius * 0.75f;
+                    auto pointerThickness = 2.5f;
+                    p.addRectangle(-pointerThickness * 0.5f, -radius * 0.8, pointerThickness, pointerLength);
+                    p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
+
+                    g.setColour(accentColor);
+                    g.fillPath(p);
+                }
+
+                if (drawArc)
+                {
+                    auto defaultVal = dynamic_cast<Knob *>(&slider)->getDefaultValue();
+                    /* arc */
+                    float arcStart = defaultVal == 0.f ? rotaryStartAngle : 0.f;
+                    float arcAngle = defaultVal == 0.f ? angle : angle - 2.f * M_PI;
+                    g.setColour(accentColor.contrasting(0.3f).withMultipliedSaturation(1.2f));
+                    Path arc;
+                    arc.addArc(rx - 4, ry - 4, rw + 8, rw + 8, arcStart, arcAngle, true);
+                    g.strokePath(arc, PathStrokeType(4.f, PathStrokeType::beveled, PathStrokeType::rounded));
+                }
+            };
+
+            width *= 0.75;
+            height *= 0.75;
+
+            switch (type)
+            {
+            case Amp:
+            {
+                drawCustomSlider(true, true, false);
+                break;
+            }
+            case Aux:
+            {
+                drawCustomSlider(false, true, true);
+                break;
+            }
+            case Simple:
+            {
+                drawCustomSlider(false, false, false);
+                break;
+            }
+            }
+
+            /* label */
+            g.setColour(accentColor);
+            String text = "";
+            if (slider.isMouseOverOrDragging() && valueToString)
+                text = valueToString(slider.getValue());
+            else if (label)
+                text = *label;
+            g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, 2);
+        }
+    };
+
     KnobLookAndFeel lnf;
     String label;
+
+    float defaultValue = 0.f;
 };
