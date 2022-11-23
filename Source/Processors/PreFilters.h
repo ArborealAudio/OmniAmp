@@ -11,11 +11,13 @@
 #pragma once
 
 template <typename T>
-struct GuitarPreFilter
+struct GuitarPreFilter : PreampProcessor
 {
-    GuitarPreFilter() = default;
+    GuitarPreFilter(GuitarMode type) : type(type)
+    {
+    }
 
-    void prepare(const dsp::ProcessSpec& spec)
+    void prepare(const dsp::ProcessSpec &spec)
     {
         lastSampleRate = spec.sampleRate;
 
@@ -23,15 +25,18 @@ struct GuitarPreFilter
         bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 350.f);
         lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 6200.f);
 
-        for (auto& b : bandPass) {
+        for (auto &b : bandPass)
+        {
             b.prepare(spec);
             b.coefficients = bp_coeffs;
         }
-        for (auto& h : hiShelf) {
+        for (auto &h : hiShelf)
+        {
             h.prepare(spec);
             h.coefficients = hs_coeffs;
         }
-        for (auto& l : sc_lp) {
+        for (auto &l : sc_lp)
+        {
             l.prepare(spec);
             l.coefficients = lp_coeffs;
         }
@@ -39,18 +44,19 @@ struct GuitarPreFilter
 
     void reset()
     {
-        for (auto& b : bandPass)
+        for (auto &b : bandPass)
             b.reset();
-        for (auto& b : hiShelf)
+        for (auto &b : hiShelf)
             b.reset();
-        for (auto& b : sc_lp)
+        for (auto &b : sc_lp)
             b.reset();
     }
 
-    template <typename Block>
-    void processBlock(Block& block, bool hi)
+#if USE_SIMD
+    void process(strix::AudioBlock<vec> &block) override
     {
-        if (hi) {
+        if (*hiGain)
+        {
             for (int ch = 0; ch < block.getNumChannels(); ++ch)
             {
                 auto in = block.getChannelPointer(ch);
@@ -61,7 +67,8 @@ struct GuitarPreFilter
                 }
             }
         }
-        else {
+        else
+        {
             for (int ch = 0; ch < block.getNumChannels(); ++ch)
             {
                 auto in = block.getChannelPointer(ch);
@@ -72,10 +79,42 @@ struct GuitarPreFilter
             }
         }
     }
+#else
+    void process(dsp::AudioBlock<double> &block) override
+    {
+        if (*hiGain)
+        {
+            for (int ch = 0; ch < block.getNumChannels(); ++ch)
+            {
+                auto in = block.getChannelPointer(ch);
+                for (int i = 0; i < block.getNumSamples(); ++i)
+                {
+                    in[i] = hiShelf[ch].processSample(in[i]);
+                    in[i] = sc_lp[ch].processSample(in[i]);
+                }
+            }
+        }
+        else
+        {
+            for (int ch = 0; ch < block.getNumChannels(); ++ch)
+            {
+                auto in = block.getChannelPointer(ch);
+                for (int i = 0; i < block.getNumSamples(); ++i)
+                {
+                    in[i] = bandPass[ch].processSample(in[i]);
+                }
+            }
+        }
+    }
+#endif
+
+    strix::BoolParameter* hiGain = nullptr;
 
 private:
-    std::array<dsp::IIR::Filter<T>,2> bandPass, hiShelf, sc_lp;
+    std::array<dsp::IIR::Filter<T>, 2> bandPass, hiShelf, sc_lp;
     dsp::IIR::Coefficients<double>::Ptr bp_coeffs, hs_coeffs, lp_coeffs;
+
+    const GuitarMode type;
 
     double lastSampleRate = 0.0;
 };
