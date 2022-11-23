@@ -113,9 +113,9 @@ private:
                              xn / (1.0 + (xn / Lp)));
 #else
         if (xn <= 0.0)
-            return (g * xn) / (1.0 - ((g * xn) / Ln));
+            return xn / (1.0 - (xn / Ln));
         else
-            return (g * xn) / (1.0 + ((g * xn) / Lp));
+            return xn / (1.0 + (xn / Lp));
 #endif
     }
 
@@ -140,7 +140,7 @@ private:
  * A different tube emultaor for triodes, with parameterized bias levels & Stateful saturation
  */
 template <typename T>
-struct AVTriode
+struct AVTriode : PreampProcessor
 {
     AVTriode() = default;
 
@@ -162,8 +162,8 @@ struct AVTriode
 
     inline void processSamples(T *x, size_t ch, size_t numSamples, T gp, T gn)
     {
-        auto inc_p = (gp - lastGp) / numSamples;
-        auto inc_n = (gn - lastGn) / numSamples;
+        auto inc_p = (gp - lastGp) / (T)numSamples;
+        auto inc_n = (gn - lastGn) / (T)numSamples;
 
         for (size_t i = 0; i < numSamples; ++i)
         {
@@ -185,16 +185,29 @@ struct AVTriode
         lastGn = gn;
     }
 
-    template <typename Block>
-    void processBlock(Block &block, T gp, T gn)
+#if USE_SIMD
+    void process(strix::AudioBlock<vec>& block) override
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
             auto in = block.getChannelPointer(ch);
 
-            processSamples(in, ch, block.getNumSamples(), gp, gn);
+            processSamples(in, ch, block.getNumSamples(), bias.first, bias.second);
         }
     }
+#else
+    void process(dsp::AudioBlock<double>& block) override
+    {
+        for (size_t ch = 0; ch < block.getNumChannels(); ch++)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            processSamples(in, ch, block.getNumSamples(), bias.first, bias.second);
+        }
+    }
+#endif
+
+    bias_t bias;
 
 private:
     std::vector<T> y_m;

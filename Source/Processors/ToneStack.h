@@ -10,7 +10,7 @@
 #pragma once
 
 template <typename T>
-struct ToneStackNodal
+struct ToneStackNodal : PreampProcessor
 {
     struct Coeffs
     {
@@ -143,9 +143,8 @@ struct ToneStackNodal
     {
         coeffs->setCoeffs(bass.getNextValue(), mid.getNextValue(), treble.getNextValue());
     }
-
-    template <typename Block>
-    void processBlock(Block& block)
+#if USE_SIMD
+    void process(strix::AudioBlock<vec>& block) override
     {
         if (bass.isSmoothing() || mid.isSmoothing() || treble.isSmoothing())
         {
@@ -170,6 +169,33 @@ struct ToneStackNodal
             coeffs->processSamples(in, ch, block.getNumSamples());
         }
     }
+#else
+    void process(dsp::AudioBlock<double>& block) override
+    {
+        if (bass.isSmoothing() || mid.isSmoothing() || treble.isSmoothing())
+        {
+            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+            {
+                auto in = block.getChannelPointer(ch);
+                for (size_t i = 0; i < block.getNumSamples(); ++i)
+                {
+                    updateCoeffs();
+                    in[i] = coeffs->processSample(in[i], ch);
+                }
+            }
+            return;
+        }
+
+        assert(coeffs != nullptr);
+
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            coeffs->processSamples(in, ch, block.getNumSamples());
+        }
+    }
+#endif
 
 private:
     SmoothedValue<double> bass, mid, treble;
