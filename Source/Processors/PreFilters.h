@@ -13,33 +13,54 @@
 template <typename T>
 struct GuitarPreFilter : PreampProcessor
 {
-    GuitarPreFilter(GuitarMode type) : type(type)
-    {
-    }
+    GuitarPreFilter() = default;
 
     void prepare(const dsp::ProcessSpec &spec)
     {
-        lastSampleRate = spec.sampleRate;
+        SR = spec.sampleRate;
 
-        hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(spec.sampleRate, 350.f, 0.7f, 4.f);
-        bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 350.f);
-        lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 6200.f);
+        changeFilters();
 
         for (auto &b : bandPass)
-        {
             b.prepare(spec);
-            b.coefficients = bp_coeffs;
-        }
         for (auto &h : hiShelf)
-        {
             h.prepare(spec);
-            h.coefficients = hs_coeffs;
-        }
         for (auto &l : sc_lp)
-        {
             l.prepare(spec);
-            l.coefficients = lp_coeffs;
+    }
+
+    void changeFilters()
+    {
+        switch (type)
+        {
+        case GammaRay:
+            bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(SR, 350.f);
+            hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 350.f, 0.7f, 4.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 6200.f);
+            break;
+        case Sunbeam:
+            bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(SR, 350.f); /*unused*/
+            hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 650.f, 0.7f, 3.5f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(SR, 7200.f);
+            break;
+        case Moonbeam:
+            bp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(SR, 150.f);
+            hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 175.f, 0.666f, 4.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 6200.f);
+            break;
+        case XRay:
+            bp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(SR, 350.f);
+            hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 175.f, 0.7f, 3.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 5500.f);
+            break;
         }
+
+        for (auto &b : bandPass)
+            b.coefficients = bp_coeffs;
+        for (auto &h : hiShelf)
+            h.coefficients = hs_coeffs;
+        for (auto &l : sc_lp)
+            l.coefficients = lp_coeffs;
     }
 
     void reset()
@@ -109,12 +130,11 @@ struct GuitarPreFilter : PreampProcessor
 #endif
 
     strix::BoolParameter* hiGain = nullptr;
+    GuitarMode type;
 
 private:
     std::array<dsp::IIR::Filter<T>, 2> bandPass, hiShelf, sc_lp;
     dsp::IIR::Coefficients<double>::Ptr bp_coeffs, hs_coeffs, lp_coeffs;
 
-    const GuitarMode type;
-
-    double lastSampleRate = 0.0;
+    double SR = 0.0;
 };
