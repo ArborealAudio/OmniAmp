@@ -34,11 +34,10 @@ struct MenuLookAndFeel : LookAndFeel_V4
 
 struct ChoiceMenu : ComboBox
 {
-    ChoiceMenu()
+    ChoiceMenu(StringArray itemList)
     {
         setLookAndFeel(&lnf);
-        addItemList(StringArray("Guitar", "Bass", "Channel"), 1);
-        setSelectedItemIndex(0);
+        addItemList(itemList, 1);
     }
     ~ChoiceMenu()
     {

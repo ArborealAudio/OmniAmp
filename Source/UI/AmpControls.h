@@ -4,7 +4,9 @@
 
 struct AmpControls : Component, private Timer
 {
-    AmpControls(AudioProcessorValueTreeState &a) : vts(a)
+    AmpControls(AudioProcessorValueTreeState &a) : vts(a),
+                                                   mode(static_cast<strix::ChoiceParameter *>(vts.getParameter("mode"))->getAllValueStrings()),
+                                                   subMode(static_cast<strix::ChoiceParameter *>(vts.getParameter("guitarMode"))->getAllValueStrings())
     {
         for (auto &k : getKnobs())
             addAndMakeVisible(*k);
@@ -110,6 +112,9 @@ struct AmpControls : Component, private Timer
 
         addAndMakeVisible(mode);
         modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "mode", mode);
+
+        addAndMakeVisible(subMode);
+        subModeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "guitarMode", subMode);
 
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
@@ -278,11 +283,15 @@ struct AmpControls : Component, private Timer
         hiGain.setSize(getWidth() * 0.07f, getHeight() * 0.15f);
         hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
 
-        auto modeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.5);
+        auto modeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.25f);
+        auto subModeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.25f);
         auto powerBounds = bounds.reduced(w * 0.1);
 
         mode.setSize(getWidth() * 0.125f, getHeight() * 0.15f);
         mode.setCentrePosition(modeBounds.getCentreX(), modeBounds.getCentreY());
+
+        subMode.setSize(getWidth() * 0.125f, getHeight() * 0.15f);
+        subMode.setCentrePosition(subModeBounds.getCentreX(), subModeBounds.getCentreY());
 
         power.setSize(powerBounds.getHeight(), powerBounds.getHeight());
         power.setCentrePosition(powerBounds.getCentreX(), powerBounds.getCentreY());
@@ -294,8 +303,8 @@ private:
     Knob inGain{KnobType::Amp}, outGain{KnobType::Amp}, bass{KnobType::Amp}, mid{KnobType::Amp}, treble{KnobType::Amp};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
 
-    ChoiceMenu mode;
-    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach;
+    ChoiceMenu mode, subMode;
+    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach, subModeAttach;
 
     LightButton hiGain;
     PowerButton power;
