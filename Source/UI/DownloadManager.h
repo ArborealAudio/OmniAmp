@@ -17,6 +17,7 @@ const String versionURL
 { "https://arborealaudio.com/versions/test/Gamma-latest.json" };
 #endif
 
+/*redirect these (in netlify) to a beta endpoint until beta testing is done*/
 const String downloadURLWin
 { "https://arborealaudio.com/downloads/Gamma-windows.exe" };
 
