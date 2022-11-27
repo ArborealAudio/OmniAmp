@@ -8,21 +8,34 @@
   ==============================================================================
 */
 
+#pragma once
+
 enum PentodeType
 {
     Classic,
     Nu
 };
 
-#pragma once
+typedef struct
+{
+    double first = 1.0;
+    double second = 1.0;
+} bias_t;
 
 /**
  * A tube emulator for Class B simulation, with option for a dynamic bias & different saturation algorithms
  */
-template <typename T, PentodeType type = Nu>
+template <typename T>
 struct Pentode
 {
     Pentode() = default;
+
+    /**
+     * @param type Pentode Type. Use widely asymmetric values in Classic mode to get the intended effect
+     */
+    Pentode(PentodeType type) : type(type)
+    {
+    }
 
     void prepare(const dsp::ProcessSpec &spec)
     {
@@ -46,17 +59,22 @@ struct Pentode
     }
 
     template <typename Block>
-    void processBlockClassB(Block &block, T gp, T gn)
+    void processBlockClassB(Block &block)
     {
+        if (type == PentodeType::Nu)
+            block *= 6.0;
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
             if (type == PentodeType::Nu)
-                processSamplesNu(in, ch, block.getNumSamples(), gp, gn);
+                processSamplesNu(in, ch, block.getNumSamples(), bias.first, bias.second);
             else
-                processSamplesClassic(in, ch, block.getNumSamples(), gp, gn);
+                processSamplesClassic(in, ch, block.getNumSamples(), bias.first, bias.second);
         }
     }
+
+    bias_t bias;
+    PentodeType type = PentodeType::Nu;
 
 private:
     void processSamplesNu(T *in, int ch, size_t numSamples, T gp, T gn)
@@ -65,20 +83,20 @@ private:
         {
             in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
 
-            in[i] = saturateAsym(in[i], gp, gp);
+            in[i] = saturateSym(in[i], gp);
 
             in[i] = dsp::FastMathApproximations::sinh(in[i]) / (T)6.0;
         }
     }
 
-    void processSamplesClassic(T* in, size_t ch, size_t numSamples, T gp, T gn)
+    void processSamplesClassic(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
         for (size_t i = 0; i < numSamples; ++i)
         {
             in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
 
-            T yn_pos = classicPentode(in[i], 10.0, gp);
-            T yn_neg = classicPentode(in[i], gn, 10.0);
+            T yn_pos = classicPentode(in[i], gn, gp);
+            T yn_neg = classicPentode(in[i], gp, gn);
 
             dcBlock[0].processSample(ch, yn_pos);
             dcBlock[1].processSample(ch, yn_neg);
@@ -86,9 +104,13 @@ private:
             yn_pos = classicPentode(yn_pos, 1.01, 1.01);
             yn_neg = classicPentode(yn_neg, 1.01, 1.01);
 
-            in[i] = yn_pos + yn_neg;
-            in[i] *= 0.5;
+            in[i] = 0.5 * (yn_pos + yn_neg);
         }
+    }
+
+    inline T saturateSym(T x, T g = 1.0)
+    {
+        return (1.0 / g) * strix::fast_tanh(x * g);
     }
 
     inline T saturateAsym(T x, T gp, T gn)
@@ -186,7 +208,7 @@ struct AVTriode : PreampProcessor
     }
 
 #if USE_SIMD
-    void process(strix::AudioBlock<vec>& block) override
+    void process(strix::AudioBlock<vec> &block) override
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
@@ -196,7 +218,7 @@ struct AVTriode : PreampProcessor
         }
     }
 #else
-    void process(dsp::AudioBlock<double>& block) override
+    void process(dsp::AudioBlock<double> &block) override
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
