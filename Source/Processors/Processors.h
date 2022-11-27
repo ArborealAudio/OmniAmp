@@ -23,7 +23,8 @@ namespace Processors
     {
         GammaRay,
         Sunbeam,
-        Moonbeam
+        Moonbeam,
+        XRay
     };
 
     /**
@@ -36,13 +37,9 @@ namespace Processors
 #else
         virtual void process(dsp::AudioBlock<double> &block) = 0;
 #endif
-    };
 
-    typedef struct
-    {
-        double first = 1.0;
-        double second = 1.0;
-    } bias_t;
+        bool shouldBypass = false;
+    };
 
 #include "Tube.h"
 #include "PreFilters.h"
@@ -59,17 +56,22 @@ namespace Processors
     struct Preamp
     {
         std::vector<PreampProcessor *> procs;
+
+        Preamp() = default;
+
 #if USE_SIMD
         void process(strix::AudioBlock<vec> &block)
         {
             for (auto p : procs)
-                p->process(block);
+                if (!p->shouldBypass)
+                    p->process(block);
         }
 #else
         void process(dsp::AudioBlock<double> &block)
         {
-            for (auto p : procs)
-                p->process(block);
+            for (auto *p : procs)
+                if (!p->shouldBypass)
+                    p->process(block);
         }
 #endif
     };
@@ -81,7 +83,8 @@ namespace Processors
      */
     struct Processor : AudioProcessorValueTreeState::Listener
     {
-        Processor(AudioProcessorValueTreeState &a, ProcessorType t, strix::VolumeMeterSource &s) : apvts(a), comp(t, s, a.getRawParameterValue("compPos"))
+        Processor(AudioProcessorValueTreeState &a, ProcessorType t, strix::VolumeMeterSource &s) : apvts(a),
+                                                                                                   comp(t, s, a.getRawParameterValue("compPos"))
         {
             inGain = dynamic_cast<strix::FloatParameter *>(apvts.getParameter("preampGain"));
             lastInGain = *inGain;
@@ -123,7 +126,7 @@ namespace Processors
             if (toneStack != nullptr)
                 toneStack->reset();
 
-            pentode->reset();
+            pentode.reset();
         }
 
         virtual void setDistParam(float newValue)
@@ -170,7 +173,7 @@ namespace Processors
             if (toneStack != nullptr)
                 toneStack->prepare(spec);
 
-            pentode->prepare(spec);
+            pentode.prepare(spec);
 
             simd.setInterleavedBlockSize(spec.numChannels, spec.maximumBlockSize);
         }
@@ -182,17 +185,14 @@ namespace Processors
         MXRDistWDF<vec> mxr;
         std::unique_ptr<ToneStackNodal<vec>> toneStack;
         std::vector<AVTriode<vec>> triode;
-        std::unique_ptr<Preamp> preamp;
-        std::unique_ptr<Pentode<vec>> pentode;
+        Pentode<vec> pentode;
 #else
         MXRDistWDF<double> mxr;
         std::unique_ptr<ToneStackNodal<double>> toneStack;
         std::vector<AVTriode<double>> triode;
-        std::unique_ptr<Preamp> preamp;
-        std::unique_ptr<Pentode<double>> pentode;
+        Pentode<double> pentode;
 #endif
-
-        // std::atomic<float> *inGain, *inGainAuto, *outGain, *outGainAuto, *hiGain, *p_comp, *linked, *dist, *eqAutoGain;
+        Preamp preamp;
         strix::FloatParameter *inGain, *outGain, *p_comp, *dist;
         strix::BoolParameter *inGainAuto, *outGainAuto, *hiGain, *linked, *eqAutoGain;
         double lastInGain, lastOutGain;
@@ -201,28 +201,27 @@ namespace Processors
 
         double SR = 44100.0;
         int numSamples = 0, numChannels = 0;
+        dsp::ProcessSpec lastSpec;
     };
 
-    struct Guitar : Processor,
-                    private AudioProcessorValueTreeState::Listener
+    struct Guitar : Processor
     {
         Guitar(AudioProcessorValueTreeState &a, strix::VolumeMeterSource &s) : Processor(a, ProcessorType::Guitar, s)
         {
+            guitarMode = dynamic_cast<strix::ChoiceParameter *>(apvts.getParameter("guitarMode"));
+            currentType = static_cast<GuitarMode>(guitarMode->getIndex());
 #if USE_SIMD
             toneStack = std::make_unique<ToneStackNodal<vec>>(eqCoeffs);
-            gtrPre = std::make_unique<GuitarPreFilter<vec>>(currentType);
-            pentode = std::make_unique<Pentode<vec>>();
 #else
             toneStack = std::make_unique<ToneStackNodal<double>>(eqCoeffs);
-            gtrPre = std::make_unique<GuitarPreFilter<double>>(currentType);
-            pentode = std::make_unique<Pentode<double>>();
 #endif
-            guitarMode = dynamic_cast<strix::ChoiceParameter *>(apvts.getParameter("guitarMode"));
-            apvts.addParameterListener("guitarMode", this);
-            gtrPre->hiGain = hiGain;
-            preamp = std::make_unique<Preamp>();
+            gtrPre.hiGain = hiGain;
+            gtrPre.type = currentType;
             triode.resize(4);
-            bias.resize(4);
+            setBias();
+            setToneStack();
+            setPreamp();
+            apvts.addParameterListener("guitarMode", this);
         }
 
         ~Guitar()
@@ -232,31 +231,40 @@ namespace Processors
 
         void prepare(const dsp::ProcessSpec &spec) override
         {
+            lastSpec = spec;
+            setPoweramp();
             defaultPrepare(spec);
-            gtrPre->prepare(spec);
-            setBias();
-            setPreamp();
+            gtrPre.prepare(spec);
         }
 
-        void parameterChanged(const String& parameterID, float newValue) override
+        void parameterChanged(const String &parameterID, float newValue) override
         {
             if (parameterID == "guitarMode")
             {
-                currentType = static_cast<GuitarMode>(guitarMode->getIndex());
-                setBias();
+                currentType = static_cast<GuitarMode>(newValue);                
+                ampChanged = true;
             }
         }
 
-        void setPreamp()
+        void setToneStack()
         {
-            if (!preamp->procs.empty())
-                return;
-            preamp->procs.push_back(&triode[0]);
-            preamp->procs.push_back(gtrPre.get());
-            preamp->procs.push_back(&triode[1]);
-            preamp->procs.push_back(&triode[2]);
-            preamp->procs.push_back(toneStack.get());
-            preamp->procs.push_back(&triode[3]);
+            switch (currentType)
+            {
+            case GammaRay:
+                eqCoeffs = (ToneStackNodal<vec>::Coeffs((vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)1e6, (vec)20e3, (vec)65e3));
+                break;
+            case Sunbeam:
+                eqCoeffs = (ToneStackNodal<vec>::Coeffs((vec)0.25e-9, (vec)15e-9, (vec)250e-9, (vec)300e3, (vec)400e3, (vec)1e3, (vec)20e3));
+                break;
+            case Moonbeam:
+                eqCoeffs = (ToneStackNodal<vec>::Coeffs((vec)0.25e-9, (vec)20e-9, (vec)50e-9, (vec)300e3, (vec)500e3, (vec)15e3, (vec)12e3));
+                break;
+            case XRay:
+                eqCoeffs = (ToneStackNodal<vec>::Coeffs((vec)0.5e-9, (vec)22e-9, (vec)22e-9, (vec)250e3, (vec)1e6, (vec)25e3, (vec)33e3));
+                break;
+            }
+
+            toneStack->changeCoeffs(eqCoeffs);
         }
 
         void setBias()
@@ -264,40 +272,124 @@ namespace Processors
             switch (currentType)
             {
             case GammaRay:
-                assert(bias.size() == (size_t)4);
-                bias[0].first = 0.5;
-                bias[0].second = 1.0;
-                bias[1].first = 1.4;
-                bias[1].second = 2.4;
-                bias[2].first = 1.4;
-                bias[2].second = 2.4;
-                bias[3].first = 2.0;
-                bias[3].second = 4.0;
+                triode[0].bias.first = 0.5;
+                triode[0].bias.second = 1.0;
+                triode[1].bias.first = 1.4;
+                triode[1].bias.second = 2.4;
+                triode[2].bias.first = 1.4;
+                triode[2].bias.second = 2.4;
+                triode[3].bias.first = 2.0;
+                triode[3].bias.second = 4.0;
                 break;
             case Sunbeam:
-                assert(bias.size() == (size_t)3);
-                bias[0].first = 0.5;
-                bias[0].second = 0.5;
-                bias[1].first = 0.5;
-                bias[1].second = 0.5;
-                bias[2].first = 2.0;
-                bias[2].second = 2.0;
+                triode[0].bias.first = 0.5;
+                triode[0].bias.second = 0.5;
+                triode[1].bias.first = 1.0;
+                triode[1].bias.second = 2.0;
+                triode[2].bias.first = 10.0;
+                triode[2].bias.second = 10.0;
                 break;
             case Moonbeam:
-                assert(bias.size() == (size_t)4);
-                bias[0].first = 2.0;
-                bias[0].second = 2.5;
-                bias[1].first = 3.0;
-                bias[1].second = 4.0;
-                bias[2].first = 3.0;
-                bias[2].second = 4.0;
-                bias[3].first = 4.0;
-                bias[3].second = 5.0;
+                triode[0].bias.first = 2.0;
+                triode[0].bias.second = 2.5;
+                triode[1].bias.first = 3.0;
+                triode[1].bias.second = 4.0;
+                triode[2].bias.first = 3.0;
+                triode[2].bias.second = 4.0;
+                triode[3].bias.first = 4.0;
+                triode[3].bias.second = 5.0;
+                break;
+            case XRay:
+                triode[0].bias.first = 0.5;
+                triode[0].bias.second = 1.0;
+                triode[1].bias.first = 1.0;
+                triode[1].bias.second = 2.0;
+                triode[2].bias.first = 3.0;
+                triode[2].bias.second = 4.0;
+                triode[3].bias.first = 2.0;
+                triode[3].bias.second = 4.0;
                 break;
             }
+        }
 
-            for (size_t i = 0; i < triode.size(); ++i)
-                triode[i].bias = bias[i];
+        void setPreamp()
+        {
+            preamp.procs.clear();
+
+            switch (currentType)
+            {
+            case GammaRay:
+                preamp.procs.push_back(&triode[0]);
+                preamp.procs.push_back(&gtrPre);
+                preamp.procs.push_back(&triode[1]);
+                preamp.procs.push_back(&triode[2]);
+                preamp.procs.push_back(toneStack.get());
+                preamp.procs.push_back(&triode[3]);
+                break;
+            case Sunbeam:
+                preamp.procs.push_back(&gtrPre);
+                preamp.procs.push_back(&triode[0]);
+                preamp.procs.push_back(&triode[1]);
+                preamp.procs.push_back(toneStack.get());
+                preamp.procs.push_back(&triode[2]);
+                break;
+            case Moonbeam:
+                preamp.procs.push_back(&gtrPre);
+                preamp.procs.push_back(&triode[0]);
+                preamp.procs.push_back(&triode[1]);
+                preamp.procs.push_back(&triode[2]);
+                preamp.procs.push_back(toneStack.get());
+                preamp.procs.push_back(&triode[3]);
+                break;
+            case XRay:
+                preamp.procs.push_back(&triode[0]);
+                preamp.procs.push_back(&gtrPre);
+                preamp.procs.push_back(&triode[1]);
+                preamp.procs.push_back(&triode[2]);
+                preamp.procs.push_back(toneStack.get());
+                preamp.procs.push_back(&triode[3]);
+                break;
+            }
+        }
+
+        void updatePreamp()
+        {
+            setToneStack();
+            gtrPre.type = currentType;
+            gtrPre.changeFilters();
+            setBias();
+            setPreamp();
+        }
+
+        void setPoweramp()
+        {
+            switch (currentType)
+            {
+            case GammaRay:
+                pentode.type = PentodeType::Nu;
+                pentode.bias.first = 0.6;
+                pentode.bias.second = 0.6;
+                pentode.prepare(lastSpec);
+                break;
+            case Sunbeam:
+                pentode.type = PentodeType::Classic;
+                pentode.bias.first = 10.0;
+                pentode.bias.second = 1.2;
+                pentode.prepare(lastSpec);
+                break;
+            case Moonbeam:
+                pentode.type = PentodeType::Nu;
+                pentode.bias.first = 0.6;
+                pentode.bias.second = 0.6;
+                pentode.prepare(lastSpec);
+                break;
+            case XRay:
+                pentode.type = PentodeType::Classic;
+                pentode.bias.first = 23.0;
+                pentode.bias.second = 1.2;
+                pentode.prepare(lastSpec);
+                break;
+            }
         }
 
         template <typename T>
@@ -322,11 +414,32 @@ namespace Processors
 
             processBlock.multiplyBy(gain_raw);
 
-            preamp->process(processBlock);
+            /* perform sync swap of preamp & poweramp if needed */
+            if (ampChanged)
+            {
+                updatePreamp();
+                setPoweramp();
+                ampChanged = false;
+            }
+            if (!*hiGain)
+                triode.back().shouldBypass = true;
+            else
+                triode.back().shouldBypass = false;
+            if (currentType == Sunbeam) // check for extra bypasses in Sunbeam
+            {
+                triode[2].shouldBypass = !*hiGain;
+                gtrPre.shouldBypass = !*hiGain;
+            }
+            else
+            {
+                triode[2].shouldBypass = false;
+                gtrPre.shouldBypass = false;
+            }
+            preamp.process(processBlock);
 
-            processBlock.multiplyBy(out_raw * 6.0);
+            processBlock.multiplyBy(out_raw);
 
-            pentode->processBlockClassB(processBlock, 0.6, 0.6);
+            pentode.processBlockClassB(processBlock);
 
             if (*outGainAuto)
                 autoGain *= 1.0 / out_raw;
@@ -344,16 +457,15 @@ namespace Processors
         GuitarMode currentType = GammaRay;
 
     private:
-        std::vector<bias_t> bias;
-
         strix::ChoiceParameter *guitarMode;
+        std::atomic<bool> ampChanged = false;
+
+        ToneStackNodal<vec>::Coeffs eqCoeffs;
 
 #if USE_SIMD
-        std::unique_ptr<GuitarPreFilter<vec>> gtrPre;
-        ToneStackNodal<vec>::Coeffs eqCoeffs{(vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)1e6, (vec)20e3, (vec)65e3};
+        GuitarPreFilter<vec> gtrPre;
 #else
-        std::unique_ptr<GuitarPreFilter<double>> gtrPre;
-        ToneStackNodal<double>::Coeffs eqCoeffs{0.25e-9, 25e-9, 22e-9, 300e3, 1e6, 20e3, 65e3};
+        GuitarPreFilter<double> gtrPre;
 #endif
     };
 
@@ -363,10 +475,8 @@ namespace Processors
         {
 #if USE_SIMD
             toneStack = std::make_unique<ToneStackNodal<vec>>(eqCoeffs);
-            pentode = std::make_unique<Pentode<vec>>();
 #else
             toneStack = std::make_unique<ToneStackNodal<double>>(eqCoeffs);
-            pentode = std::make_unique<Pentode<double>>();
 #endif
             triode.resize(4);
             bias.resize(4);
@@ -454,9 +564,9 @@ namespace Processors
                 autoGain *= 1.0 / out_raw;
 
             if (!*hiGain)
-                pentode->processBlockClassB(processBlock, 0.6, 0.6);
+                pentode.processBlockClassB(processBlock /* , 0.6, 0.6 */);
             else
-                pentode->processBlockClassB(processBlock, 0.7, 0.7);
+                pentode.processBlockClassB(processBlock /* , 0.7, 0.7 */);
 
             processBlock.multiplyBy(autoGain);
 
@@ -485,11 +595,6 @@ namespace Processors
         Channel(AudioProcessorValueTreeState &a, strix::VolumeMeterSource &s) : Processor(a, ProcessorType::Channel, s)
         {
             toneStack = nullptr;
-#if USE_SIMD
-            pentode = std::make_unique<Pentode<vec>>();
-#else
-            pentode = std::make_unique<Pentode<double>>();
-#endif
             triode.resize(2);
         }
 
@@ -604,9 +709,9 @@ namespace Processors
                 processBlock.multiplyBy(6.0 * out_raw);
 
                 if (!*hiGain)
-                    pentode->processBlockClassB(processBlock, 0.4f, 0.4f);
+                    pentode.processBlockClassB(processBlock /* , 0.4f, 0.4f */);
                 else
-                    pentode->processBlockClassB(processBlock, 0.6f, 0.6f);
+                    pentode.processBlockClassB(processBlock /* , 0.6f, 0.6f */);
             }
 
             if (*outGainAuto)
