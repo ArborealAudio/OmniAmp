@@ -14,9 +14,15 @@ struct ToneStackNodal : PreampProcessor
 {
     struct Coeffs
     {
-        Coeffs(T c1, T c2, T c3, T r1, T r2, T r3, T r4) :
-        C1(c1), C2(c2), C3(c3), R1(r1), R2(r2), R3(r3), R4(r4)
+        Coeffs() = default;
+
+        Coeffs(T c1, T c2, T c3, T r1, T r2, T r3, T r4) : C1(c1), C2(c2), C3(c3), R1(r1), R2(r2), R3(r3), R4(r4)
         {
+        }
+
+        Coeffs &operator=(const Coeffs &newCoeffs)
+        {
+            return *(Coeffs *) memcpy(this, &newCoeffs, sizeof(newCoeffs));
         }
 
         void prepare(double sampleRate)
@@ -30,7 +36,7 @@ struct ToneStackNodal : PreampProcessor
 
             b2 = (treble * (C1 * C2 * R1 * R4 + C1 * C3 * R1 * R4)) - mid * mid * (C1 * C3 * R3 * R3 + C2 * C3 * R3 * R3) + mid * (C1 * C3 * R1 * R3 + C1 * C3 * R3 * R3 + C2 * C3 * R3 * R3) + bass * (C1 * C2 * R1 * R2 + C1 * C2 * R2 * R4 + C1 * C3 * R2 * R4) + bass * mid * (C1 * C3 * R2 * R3 + C2 * C3 * R2 * R3) + (C1 * C2 * R1 * R3 + C1 * C2 * R3 * R4 + C1 * C3 * R3 * R4);
 
-            b3 = bass * mid * (C1 * C2 * C3 * R1 * R2 * R3 + C1 * C2 * C3 * R2 * R3 * R4) - mid * mid * (C1 * C2 * C3 * R1 * R3 * R3 + C1 * C2 * C3 * R3 * R3 * R4) + mid * (C1 * C2 * C3 * R1 * R3 * R3 + C1 * C2 * C3 * R3 * R3 * R4) + treble * (C1 * C2 * C3 * R1 * R3 * R4) - treble * mid * (C1 * C2 * C3 * R1 * R3 * R4) + treble * bass * (C1*C2*C3*R1*R2*R4);
+            b3 = bass * mid * (C1 * C2 * C3 * R1 * R2 * R3 + C1 * C2 * C3 * R2 * R3 * R4) - mid * mid * (C1 * C2 * C3 * R1 * R3 * R3 + C1 * C2 * C3 * R3 * R3 * R4) + mid * (C1 * C2 * C3 * R1 * R3 * R3 + C1 * C2 * C3 * R3 * R3 * R4) + treble * (C1 * C2 * C3 * R1 * R3 * R4) - treble * mid * (C1 * C2 * C3 * R1 * R3 * R4) + treble * bass * (C1 * C2 * C3 * R1 * R2 * R4);
 
             a0 = 1.0;
 
@@ -60,7 +66,7 @@ struct ToneStackNodal : PreampProcessor
             x1[1] = x2[1] = x3[1] = 0.0;
         }
 
-        void processSamples(T* x, size_t ch, size_t numSamples)
+        void processSamples(T *x, size_t ch, size_t numSamples)
         {
             for (size_t i = 0; i < numSamples; ++i)
             {
@@ -94,7 +100,7 @@ struct ToneStackNodal : PreampProcessor
         }
 
     private:
-        T c = 0, b1 = 0, b2 = 0, b3 = 0, a0 = 0, a1 = 0, a2 = 0, a3 = 0, B0 = 0, B1 = 0, B2 = 0, B3 = 0, A0 = 1.0, A1 = 0, A2 = 0, A3 = 0;
+        T c = 88200.0, b1 = 0, b2 = 0, b3 = 0, a0 = 0, a1 = 0, a2 = 0, a3 = 0, B0 = 0, B1 = 0, B2 = 0, B3 = 0, A0 = 1.0, A1 = 0, A2 = 0, A3 = 0;
 
         T z1[2]{0.f}, z2[2]{0.f}, z3[2]{0.f}, x1[2]{0.f}, x2[2]{0.f}, x3[2]{0.f};
         const T C1 = 0.25e-9f, C2 = 22e-9f, C3 = 22e-9f, R1 = 300e3f, R2 = 0.5e6f, R3 = 30e3f, R4 = 56e3f;
@@ -108,8 +114,17 @@ struct ToneStackNodal : PreampProcessor
         treble.setTargetValue(0.5);
     }
 
-    void prepare(const dsp::ProcessSpec& spec)
+    void changeCoeffs(Coeffs newC)
     {
+        coeffs.reset(new Coeffs(newC));
+        coeffs->prepare(SR);
+        updateCoeffs();
+    }
+
+    void prepare(const dsp::ProcessSpec &spec)
+    {
+        SR = spec.sampleRate;
+
         coeffs->prepare(spec.sampleRate);
 
         bass.reset(spec.sampleRate, 0.005);
@@ -143,8 +158,9 @@ struct ToneStackNodal : PreampProcessor
     {
         coeffs->setCoeffs(bass.getNextValue(), mid.getNextValue(), treble.getNextValue());
     }
+
 #if USE_SIMD
-    void process(strix::AudioBlock<vec>& block) override
+    void process(strix::AudioBlock<vec> &block) override
     {
         if (bass.isSmoothing() || mid.isSmoothing() || treble.isSmoothing())
         {
@@ -170,7 +186,7 @@ struct ToneStackNodal : PreampProcessor
         }
     }
 #else
-    void process(dsp::AudioBlock<double>& block) override
+    void process(dsp::AudioBlock<double> &block) override
     {
         if (bass.isSmoothing() || mid.isSmoothing() || treble.isSmoothing())
         {
@@ -197,8 +213,9 @@ struct ToneStackNodal : PreampProcessor
     }
 #endif
 
+    std::unique_ptr<Coeffs> coeffs = nullptr;
+
 private:
     SmoothedValue<double> bass, mid, treble;
-
-    std::unique_ptr<Coeffs> coeffs;
+    double SR = 44100.0;
 };
