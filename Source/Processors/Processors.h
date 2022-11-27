@@ -286,8 +286,8 @@ namespace Processors
                 triode[0].bias.second = 0.5;
                 triode[1].bias.first = 1.0;
                 triode[1].bias.second = 2.0;
-                triode[2].bias.first = 10.0;
-                triode[2].bias.second = 10.0;
+                triode[2].bias.first = 5.0;
+                triode[2].bias.second = 5.0;
                 break;
             case Moonbeam:
                 triode[0].bias.first = 2.0;
@@ -373,7 +373,7 @@ namespace Processors
                 break;
             case Sunbeam:
                 pentode.type = PentodeType::Classic;
-                pentode.bias.first = 10.0;
+                pentode.bias.first = 3.0;
                 pentode.bias.second = 1.2;
                 pentode.prepare(lastSpec);
                 break;
@@ -385,7 +385,7 @@ namespace Processors
                 break;
             case XRay:
                 pentode.type = PentodeType::Classic;
-                pentode.bias.first = 23.0;
+                pentode.bias.first = 2.0;
                 pentode.bias.second = 1.2;
                 pentode.prepare(lastSpec);
                 break;
@@ -421,10 +421,7 @@ namespace Processors
                 setPoweramp();
                 ampChanged = false;
             }
-            if (!*hiGain)
-                triode.back().shouldBypass = true;
-            else
-                triode.back().shouldBypass = false;
+            triode.back().shouldBypass = !*hiGain;
             if (currentType == Sunbeam) // check for extra bypasses in Sunbeam
             {
                 triode[2].shouldBypass = !*hiGain;
