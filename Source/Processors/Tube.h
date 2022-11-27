@@ -49,6 +49,10 @@ struct Pentode
         sc_lp.prepare(spec);
         sc_lp.setCutoffFreq(5.0);
         sc_lp.setType(strix::FilterType::lowpass);
+
+        absorb.prepare(spec);
+        absorb.setCutoffFreq(type == Nu ? 10000.0 : 6500.0);
+        absorb.setType(strix::FilterType::firstOrderLowpass);
     }
 
     void reset()
@@ -56,6 +60,7 @@ struct Pentode
         for (auto &f : dcBlock)
             f.reset();
         sc_lp.reset();
+        absorb.reset();
     }
 
     template <typename Block>
@@ -86,6 +91,8 @@ private:
             in[i] = saturateSym(in[i], gp);
 
             in[i] = dsp::FastMathApproximations::sinh(in[i]) / (T)6.0;
+            
+            in[i] = absorb.processSample(ch, in[i]);
         }
     }
 
@@ -93,10 +100,11 @@ private:
     {
         for (size_t i = 0; i < numSamples; ++i)
         {
-            in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
+            auto env = 1.2 * processEnvelopeDetector(in[i], ch);
+            in[i] -= env;
 
-            T yn_pos = classicPentode(in[i], gn, gp);
-            T yn_neg = classicPentode(in[i], gp, gn);
+            T yn_pos = classicPentode(in[i], gn, gp, 2.0);
+            T yn_neg = classicPentode(in[i], gp, gn, 2.0);
 
             dcBlock[0].processSample(ch, yn_pos);
             dcBlock[1].processSample(ch, yn_neg);
@@ -105,6 +113,7 @@ private:
             yn_neg = classicPentode(yn_neg, 1.01, 1.01);
 
             in[i] = 0.5 * (yn_pos + yn_neg);
+            in[i] = absorb.processSample(ch, in[i]);
         }
     }
 
@@ -127,12 +136,12 @@ private:
 #endif
     }
 
-    inline T classicPentode(T xn, T Ln, T Lp)
+    inline T classicPentode(T xn, T Ln, T Lp, T g = 1.0)
     {
 #if USE_SIMD
         return xsimd::select(xn <= 0.0,
-                             xn / (1.0 - (xn / Ln)),
-                             xn / (1.0 + (xn / Lp)));
+                             (g * xn) / (1.0 - ((g * xn) / Ln)),
+                             (g * xn) / (1.0 + ((g * xn) / Lp)));
 #else
         if (xn <= 0.0)
             return xn / (1.0 - (xn / Ln));
@@ -155,7 +164,7 @@ private:
 
     std::array<strix::SVTFilter<T>, 2> dcBlock; /*need 2 for pos & neg signals*/
 
-    strix::SVTFilter<T> sc_lp;
+    strix::SVTFilter<T> sc_lp, absorb;
 };
 
 /**
