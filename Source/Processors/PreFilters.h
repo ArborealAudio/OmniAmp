@@ -40,7 +40,7 @@ struct GuitarPreFilter : PreampProcessor
             break;
         case Sunbeam:
             bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(SR, 350.f); /*unused*/
-            hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 650.f, 0.7f, 3.5f);
+            hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 750.f, 0.7f, 2.f);
             lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(SR, 7200.f);
             break;
         case Moonbeam:
