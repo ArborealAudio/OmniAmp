@@ -6,7 +6,7 @@ namespace EnhancerSaturation
 {
     // higher values of k = harder clipping
     // lower values can attenuate the signal a bit
-    inline void process(dsp::AudioBlock<double> &block, double gp, double gn, double k)
+    inline void process(dsp::AudioBlock<double> &block, double gp, double gn)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -28,7 +28,7 @@ namespace EnhancerSaturation
         }
     }
 
-    inline void process(strix::AudioBlock<vec> &block, vec gp, vec gn, vec k)
+    inline void process(strix::AudioBlock<vec> &block, vec gp, vec gn)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
@@ -198,7 +198,7 @@ private:
 
         strix::SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
 
-        EnhancerSaturation::process(block, 1.0, 1.0, 1.0);
+        EnhancerSaturation::process(block, 1.0, 1.0);
         block.multiplyBy(2.0);
 
         if ((bool)*hfAutoGain)
@@ -223,7 +223,7 @@ private:
 
         strix::SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
 
-        EnhancerSaturation::process(block, 1.0, 2.0, 4.0);
+        EnhancerSaturation::process(block, 1.0, 2.0);
 
         if (*lfAutoGain)
             autoGain *= 1.0 / (6.0 * gain);
