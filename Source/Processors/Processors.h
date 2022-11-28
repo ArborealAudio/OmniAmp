@@ -27,6 +27,19 @@ namespace Processors
         XRay
     };
 
+    enum BassMode
+    {
+        Cobalt,
+        Emerald,
+        Quartz
+    };
+
+    enum ChannelMode
+    {
+        A,
+        B
+    };
+
     /**
      * Generic preamp processor
      */
