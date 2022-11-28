@@ -1,36 +1,49 @@
 // Enhancer.h
 
 #pragma once
-
+#define NU_ENHANCE 1
 namespace EnhancerSaturation
 {
     // higher values of k = harder clipping
     // lower values can attenuate the signal a bit
-    inline void process(dsp::AudioBlock<double>& block, double gp, double gn, double k)
+    inline void process(dsp::AudioBlock<double> &block, double gp, double gn, double k)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
             for (size_t i = 0; i < block.getNumSamples(); ++i)
             {
+#if NU_ENHANCE
+                if (in[i] >= 0.0)
+                    in[i] = (1.0 / gp) * strix::fast_tanh(in[i] * gp);
+                else
+                    in[i] = (1.0 / gn) * strix::fast_tanh(in[i] * gn);
+#else
                 if (in[i] >= 0.0)
                     in[i] = (1.0 / gp) * (in[i] * gp) / std::pow((1.0 + gp * std::pow(std::abs(in[i] * gp), k)), 1.0 / k);
                 else
                     in[i] = (1.0 / gn) * (in[i] * gn) / std::pow((1.0 + gn * std::pow(std::abs(in[i] * gn), k)), 1.0 / k);
+#endif
             }
         }
     }
 
-    inline void process(strix::AudioBlock<vec>& block, vec gp, vec gn, vec k)
+    inline void process(strix::AudioBlock<vec> &block, vec gp, vec gn, vec k)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
             for (size_t i = 0; i < block.getNumSamples(); ++i)
             {
+#if NU_ENHANCE
                 in[i] = xsimd::select(in[i] >= 0.0,
-                (1.0 / gp) * (in[i] * gp) / xsimd::pow((1.0 + gp * xsimd::pow(xsimd::abs(in[i] * gp), k)), 1.0 / k),
-                (1.0 / gn) * (in[i] * gn) / xsimd::pow((1.0 + gn * xsimd::pow(xsimd::abs(in[i] * gn), k)), 1.0 / k));
+                                      (1.0 / gp) * strix::fast_tanh(in[i] * gp),
+                                      (1.0 / gn) * strix::fast_tanh(in[i] * gn));
+#else
+                in[i] = xsimd::select(in[i] >= 0.0,
+                                      (1.0 / gp) * (in[i] * gp) / xsimd::pow((1.0 + gp * xsimd::pow(xsimd::abs(in[i] * gp), k)), 1.0 / k),
+                                      (1.0 / gn) * (in[i] * gn) / xsimd::pow((1.0 + gn * xsimd::pow(xsimd::abs(in[i] * gn), k)), 1.0 / k));
+#endif
             }
         }
     }
@@ -45,7 +58,7 @@ enum EnhancerType
 template <typename T, EnhancerType type>
 struct Enhancer
 {
-    Enhancer(AudioProcessorValueTreeState& a) : apvts(a)
+    Enhancer(AudioProcessorValueTreeState &a) : apvts(a)
     {
         lfAutoGain = apvts.getRawParameterValue("lfEnhanceAuto");
         hfAutoGain = apvts.getRawParameterValue("hfEnhanceAuto");
@@ -56,7 +69,7 @@ struct Enhancer
         mode = newMode;
     }
 
-    void prepare(const dsp::ProcessSpec& spec)
+    void prepare(const dsp::ProcessSpec &spec)
     {
         SR = spec.sampleRate;
 
@@ -82,12 +95,14 @@ struct Enhancer
         hp1.clear();
         hp2.clear();
 
-        for (auto& c : lp_c) {
+        for (auto &c : lp_c)
+        {
             lp1.emplace_back(dsp::IIR::Filter<T>(c));
             lp2.emplace_back(dsp::IIR::Filter<T>(c));
         }
 
-        for (auto& c : hp_c) {
+        for (auto &c : hp_c)
+        {
             hp1.emplace_back(dsp::IIR::Filter<T>(c));
             hp2.emplace_back(dsp::IIR::Filter<T>(c));
         }
@@ -142,11 +157,11 @@ struct Enhancer
     }
 
     template <typename Block>
-    void processBlock(Block& block, const double enhance, const bool invert)
+    void processBlock(Block &block, const double enhance, const bool invert)
     {
-        if (needUpdate) 
+        if (needUpdate)
             updateFilters();
-        
+
         wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), block.getNumSamples());
         if (block.getNumChannels() > 1)
             wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), block.getNumSamples());
@@ -170,15 +185,14 @@ struct Enhancer
     }
 
 private:
-
     template <typename Block>
-    void processHF(Block& block, double enhance)
+    void processHF(Block &block, double enhance)
     {
         auto inL = block.getChannelPointer(0);
 
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = hp1[0].processSample(inL[i]);
-        
+
         auto gain = jmap(enhance, 1.0, 4.0);
         double autoGain = 1.0;
 
@@ -187,7 +201,7 @@ private:
         EnhancerSaturation::process(block, 1.0, 1.0, 1.0);
         block.multiplyBy(2.0);
 
-        if (*hfAutoGain)
+        if ((bool)*hfAutoGain)
             autoGain *= 1.0 / (2.0 * gain);
 
         for (int i = 0; i < block.getNumSamples(); ++i)
@@ -197,10 +211,10 @@ private:
     }
 
     template <typename Block>
-    void processLF(Block& block, double enhance)
+    void processLF(Block &block, double enhance)
     {
         auto inL = block.getChannelPointer(0);
-        
+
         for (int i = 0; i < block.getNumSamples(); ++i)
             inL[i] = lp1[0].processSample(inL[i]);
 
