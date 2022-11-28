@@ -2,10 +2,13 @@
 
 #pragma once
 
-#define GAMMA_RAY 42.f / 360.f, 0.31f, 0.71f, 0.3f
+#define GAMMA_RAY 35.f / 360.f, 0.31f, 0.71f, 0.3f
 #define SUNBEAM 50.f / 360.f, 0.28f, 0.75f, 0.3f
 #define MOONBEAM 50.f / 360.f, 0.10f, 0.71f, 0.3f
-#define XRAY 12.f / 360.f, 0.10f, 0.61f, 0.3f
+#define XRAY 12.f / 360.f, 0.28f, 0.61f, 0.3f
+#define COBALT 210.f / 360.f, 0.25f, 0.5f, 0.5f
+#define EMERALD 157.f / 360.f, 0.13f, 0.5f, 0.5f
+#define QUARTZ 240.f / 360.f, 0.07f, 0.67f, 0.5f
 
 struct AmpControls : Component, private Timer
 {
@@ -217,17 +220,17 @@ struct AmpControls : Component, private Timer
         {
             switch ((GuitarMode)subMode_p->load())
             {
-                case(GuitarMode::GammaRay):
-                    backgroundColor = Colour(GAMMA_RAY);
-                    break;
-                case(GuitarMode::Sunbeam):
-                    backgroundColor = Colour(SUNBEAM);
-                    break;
-                case(GuitarMode::Moonbeam):
-                    backgroundColor = Colour(MOONBEAM);
+            case (GuitarMode::GammaRay):
+                backgroundColor = Colour(GAMMA_RAY);
                 break;
-                case(GuitarMode::XRay):
-                    backgroundColor = Colour(XRAY);
+            case (GuitarMode::Sunbeam):
+                backgroundColor = Colour(SUNBEAM);
+                break;
+            case (GuitarMode::Moonbeam):
+                backgroundColor = Colour(MOONBEAM);
+                break;
+            case (GuitarMode::XRay):
+                backgroundColor = Colour(XRAY);
                 break;
             }
             secondaryColor = Colour(TOP_TRIM).contrasting(1.f);
@@ -239,31 +242,56 @@ struct AmpControls : Component, private Timer
         }
         break;
         case Processors::ProcessorType::Bass:
-                backgroundColor = Colours::slategrey;
-                secondaryColor = Colours::lightgrey;
-                for (auto &k : getKnobs())
-                {
-                    k->setColor(Colours::black, secondaryColor);
-                    k->repaint();
-                }
+            switch ((BassMode)subMode_p->load())
+            {
+            case Cobalt:
+                backgroundColor = Colour(COBALT);
                 break;
+            case Emerald:
+                backgroundColor = Colour(EMERALD);
+                break;
+            case Quartz:
+                backgroundColor = Colour(QUARTZ);
+                break;
+            }
+            secondaryColor = Colours::lightgrey;
+            for (auto &k : getKnobs())
+            {
+                k->setColor(Colours::black, secondaryColor);
+                k->repaint();
+            }
+            break;
         case Processors::ProcessorType::Channel:
-                backgroundColor = Colours::darkgrey;
-                secondaryColor = Colours::oldlace;
+            backgroundColor = Colours::darkgrey;
+            secondaryColor = Colours::oldlace;
+            if ((ChannelMode)subMode_p->load() == A)
+            {
                 for (auto &k : getKnobs())
                 {
                     if (k == &bass)
-                        k->setColor(Colours::forestgreen, secondaryColor);
+                        k->setColor(Colour(142.f/360.f, 0.42f, 0.50f, 1.f), secondaryColor);
                     else if (k == &mid)
-                        k->setColor(Colours::blue.withMultipliedSaturation(0.5f), secondaryColor);
+                        k->setColor(Colour(200.f/360.f, 0.42f, 0.50f, 1.f), secondaryColor);
                     else if (k == &treble)
-                        k->setColor(Colours::crimson, secondaryColor);
+                        k->setColor(Colour(345.f/360.f, 0.42f, 0.50f, 1.f), secondaryColor);
                     else
                         k->setColor(Colours::slategrey, secondaryColor);
 
                     k->repaint();
                 }
-                break;
+            }
+            else
+            {
+                for (auto &k : getKnobs())
+                {
+                    if (k == &inGain || k == &outGain)
+                        k->setColor(Colour(345.f/360.f, 0.42f, 0.50f, 1.f), secondaryColor);
+                    else
+                        k->setColor(Colours::lightgrey, secondaryColor);
+                    k->repaint();
+                }
+            }
+            break;
         };
 
         power.setBackgroundColor(backgroundColor);
@@ -272,7 +300,7 @@ struct AmpControls : Component, private Timer
     void paint(Graphics &g) override
     {
         // g.setColour(backgroundColor);
-        ColourGradient grad(Colour(TOP_TRIM), getLocalBounds().getCentreX(), getLocalBounds().getCentreY(), backgroundColor, getX(), getY(), true);
+        ColourGradient grad(backgroundColor, getLocalBounds().getCentreX(), getLocalBounds().getCentreY(), Colour(TOP_TRIM), getWidth(), getHeight(), true);
         g.setGradientFill(grad);
         g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f);
         g.setColour(secondaryColor);
@@ -295,15 +323,15 @@ struct AmpControls : Component, private Timer
         };
 
         if (inGain.autoGain.load())
-                paintAuto(Rectangle<int>(inGain.getX(), inGain.getBottom() + 3, inGain.getWidth(), 10));
+            paintAuto(Rectangle<int>(inGain.getX(), inGain.getBottom() + 3, inGain.getWidth(), 10));
 
         auto toneControls = bass.getBounds().getUnion(mid.getBounds()).getUnion(treble.getBounds());
 
         if ((bass.autoGain.load() || mid.autoGain.load() || treble.autoGain.load()) && lastMode > 1)
-                paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom() + 3, toneControls.getWidth(), 10));
+            paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom() + 3, toneControls.getWidth(), 10));
 
         if (outGain.autoGain.load())
-                paintAuto(Rectangle<int>(outGain.getX(), outGain.getBottom() + 3, outGain.getWidth(), 10));
+            paintAuto(Rectangle<int>(outGain.getX(), outGain.getBottom() + 3, outGain.getWidth(), 10));
     }
 
     void resized() override
@@ -314,7 +342,7 @@ struct AmpControls : Component, private Timer
         auto w = mb.getWidth() / getKnobs().size();
 
         for (auto &k : getKnobs())
-                k->setBounds(mb.removeFromLeft(w).reduced(5));
+            k->setBounds(mb.removeFromLeft(w).reduced(5));
 
         auto hiGainBounds = bounds.removeFromLeft(w);
         hiGain.setSize(getWidth() * 0.07f, getHeight() * 0.15f);
