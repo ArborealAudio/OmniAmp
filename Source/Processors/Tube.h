@@ -49,10 +49,6 @@ struct Pentode
         sc_lp.prepare(spec);
         sc_lp.setCutoffFreq(5.0);
         sc_lp.setType(strix::FilterType::lowpass);
-
-        absorb.prepare(spec);
-        absorb.setCutoffFreq(type == Nu ? 10000.0 : 6500.0);
-        absorb.setType(strix::FilterType::firstOrderLowpass);
     }
 
     void reset()
@@ -60,14 +56,13 @@ struct Pentode
         for (auto &f : dcBlock)
             f.reset();
         sc_lp.reset();
-        absorb.reset();
     }
 
     template <typename Block>
     void processBlockClassB(Block &block)
     {
-        if (type == PentodeType::Nu)
-            block *= 6.0;
+        // if (type == PentodeType::Nu)
+        //     block *= 2.0;
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
@@ -82,17 +77,12 @@ struct Pentode
     PentodeType type = PentodeType::Nu;
 
 private:
-    void processSamplesNu(T *in, int ch, size_t numSamples, T gp, T gn)
+    void processSamplesNu(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
         for (size_t i = 0; i < numSamples; ++i)
         {
             in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
-
             in[i] = saturateSym(in[i], gp);
-
-            in[i] = dsp::FastMathApproximations::sinh(in[i]) / (T)6.0;
-            
-            in[i] = absorb.processSample(ch, in[i]);
         }
     }
 
@@ -100,25 +90,25 @@ private:
     {
         for (size_t i = 0; i < numSamples; ++i)
         {
-            auto env = 1.2 * processEnvelopeDetector(in[i], ch);
-            in[i] -= env;
+            in[i] -= 0.8 * processEnvelopeDetector(in[i], ch);
 
-            T yn_pos = classicPentode(in[i], gn, gp, 2.0);
-            T yn_neg = classicPentode(in[i], gp, gn, 2.0);
+            T yn_pos = classicPentode(in[i], gn, gp, 4.0);
+            T yn_neg = classicPentode(in[i], gp, gn, 4.0);
 
             dcBlock[0].processSample(ch, yn_pos);
             dcBlock[1].processSample(ch, yn_neg);
 
-            yn_pos = classicPentode(yn_pos, 1.01, 1.01);
-            yn_neg = classicPentode(yn_neg, 1.01, 1.01);
+            yn_pos = classicPentode(yn_pos, 2.01, 2.01);
+            yn_neg = classicPentode(yn_neg, 2.01, 2.01);
 
             in[i] = 0.5 * (yn_pos + yn_neg);
-            in[i] = absorb.processSample(ch, in[i]);
         }
     }
 
     inline T saturateSym(T x, T g = 1.0)
     {
+        x = xsimd::select(x > (T)4.0, (T)4.0, x);
+        x = xsimd::select(x < (T)-4.0, (T)-4.0, x);
         return (1.0 / g) * strix::fast_tanh(x * g);
     }
 
@@ -141,7 +131,8 @@ private:
 #if USE_SIMD
         return xsimd::select(xn <= 0.0,
                              (g * xn) / (1.0 - ((g * xn) / Ln)),
-                             (g * xn) / (1.0 + ((g * xn) / Lp)));
+                             (g * xn) / (1.0 + ((g * xn) / Lp))) /
+               g;
 #else
         if (xn <= 0.0)
             return xn / (1.0 - (xn / Ln));
@@ -152,19 +143,16 @@ private:
 
     inline T processEnvelopeDetector(T x, int ch)
     {
-        T xr = 0.0;
 #if USE_SIMD
-        xr = xsimd::abs(x);
+        x = xsimd::abs(x);
 #else
-        xr = std::abs(x);
+        x = std::abs(x);
 #endif
-
-        return 0.251188 * sc_lp.processSample(ch, xr);
+        return 0.151188 * sc_lp.processSample(ch, x);
     }
 
     std::array<strix::SVTFilter<T>, 2> dcBlock; /*need 2 for pos & neg signals*/
-
-    strix::SVTFilter<T> sc_lp, absorb;
+    strix::SVTFilter<T> sc_lp;
 };
 
 /**
@@ -191,25 +179,37 @@ struct AVTriode : PreampProcessor
         sc_hp.reset();
     }
 
+    template <bool mode = true>
     inline void processSamples(T *x, size_t ch, size_t numSamples, T gp, T gn)
     {
         auto inc_p = (gp - lastGp) / (T)numSamples;
         auto inc_n = (gn - lastGn) / (T)numSamples;
 
-        for (size_t i = 0; i < numSamples; ++i)
+        if (mode)
         {
-            auto f1 = (1.f / lastGp) * strix::fast_tanh(lastGp * x[i]) * y_m[ch];
+            for (size_t i = 0; i < numSamples; ++i)
+            {
+                auto f1 = (1.f / lastGp) * strix::fast_tanh(lastGp * x[i]) * y_m[ch];
 #if USE_SIMD
-            auto f2 = (1.f / lastGn) * xsimd::atan(lastGn * x[i]) * (1.0 - y_m[ch]);
+                auto f2 = (1.f / lastGn) * xsimd::atan(lastGn * x[i]) * (1.0 - y_m[ch]);
 #else
-            auto f2 = (1.f / lastGn) * std::atan(lastGn * x[i]) * (1.0 - y_m[ch]);
+                auto f2 = (1.f / lastGn) * std::atan(lastGn * x[i]) * (1.0 - y_m[ch]);
 #endif
 
-            lastGp += inc_p;
-            lastGn += inc_n;
+                lastGp += inc_p;
+                lastGn += inc_n;
 
-            x[i] = f1 + f2;
-            y_m[ch] = sc_hp.processSample(ch, x[i]);
+                x[i] = f1 + f2;
+                y_m[ch] = sc_hp.processSample(ch, x[i]);
+            }
+        }
+        else
+        {
+            for (size_t i = 0; i < numSamples; ++i)
+            {
+                x[i] = (1.f / lastGp) * strix::fast_tanh(lastGp * x[i]);
+                lastGp += inc_p;
+            }
         }
 
         lastGp = gp;
@@ -223,7 +223,10 @@ struct AVTriode : PreampProcessor
         {
             auto in = block.getChannelPointer(ch);
 
-            processSamples(in, ch, block.getNumSamples(), bias.first, bias.second);
+            if (type == B)
+                processSamples<true>(in, ch, block.getNumSamples(), bias.first, bias.second);
+            else
+                processSamples<false>(in, ch, block.getNumSamples(), bias.first, bias.second);
         }
     }
 #else
@@ -233,12 +236,13 @@ struct AVTriode : PreampProcessor
         {
             auto in = block.getChannelPointer(ch);
 
-            processSamples(in, ch, block.getNumSamples(), bias.first, bias.second);
+            processSamples<type>(in, ch, block.getNumSamples(), bias.first, bias.second);
         }
     }
 #endif
 
     bias_t bias;
+    ChannelMode type = ChannelMode::B;
 
 private:
     std::vector<T> y_m;
