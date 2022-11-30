@@ -136,5 +136,63 @@ private:
     std::array<dsp::IIR::Filter<T>, 2> bandPass, hiShelf, sc_lp;
     dsp::IIR::Coefficients<double>::Ptr bp_coeffs, hs_coeffs, lp_coeffs;
 
-    double SR = 0.0;
+    double SR = 44100.0;
+};
+
+template <typename T>
+struct BassPreFilter : PreampProcessor
+{
+    BassPreFilter() = default;
+
+    void prepare(const dsp::ProcessSpec& spec)
+    {
+        SR = spec.sampleRate;
+        filter.resize(spec.numChannels);
+        for (auto &f : filter)
+            f.prepare(spec);
+        changeFilters();
+    }
+
+    void reset()
+    {
+        for (auto &f : filter)
+            f.reset();
+    }
+
+    void changeFilters()
+    {
+        switch (type)
+        {
+        case Cobalt:
+            for (auto &f : filter)
+                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 650.0, 1.0, 0.5);
+            break;
+        case Emerald:
+            for (auto &f : filter)
+                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 1000.0, 0.7, 0.5);
+            break;
+        case Quartz:
+            for (auto &f : filter)
+                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 1500.0, 0.66, 1.2);
+            break;
+        }
+    }
+
+    void process(strix::AudioBlock<vec> &block) override
+    {
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+                in[i] = filter[ch].processSample(in[i]);
+        }
+    }
+
+    strix::BoolParameter *hiGain = nullptr;
+    BassMode type;
+
+private:
+    std::vector<dsp::IIR::Filter<T>> filter;
+
+    double SR = 44100.0;
 };
