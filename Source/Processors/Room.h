@@ -538,9 +538,9 @@ public:
 
         mix.setWetMixProportion(amt);
         if (numChannels > 1)
-            mix.mixWetSamples(dsp::AudioBlock<double>(buf).getSubBlock(0, numSamples));
+            mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSubBlock(0, numSamples));
         else
-            mix.mixWetSamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(0).getSubBlock(0, numSamples));
+            mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(0).getSubBlock(0, numSamples));
 
         buf.makeCopyOf(usBuf, true);
     }
