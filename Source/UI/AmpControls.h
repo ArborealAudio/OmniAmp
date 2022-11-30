@@ -294,7 +294,7 @@ struct AmpControls : Component, private Timer
             break;
         };
 
-        power.setBackgroundColor(backgroundColor);
+        power.setBackgroundColor(backgroundColor.contrasting(0.2f));
     }
 
     void paint(Graphics &g) override
