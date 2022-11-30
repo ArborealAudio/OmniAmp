@@ -83,6 +83,7 @@ namespace Processors
 
 #include "Tube.h"
 #include "PreFilters.h"
+#include "EmphasisFilters.h"
 #include "ToneStack.h"
 #include "Comp.h"
 #include "Enhancer.h"
