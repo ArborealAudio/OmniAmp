@@ -22,7 +22,9 @@ GammaAudioProcessor::GammaAudioProcessor()
                          ),
       apvts(*this, nullptr, "Parameters", createParams()),
       guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
-      cab(apvts, (Processors::CabType)apvts.getRawParameterValue("cabType")->load())
+      cab(apvts, (Processors::CabType)apvts.getRawParameterValue("cabType")->load()),
+      emphLow((strix::FloatParameter *)apvts.getParameter("lfEmphasis"), (strix::FloatParameter *)apvts.getParameter("lfEmphasisFreq")),
+      emphHigh((strix::FloatParameter *)apvts.getParameter("hfEmphasis"), (strix::FloatParameter *)apvts.getParameter("hfEmphasisFreq"))
 #endif
 {
     inGain = apvts.getRawParameterValue("inputGain");
@@ -147,6 +149,9 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     gateProc.setRatio(10.0);
     gateProc.setThreshold(*gate);
 
+    emphLow.prepare(spec);
+    emphHigh.prepare(spec);
+
     guitar.prepare(osSpec);
     bass.prepare(osSpec);
     channel.prepare(osSpec);
@@ -195,6 +200,8 @@ void GammaAudioProcessor::releaseResources()
     channel.reset();
     hfEnhancer.reset();
     lfEnhancer.reset();
+    emphLow.reset();
+    emphHigh.reset();
     cab.reset();
     reverb.reset();
     emphasisIn.reset();
@@ -399,7 +406,9 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<fParam>(ParameterID("doubler", 1), "Doubler", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("mix", 1), "Mix", 0.f, 1.f, 1.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("lfEmphasis", 1), "LF Emphasis", -12.f, 12.f, 0.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("lfEmphasisFreq", 1), "LF Emphasis Freq", 30.f, 1800.f, 200.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("hfEmphasis", 1), "HF Emphasis", -12.f, 12.f, 0.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("hfEmphasisFreq", 1), "HF Emphasis Freq", 1800.f, 18000.f, 5000.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("comp", 1), "Compression", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("compLink", 1), "Comp Stereo Link", true));
     params.emplace_back(std::make_unique<bParam>(ParameterID("compPos", 1), "Comp Pre/Post", false));
