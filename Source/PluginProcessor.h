@@ -10,16 +10,16 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-    #if NDEBUG
-        #define USE_SIMD 1
-    #else // make sure DBG builds are labeled non-production
-        #ifndef PRODUCTION_BUILD
-            #define PRODUCTION_BUILD 0
-        #endif
-    #endif
+#if NDEBUG
+#define USE_SIMD 1
+#else // make sure DBG builds are labeled non-production
+#ifndef PRODUCTION_BUILD
+#define PRODUCTION_BUILD 0
+#endif
+#endif
 #endif
 #ifndef PRODUCTION_BUILD // use this to control production build parameter
-    #define PRODUCTION_BUILD 1
+#define PRODUCTION_BUILD 1
 #endif
 
 #include <JuceHeader.h>
@@ -29,7 +29,7 @@
 #include "UI/UI.h"
 #include "UI/SineWave.hpp"
 #if PRODUCTION_BUILD
-    #define BETA_BUILD 1
+#define BETA_BUILD 1
 #endif
 #include "Activation.hpp"
 
@@ -161,6 +161,8 @@ private:
     Processors::ReverbManager reverb;
 
     strix::Balance emphasisIn, emphasisOut;
+    Processors::EmphasisFilter<double, Processors::EmphasisFilterType::Low> emphLow;
+    Processors::EmphasisFilter<double, Processors::EmphasisFilterType::High> emphHigh;
 
     strix::MonoToStereo<double> doubler;
 
@@ -200,7 +202,6 @@ private:
 
         /* M/S encode if necessary */
         bool ms = (bool)*apvts.getRawParameterValue("m/s");
-
         if (ms && !mono)
             strix::MSMatrix::msEncode(block);
 
@@ -211,6 +212,9 @@ private:
             stereoEmph = jmap(stereoEmph, 0.1f, 10.f); /*create a range from -10 to 10*/
             emphasisIn.process(block, stereoEmph, ms);
         }
+
+        emphLow.processIn(block);
+        emphHigh.processIn(block);
 
         auto osBlock = oversample[os_index].processSamplesUp(block);
 
@@ -233,21 +237,23 @@ private:
         oversample[os_index].processSamplesDown(block);
 
         auto latency = oversample[os_index].getLatencyInSamples();
+        setLatencySamples((int)latency);
 
-        setLatencySamples(latency);
+        emphLow.processOut(block);
+        emphHigh.processOut(block);
 
 #if USE_SIMD
         auto &&processBlock = simd.interleaveBlock(block);
 #else
         auto &&processBlock = block;
 #endif
-        if (*lfEnhance)
+        if ((bool)*lfEnhance)
             lfEnhancer.processBlock(processBlock, (double)*lfEnhance, *apvts.getRawParameterValue("lfEnhanceInvert"));
 
-        if (*hfEnhance)
+        if ((bool)*hfEnhance)
             hfEnhancer.processBlock(processBlock, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"));
 
-        if (*apvts.getRawParameterValue("cabType"))
+        if ((bool)*apvts.getRawParameterValue("cabType"))
             cab.processBlock(processBlock);
 
 #if USE_SIMD
@@ -265,13 +271,14 @@ private:
         if (dubAmt && !mono)
             doubler.process(block, dubAmt);
 
-        if (*apvts.getRawParameterValue("reverbType"))
+        if ((bool)*apvts.getRawParameterValue("reverbType"))
             reverb.process(buffer, *apvts.getRawParameterValue("roomAmt"));
 
         // apply output gain
         strix::SmoothGain<float>::applySmoothGain(block, outGain_raw, lastOutGain);
 
-        if (float width = *apvts.getRawParameterValue("width") != 1.f && !mono)
+        float width = *apvts.getRawParameterValue("width");
+        if (width != 1.f && !mono)
             strix::Balance::processBalance(block, width, false, lastWidth);
 
         mixer.setWetLatency(latency);
