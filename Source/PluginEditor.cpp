@@ -201,7 +201,7 @@ void GammaAudioProcessorEditor::resized()
     auto topSectionQtr = topSection.getWidth() / 4;
     auto topKnobs = topSection.removeFromLeft(w * 0.5f - topSectionQtr * 0.5);
     topKnobs.removeFromLeft(w / 12); // section where logo is drawn
-    auto presetSection = topSection.removeFromRight(w * 0.5f - topSectionQtr * 0.5);
+    auto presetSection = topSection.removeFromRight(w * 0.5f - topSectionQtr * 0.5).withTrimmedRight(topSectionQtr * 0.5);
     auto titleSection = topSection;
 
     pluginTitle.setBounds(titleSection);
