@@ -2,6 +2,34 @@
 
 #pragma once
 
+/**
+ * A struct for containing all reverb parameters, can be modified together or individually
+ */
+struct ReverbParams
+{
+    /* room size in Ms, use this in conjunction w/ rt60 to create bigger or larger rooms */
+    float roomSizeMs;
+    /* controls density of reverberation (basically the feedback) of the algo */
+    float rt60;
+    /* a gain value that sets the level of early reflections. Tapers logarithmically from this
+    value to something lower. */
+    float erLevel;
+    /* Set the level of dampening, as a fraction of Nyquist, in the feedback path */
+    float dampening;
+    /* Sets the max frequency of the modulation. Each delay line will have a mod rate that
+    logarithmically ranges from zero to this parameter */
+    float modulation;
+    /* Pre-delay in samples */
+    float preDelay;
+};
+
+enum class ReverbType
+{
+    Off,
+    Room,
+    Hall
+};
+
 template <int channels, typename Type>
 class Room
 {
@@ -70,14 +98,16 @@ class Room
     template <typename T>
     struct Diffuser
     {
-        float delayRange;
+        Diffuser()
+        {
+            rand.setSeed((int64)0);
+        }
 
         /**
         @param delayRangeinS you guessed it, delay range in seconds
         */
-        Diffuser(float delayRangeinS) : delayRange(delayRangeinS) /*  : maxDelay(max), minDelay(min) */
+        Diffuser(float delayRangeinS) : delayRange(delayRangeinS)
         {
-            delay.resize(channels);
             rand.setSeed((int64)0);
         }
 
@@ -85,16 +115,37 @@ class Room
         {
             spec.numChannels = 1;
 
+            SR = spec.sampleRate;
+
             invert.clear();
 
             int i = 0;
             for (auto &d : delay)
             {
-                auto delayRangeSamples = delayRange * spec.sampleRate;
+                auto delayRangeSamples = delayRange * SR;
                 double minDelay = delayRangeSamples * i / channels;
                 double maxDelay = delayRangeSamples * (i + 1) / channels;
                 d.prepare(spec);
-                d.setMaximumDelayInSamples(maxDelay + 1);
+                d.setMaximumDelayInSamples(2 * maxDelay + 1);
+                d.setDelay(rand.nextInt(Range<int>(minDelay, maxDelay)));
+                invert.push_back(rand.nextInt() % 2 == 0);
+                ++i;
+            }
+        }
+
+        /* set a new delay range in seconds */
+        void changeDelay(float newDelayRangeInS)
+        {
+            invert.clear();
+
+            delayRange = newDelayRangeInS;
+
+            int i = 0;
+            for (auto &d : delay)
+            {
+                auto delayRangeSamples = delayRange * SR;
+                double minDelay = delayRangeSamples * i / channels;
+                double maxDelay = delayRangeSamples * (i + 1) / channels;
                 d.setDelay(rand.nextInt(Range<int>(minDelay, maxDelay)));
                 invert.push_back(rand.nextInt() % 2 == 0);
                 ++i;
@@ -159,10 +210,11 @@ class Room
         }
 
     private:
-        std::vector<dsp::DelayLine<T>> delay;
+        std::array<dsp::DelayLine<T>, channels> delay;
         std::vector<bool> invert;
-
+        float delayRange;
         Random rand;
+        double SR = 44100.0;
     };
 
     template <typename T>
@@ -172,6 +224,8 @@ class Room
 
         void prepare(const dsp::ProcessSpec &spec)
         {
+            SR = spec.sampleRate;
+
             double delaySamplesBase = delayMs * 0.001 * spec.sampleRate;
 
             for (int ch = 0; ch < channels; ++ch)
@@ -179,7 +233,7 @@ class Room
                 double r = ch * 1.0 / channels;
                 delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
                 delays[ch].prepare(spec);
-                delays[ch].setMaximumDelayInSamples(delaySamples[ch] + 1);
+                delays[ch].setMaximumDelayInSamples(2 * delaySamples[ch] + 1);
 
                 osc[ch].initialise([](double x)
                                    { return std::sin(x); });
@@ -199,6 +253,18 @@ class Room
             hp.setCutoffFreq(150.0);
         }
 
+        /* use this to change the feedback's delay times (don't change delayMS directly) */
+        void changeDelay(float newDelayMs)
+        {
+            delayMs = newDelayMs;
+            double delaySamplesBase = delayMs * 0.001 * SR;
+            for (int ch = 0; ch < channels; ++ch)
+            {
+                double r = ch * 1.0 / channels;
+                delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
+            }
+        }
+
         void reset()
         {
             for (auto &d : delays)
@@ -215,8 +281,6 @@ class Room
         {
             for (int i = 0; i < block.getNumSamples(); ++i)
             {
-                std::vector<T> delayed;
-
                 for (int ch = 0; ch < channels; ++ch)
                 {
                     auto mod = osc[ch].processSample(delaySamples[ch]);
@@ -224,7 +288,7 @@ class Room
                     auto d = delays[ch].popSample(0, dtime);
                     d = lp.processSample(ch, d);
                     d = hp.processSample(ch, d);
-                    delayed.push_back(d);
+                    delayed[ch] = d;
                 }
 
                 MixMatrix<channels>::processHouseholder(delayed.data());
@@ -249,13 +313,17 @@ class Room
         T modFreq = 1.0;
 
     private:
-        // static constexpr size_t channels = channels;
-
         std::array<int, channels> delaySamples;
         std::array<dsp::DelayLine<T>, channels> delays;
+
+        // container for N number of delayed & filtered samples
+        std::array<T, channels> delayed;
+
         strix::SVTFilter<T> lp, hp;
 
         std::array<dsp::Oscillator<T>, channels> osc;
+
+        double SR = 44100.0;
     };
 
     std::vector<Diffuser<Type>> diff;
@@ -393,37 +461,70 @@ class Room
     int numChannels = 0;
 
 public:
-    /**
-     * @param roomSizeMs room size in Ms, use this in conjunction w/ rt60 to create bigger or larger rooms
-     * @param rt60 controls density of reverberation (basically the feedback) of the algo
-     * @param erLevel a gain value that sets the level of early reflections. Tapers logarithmically from this
-     * value to something lower.
-     * @param dampening Set the level of dampening, as a fraction of Nyquist, in the feedback path
-     * @param modulation Sets the max frequency of the modulation. Each delay line will have a mod rate that
-     * logarithmically ranges from zero to this parameter
-     */
-    Room(double roomSizeMs, double rt60, double erLevel, double dampening, double modulation) : erLevel(erLevel)
+    /* our local reverb parameters */
+    ReverbParams params;
+
+    strix::Delay<double> preDelay{4410};
+
+    Room(ReverbType initType)
     {
-        auto diffusion = (roomSizeMs * 0.001);
+        diff.resize(4);
+        switch (initType)
+        {
+        case ReverbType::Off: /* just use Room as the default if initialized to Off */
+            setReverbParams(ReverbParams{30.f, 0.65f, 0.5f, 0.23f, 3.f, 0.f});
+            break;
+        case ReverbType::Room:
+            setReverbParams(ReverbParams{30.f, 0.65f, 0.5f, 0.23f, 3.f, 0.f});
+            break;
+        case ReverbType::Hall:
+            setReverbParams(ReverbParams{75.0f, 2.0f, 0.5f, 1.0f, 5.0f, 0.f});
+            break;
+        }
+    }
+
+    Room(const ReverbParams &_params)
+    {
+        diff.resize(4);
+        setReverbParams(_params);
+    }
+
+    /* method for setting all reverb parameters, useful for changing btw reverb types */
+    void setReverbParams(const ReverbParams &newParams)
+    {
+        params = newParams;
+
+        params.preDelay = newParams.preDelay;
+        preDelay.setDelay(params.preDelay);
+
+        params.roomSizeMs = jmax(params.roomSizeMs, params.rt60 * 10.f);
+
+        auto diffusion = (params.roomSizeMs * 0.001);
         for (int i = 0; i < 4; ++i)
         {
             diffusion *= 0.5;
-            diff.emplace_back(diffusion);
+            diff[i].changeDelay(diffusion);
         }
 
-        feedback.delayMs = roomSizeMs;
+        erLevel = params.erLevel;
 
-        double typicalLoopMs = roomSizeMs * 1.5;
+        feedback.changeDelay(params.roomSizeMs);
 
-        double loopsPerRt60 = rt60 / (typicalLoopMs * 0.001);
+        double typicalLoopMs = params.roomSizeMs * 1.5;
+
+        double loopsPerRt60 = params.rt60 / (typicalLoopMs * 0.001);
 
         double dbPerCycle = -60.0 / loopsPerRt60;
 
         feedback.decayGain = std::pow(10.0, dbPerCycle * 0.05);
+        feedback.dampening = params.dampening;
+        feedback.modFreq = params.modulation;
+    }
 
-        feedback.dampening = dampening;
-
-        feedback.modFreq = modulation;
+    void setPredelay(float newPredelay)
+    {
+        params.preDelay = newPredelay;
+        preDelay.setDelay(params.preDelay);
     }
 
     /* call this before Prepare! sets a ratio to downsample the internal processing, defaults to 1 */
@@ -438,6 +539,8 @@ public:
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
         dsBuf.setSize(numChannels, spec.maximumBlockSize);
+
+        preDelay.prepare(spec);
 
         for (auto &d : diff)
             d.prepare(spec);
@@ -476,6 +579,7 @@ public:
         for (auto &d : diff)
             d.reset();
 
+        preDelay.reset();
         feedback.reset();
 
         for (auto &ch : dsLP)
@@ -508,6 +612,9 @@ public:
         splitBuf.clear();
 
         downsampleBuffer(buf, numSamples);
+
+        // auto dsBlock = dsp::AudioBlock<double>(dsBuf);
+        // preDelay.processBlock(dsBlock);
 
         upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), hNumSamples);
 
@@ -546,32 +653,50 @@ public:
     }
 };
 
-enum class ReverbType
+class ReverbManager : AudioProcessorValueTreeState::Listener
 {
-    Off,
-    Room,
-    Hall
-};
+    AudioProcessorValueTreeState &apvts;
+    Room<8, double> rev;
+    std::atomic<bool> needsUpdate = false;
 
-class ReverbManager
-{
-    strix::ReleasePoolShared relPool;
+    enum reverb_flags
+    {
+        ANY,
+        PREDELAY,
+    };
+    reverb_flags lastFlag;
 
-    std::shared_ptr<Room<8, double>> rev;
+    strix::ChoiceParameter *type;
+    strix::FloatParameter *decay, *size, *predelay;
 
-    dsp::ProcessSpec memSpec;
+    double SR = 44100.0;
 
     int ratio = 1;
 
 public:
-    ReverbManager()
+    ReverbManager(AudioProcessorValueTreeState &v) : apvts(v), rev(ReverbParams{75.0f, 2.0f, 0.5f, 1.0f, 5.0f, 0.f})
     {
-        rev = std::make_shared<Room<8, double>>(75.0, 2.0, 0.5, 1.0, 5.0);
+        type = (strix::ChoiceParameter *)apvts.getParameter("reverbType");
+        decay = (strix::FloatParameter *)apvts.getParameter("reverbDecay");
+        size = (strix::FloatParameter *)apvts.getParameter("reverbSize");
+        predelay = (strix::FloatParameter *)apvts.getParameter("reverbPredelay");
+        apvts.addParameterListener("reverbType", this);
+        apvts.addParameterListener("reverbDecay", this);
+        apvts.addParameterListener("reverbSize", this);
+        apvts.addParameterListener("reverbPredelay", this);
+    }
+
+    ~ReverbManager()
+    {
+        apvts.removeParameterListener("reverbType", this);
+        apvts.removeParameterListener("reverbDecay", this);
+        apvts.removeParameterListener("reverbSize", this);
+        apvts.removeParameterListener("reverbPredelay", this);
     }
 
     void setDownsampleRatio(int dsRatio)
     {
-        rev->setDownsampleRatio(dsRatio);
+        rev.setDownsampleRatio(dsRatio);
         ratio = dsRatio;
     }
 
@@ -580,43 +705,62 @@ public:
         auto hSpec = spec;
         hSpec.sampleRate /= ratio;
         hSpec.maximumBlockSize /= ratio;
-        rev->prepare(hSpec);
-
-        memSpec = hSpec;
+        rev.prepare(hSpec);
+        SR = hSpec.sampleRate;
     }
 
     void reset()
     {
-        rev->reset();
+        rev.reset();
     }
 
-    void changeRoomType(ReverbType newType)
+    void parameterChanged(const String &paramID, float newValue) override
     {
-        std::shared_ptr<Room<8, double>> newRev;
+        if (paramID == "reverbType" || paramID == "reverbDecay" || paramID == "reverbSize")
+            lastFlag = ANY;
+        else if (paramID == "reverbPredelay")
+            lastFlag = PREDELAY;
 
-        switch (newType)
+        needsUpdate = true;
+    }
+
+    void manageUpdate(reverb_flags flags)
+    {
+        switch (flags)
         {
-        case ReverbType::Off:
-            return;
-        case ReverbType::Room:
-            newRev = std::make_shared<Room<8, double>>(30.0, 0.65, 0.5, 0.23, 3.0);
-            break;
-        case ReverbType::Hall:
-            newRev = std::make_shared<Room<8, double>>(75.0, 2.0, 0.5, 1.0, 5.0);
+        case ANY:
+        {
+            float d = *decay;
+            d = jmax(0.01f, d);
+            float s = *size;
+            s = jmax(0.01f, s);
+            float p = *predelay * 1000.f * SR;
+            switch ((ReverbType)type->getIndex())
+            {
+            case ReverbType::Room:
+                rev.setReverbParams(ReverbParams{30.f * s, 0.65f * d, 0.5f, 0.23f, 3.f, p});
+                break;
+            case ReverbType::Hall:
+                rev.setReverbParams(ReverbParams{75.0f * s, 2.0f * d, 0.5f, 1.0f, 5.0f, p});
+                break;
+            }
             break;
         }
-
-        newRev->setDownsampleRatio(ratio);
-        newRev->prepare(memSpec);
-
-        relPool.add(newRev);
-        std::atomic_store(&rev, newRev);
+        case PREDELAY:
+            float p = *predelay * 1000.f * SR;
+            rev.setPredelay(p);
+            break;
+        }
     }
 
     void process(AudioBuffer<double> &buffer, float amt)
     {
-        std::shared_ptr<Room<8, double>> procRev = std::atomic_load(&rev);
-
-        procRev->process(buffer, amt);
+        if (needsUpdate)
+        {
+            manageUpdate(lastFlag);
+            needsUpdate = false;
+        }
+        if (!needsUpdate)
+            rev.process(buffer, amt);
     }
 };
