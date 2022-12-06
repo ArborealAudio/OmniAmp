@@ -24,7 +24,8 @@ GammaAudioProcessor::GammaAudioProcessor()
       guitar(apvts, meterSource), bass(apvts, meterSource), channel(apvts, meterSource),
       cab(apvts, (Processors::CabType)apvts.getRawParameterValue("cabType")->load()),
       emphLow((strix::FloatParameter *)apvts.getParameter("lfEmphasis"), (strix::FloatParameter *)apvts.getParameter("lfEmphasisFreq")),
-      emphHigh((strix::FloatParameter *)apvts.getParameter("hfEmphasis"), (strix::FloatParameter *)apvts.getParameter("hfEmphasisFreq"))
+      emphHigh((strix::FloatParameter *)apvts.getParameter("hfEmphasis"), (strix::FloatParameter *)apvts.getParameter("hfEmphasisFreq")),
+      reverb(apvts)
 #endif
 {
     inGain = apvts.getRawParameterValue("inputGain");
@@ -43,7 +44,9 @@ GammaAudioProcessor::GammaAudioProcessor()
     apvts.addParameterListener("mode", this);
     apvts.addParameterListener("dist", this);
     apvts.addParameterListener("cabType", this);
-    apvts.addParameterListener("reverbType", this);
+    // apvts.addParameterListener("reverbType", this);
+    // apvts.addParameterListener("roomDecay", this);
+    // apvts.addParameterListener("roomSize", this);
     apvts.addParameterListener("hq", this);
 
     LookAndFeel::getDefaultLookAndFeel().setDefaultSansSerifTypeface(getCustomFont());
@@ -59,7 +62,9 @@ GammaAudioProcessor::~GammaAudioProcessor()
     apvts.removeParameterListener("mode", this);
     apvts.removeParameterListener("dist", this);
     apvts.removeParameterListener("cabType", this);
-    apvts.removeParameterListener("reverbType", this);
+    // apvts.removeParameterListener("reverbType", this);
+    // apvts.removeParameterListener("roomDecay", this);
+    // apvts.removeParameterListener("roomSize", this);
     apvts.removeParameterListener("hq", this);
 }
 
@@ -178,7 +183,7 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
     reverb.setDownsampleRatio(2);
     reverb.prepare(spec);
-    reverb.changeRoomType((Processors::ReverbType)apvts.getRawParameterValue("reverbType")->load());
+    // reverb.updateRoom();
 
     mixer.prepare(spec);
     mixer.setMixingRule(dsp::DryWetMixingRule::linear);
@@ -258,8 +263,8 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     {
         cab.setCabType((int)newValue);
     }
-    else if (parameterID == "reverbType")
-        reverb.changeRoomType((Processors::ReverbType)newValue);
+    // else if (parameterID == "reverbType" || parameterID == "roomDecay" || parameterID == "roomSize")
+    //     reverb.updateRoom();
     else if (parameterID == "gate")
         gateProc.setThreshold(*gate);
     else if (parameterID == "gainLink")
@@ -435,7 +440,10 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<bParam>(ParameterID("lfEnhanceInvert", 1), "LF Enhancer Invert", false));
     params.emplace_back(std::make_unique<cParam>(ParameterID("cabType", 1), "Cab Type", StringArray("Off", "2x12", "4x12", "6x10"), 0));
     params.emplace_back(std::make_unique<cParam>(ParameterID("reverbType", 1), "Reverb Type", StringArray("Off", "Room", "Hall"), 0));
-    params.emplace_back(std::make_unique<fParam>(ParameterID("roomAmt", 1), "Reverb Amount", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("reverbAmt", 1), "Reverb Amount", 0.f, 1.f, 0.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("reverbDecay", 1), "Reverb Decay", 0.f, 2.f, 1.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("reverbSize", 1), "Reverb Size", 0.f, 2.f, 1.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("reverbPredelay", 1), "Reverb Predelay", 0.f, 200.f, 0.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("hq", 1), "HQ On/Off", true));
     params.emplace_back(std::make_unique<bParam>(ParameterID("renderHQ", 1), "Render HQ", false));
 

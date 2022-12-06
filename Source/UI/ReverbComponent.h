@@ -69,8 +69,8 @@ protected:
 
 class ReverbComponent : public Component, private Timer
 {
-    Knob reverbAmount{KnobType::Simple};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> amtAttach;
+    Knob reverbAmount{KnobType::Simple}, reverbDecay{KnobType::Simple}, reverbSize{KnobType::Simple};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> amtAttach, decayAttach, sizeAttach;
 
     std::array<ReverbButton, 2> reverb{ReverbButton::Placement::Left, ReverbButton::Placement::Right};
 
@@ -83,10 +83,24 @@ public:
     ReverbComponent(AudioProcessorValueTreeState &v)
     {
         addAndMakeVisible(reverbAmount);
-        amtAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "roomAmt", reverbAmount);
+        amtAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbAmt", reverbAmount);
         reverbAmount.setLabel("Amount");
         reverbAmount.setTooltip("Mix for reverb. At 50%, wet and dry signals are both at full volume, and the dry signal begins to decrease after 50%");
         reverbAmount.setValueToStringFunction([](float val)
+                                              { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
+
+        addAndMakeVisible(reverbDecay);
+        decayAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbDecay", reverbDecay);
+        reverbDecay.setLabel("Decay");
+        reverbDecay.setTooltip("Decay control for the reverb time");
+        reverbDecay.setValueToStringFunction([](float val)
+                                              { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
+
+        addAndMakeVisible(reverbSize);
+        sizeAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbSize", reverbSize);
+        reverbSize.setLabel("Size");
+        reverbSize.setTooltip("Control for the size of the reverb algorithm");
+        reverbSize.setValueToStringFunction([](float val)
                                               { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
 
         reverbType = v.getRawParameterValue("reverbType");
@@ -147,9 +161,16 @@ public:
     void resized() override
     {
         auto b = getLocalBounds().reduced(10);
-        auto bottom = b.removeFromBottom(b.getHeight() / 2);
-        reverbAmount.setSize(bottom.getHeight(), bottom.getHeight());
-        reverbAmount.setCentrePosition(bottom.getCentreX(), bottom.getCentreY());
+        {
+            auto bottom = b.removeFromBottom(b.getHeight() / 2);
+            auto chunk = b.getWidth() / 3;
+            auto amountBounds = bottom.removeFromRight(chunk);
+            auto sizeBounds = bottom.removeFromRight(chunk);
+            auto decayBounds = bottom;
+            reverbAmount.setBounds(amountBounds);
+            reverbSize.setBounds(sizeBounds);
+            reverbDecay.setBounds(decayBounds);
+        }
 
         auto half = b.getWidth() / reverb.size();
         reverb[0].setBounds(b.removeFromLeft(half));
