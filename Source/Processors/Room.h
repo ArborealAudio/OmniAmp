@@ -279,7 +279,7 @@ class Room
             coeffs[1] = 0;
             for (int i = 1; i < hChannels; ++i)
             {
-                double phase = M_PI * i / channels;
+                double phase = MathConstants<float>::pi * i / channels;
                 coeffs[2 * i] = std::cos(phase);
                 coeffs[2 * i + 1] = std::sin(phase);
             }

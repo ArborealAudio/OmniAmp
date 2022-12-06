@@ -196,7 +196,7 @@ private:
                     auto defaultVal = dynamic_cast<Knob *>(&slider)->getDefaultValue();
                     /* arc */
                     float arcStart = defaultVal == 0.f ? rotaryStartAngle : 0.f;
-                    float arcAngle = defaultVal == 0.f ? angle : angle - 2.f * M_PI;
+                    float arcAngle = defaultVal == 0.f ? angle : angle - 2.f * MathConstants<float>::pi;
                     g.setColour(accentColor.contrasting(0.3f).withMultipliedSaturation(1.2f));
                     Path arc;
                     arc.addArc(rx - 4, ry - 4, rw + 8, rw + 8, arcStart, arcAngle, true);
