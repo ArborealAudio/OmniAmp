@@ -56,7 +56,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     menu.windowResizeCallback = [&]
     { resetWindowSize(); };
     menu.checkUpdateCallback = [&]
-    { dl.setVisible(dl.checkForUpdate()); };
+    {
+        dl.setVisible(dl.checkForUpdate());
+        if (!dl.isVisible())
+            NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
+    };
 #if JUCE_WINDOWS || JUCE_LINUX
     menu.openGLCallback = [&](bool state)
     {
@@ -155,11 +159,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         p.lockProcessing(!result);
     };
     activation.centreWithSize(300, 200);
-    // if (!activation.isBetaLive())
-    //     this->setEnabled(false);
-    // auto activated = activation.readFile();
-    // activation.setVisible(!activated);
-    // p.lockProcessing(!activated);
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
