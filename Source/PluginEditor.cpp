@@ -138,17 +138,28 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     dl.centreWithSize(300, 200);
 
     addChildComponent(activation);
-    activation.centreWithSize(300, 200);
-    if (!activation.isBetaLive())
-        this->setEnabled(false);
-    auto activated = activation.readFile();
-    activation.setVisible(!activated);
-    p.lockProcessing(!activated);
     activation.onActivationCheck = [&](bool result)
     {
         activation.setVisible(!result);
         p.lockProcessing(!result);
     };
+    activation.onSiteCheck = [&](bool result)
+    {
+        activation.m_betaLive = result;
+        activation.setVisible(!result);
+        activation.editor.setVisible(result);
+        activation.submit.setVisible(result);
+        activation.repaint();
+        if (result)
+            activation.readFile();
+        p.lockProcessing(!result);
+    };
+    activation.centreWithSize(300, 200);
+    // if (!activation.isBetaLive())
+    //     this->setEnabled(false);
+    // auto activated = activation.readFile();
+    // activation.setVisible(!activated);
+    // p.lockProcessing(!activated);
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
