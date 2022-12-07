@@ -271,8 +271,7 @@ private:
         if (dubAmt && !mono)
             doubler.process(block, dubAmt);
 
-        if ((bool)*apvts.getRawParameterValue("reverbType"))
-            reverb.process(buffer, *apvts.getRawParameterValue("reverbAmt"));
+        reverb.process(buffer, *apvts.getRawParameterValue("reverbAmt"));
 
         // apply output gain
         strix::SmoothGain<float>::applySmoothGain(block, outGain_raw, lastOutGain);
