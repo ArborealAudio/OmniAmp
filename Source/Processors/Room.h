@@ -98,19 +98,23 @@ class Room
     template <typename T>
     struct Diffuser
     {
-        Diffuser()
+        /**
+         * @param seed seed for delay time RNG
+        */
+        Diffuser(int64_t seed) : seed(seed)
         {
-            rand.setSeed((int64)0);
+            // rand.setSeed(seed);
         }
 
         /**
         @param delayRangeinS you guessed it, delay range in seconds
         */
-        Diffuser(float delayRangeinS) : delayRange(delayRangeinS)
+        Diffuser(float delayRangeinS, int64_t seed) : delayRange(delayRangeinS), seed(seed)
         {
-            rand.setSeed((int64)0);
+            // rand.setSeed(seed);
         }
 
+        /* delay range should be initialized before this is called */
         void prepare(dsp::ProcessSpec spec)
         {
             spec.numChannels = 1;
@@ -118,6 +122,8 @@ class Room
             SR = spec.sampleRate;
 
             invert.clear();
+
+            Random rand(seed);
 
             int i = 0;
             for (auto &d : delay)
@@ -127,28 +133,28 @@ class Room
                 double maxDelay = delayRangeSamples * (i + 1) / channels;
                 d.prepare(spec);
                 d.setMaximumDelayInSamples(2 * maxDelay + 1);
-                d.setDelay(rand.nextInt(Range<int>(minDelay, maxDelay)));
+                randDelay[i] = rand.nextInt(Range<int>(minDelay, maxDelay));
+                d.setDelay(randDelay[i]);
                 invert.push_back(rand.nextInt() % 2 == 0);
                 ++i;
             }
         }
 
-        /* set a new delay range in seconds */
-        void changeDelay(float newDelayRangeInS)
+        /* change delay ranges after changing main delayRange */
+        void changeDelay()
         {
             invert.clear();
 
-            delayRange = newDelayRangeInS;
+            Random rand(seed);
 
-            int i = 0;
-            for (auto &d : delay)
+            for (size_t i = 0; i < delay.size(); ++i)
             {
                 auto delayRangeSamples = delayRange * SR;
                 double minDelay = delayRangeSamples * i / channels;
                 double maxDelay = delayRangeSamples * (i + 1) / channels;
-                d.setDelay(rand.nextInt(Range<int>(minDelay, maxDelay)));
+                randDelay[i] = rand.nextInt(Range<int>(minDelay, maxDelay));
+                delay[i].setDelay(randDelay[i]);
                 invert.push_back(rand.nextInt() % 2 == 0);
-                ++i;
             }
         }
 
@@ -159,7 +165,8 @@ class Room
         }
 
         // expects a block of N channels
-        void process(dsp::AudioBlock<T> &block)
+        template <typename Block>
+        void process(Block &block)
         {
             for (auto i = 0; i < block.getNumSamples(); ++i)
             {
@@ -181,39 +188,12 @@ class Room
                     FloatVectorOperations::multiply(block.getChannelPointer(ch), -1.0, block.getNumSamples());
         }
 
-        void process(strix::AudioBlock<vec> &block)
-        {
-            for (auto i = 0; i < block.getNumSamples(); ++i)
-            {
-                std::vector<T> vec;
-
-                for (auto ch = 0; ch < channels; ++ch)
-                {
-                    delay[ch].pushSample(0, block.getSample(ch, i));
-                    vec.push_back(delay[ch].popSample(0));
-                }
-
-                MixMatrix<channels>::processHadamardMatrix(vec.data());
-
-                for (auto ch = 0; ch < channels; ++ch)
-                    block.getChannelPointer(ch)[i] = vec[ch];
-            }
-            for (auto ch = 0; ch < channels; ++ch)
-            {
-                if (invert[ch])
-                {
-                    auto in = block.getChannelPointer(ch);
-                    for (int i = 0; i < block.getNumSamples(); ++i)
-                        in[i] *= -1.0;
-                }
-            }
-        }
-
+        float delayRange;
     private:
         std::array<dsp::DelayLine<T>, channels> delay;
+        std::array<int, channels> randDelay;
+        int64_t seed;
         std::vector<bool> invert;
-        float delayRange;
-        Random rand;
         double SR = 44100.0;
     };
 
@@ -252,6 +232,8 @@ class Room
             hp.setType(strix::FilterType::firstOrderHighpass);
             hp.setCutoffFreq(150.0);
         }
+
+        /* TODO: make a method for changing mod freq */
 
         /* use this to change the feedback's delay times (don't change delayMS directly) */
         void changeDelay(float newDelayMs)
@@ -468,7 +450,9 @@ public:
 
     Room(ReverbType initType)
     {
-        diff.resize(4);
+        for (size_t i = 0; i < 4; ++i)
+            diff.emplace_back((int64_t)i);
+        
         switch (initType)
         {
         case ReverbType::Off: /* just use Room as the default if initialized to Off */
@@ -480,17 +464,20 @@ public:
         case ReverbType::Hall:
             setReverbParams(ReverbParams{75.0f, 2.0f, 0.5f, 1.0f, 5.0f, 0.f});
             break;
-        }
+            }
     }
 
     Room(const ReverbParams &_params)
     {
-        diff.resize(4);
+        for (size_t i = 0; i < 4; ++i)
+            diff.emplace_back((int64_t)i);
         setReverbParams(_params);
     }
 
-    /* method for setting all reverb parameters, useful for changing btw reverb types */
-    void setReverbParams(const ReverbParams &newParams)
+    /**
+     * method for setting all reverb parameters, useful for changing btw reverb types 
+     * @param init whether or not this is the initial call to setReverbParams. True by default, this defers setting up the diffuser delay lines until prepare(). If false, this will change the diffuser delay lines. Pass false if changing params after initialization*/
+    void setReverbParams(const ReverbParams &newParams, bool init = true)
     {
         params = newParams;
 
@@ -500,10 +487,13 @@ public:
         params.roomSizeMs = jmax(params.roomSizeMs, params.rt60 * 10.f);
 
         auto diffusion = (params.roomSizeMs * 0.001);
+        assert(diff.size() == 4);
         for (int i = 0; i < 4; ++i)
         {
             diffusion *= 0.5;
-            diff[i].changeDelay(diffusion);
+            diff[i].delayRange = diffusion;
+            if (!init)
+                diff[i].changeDelay();
         }
 
         erLevel = params.erLevel;
@@ -549,6 +539,11 @@ public:
 
         auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(spec.sampleRate / (double)ratio, spec.sampleRate * (double)ratio, 8);
 
+        dsLP[0].clear();
+        dsLP[1].clear();
+        usLP[0].clear();
+        usLP[1].clear();
+
         for (auto &c : coeffs)
         {
             dsLP[0].emplace_back(dsp::IIR::Filter<double>(c));
@@ -564,7 +559,7 @@ public:
 
         for (auto &ch : dsLP)
             for (auto &f : ch)
-                f.prepare(filterSpec); // is this causing the aliasing?
+                f.prepare(filterSpec);
 
         for (auto &ch : usLP)
             for (auto &f : ch)
@@ -714,7 +709,7 @@ public:
         rev.reset();
     }
 
-    void parameterChanged(const String &paramID, float newValue) override
+    void parameterChanged(const String &paramID, float) override
     {
         if (paramID == "reverbType" || paramID == "reverbDecay" || paramID == "reverbSize")
             lastFlag = ANY;
@@ -738,10 +733,12 @@ public:
             switch ((ReverbType)type->getIndex())
             {
             case ReverbType::Room:
-                rev.setReverbParams(ReverbParams{30.f * s, 0.65f * d, 0.5f, 0.23f, 3.f, p});
+                rev.setReverbParams(ReverbParams{30.f * s, 0.65f * d, 0.5f, 0.23f, 3.f, p}, false);
                 break;
             case ReverbType::Hall:
-                rev.setReverbParams(ReverbParams{75.0f * s, 2.0f * d, 0.5f, 1.0f, 5.0f, p});
+                rev.setReverbParams(ReverbParams{75.0f * s, 2.0f * d, 0.5f, 1.0f, 5.0f, p}, false);
+                break;
+            case ReverbType::Off:
                 break;
             }
             break;
@@ -760,7 +757,7 @@ public:
             manageUpdate(lastFlag);
             needsUpdate = false;
         }
-        if (!needsUpdate)
+        if (!needsUpdate && *type)
             rev.process(buffer, amt);
     }
 };
