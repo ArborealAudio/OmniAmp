@@ -335,7 +335,7 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
         }
     }
 
-    audioSource.getBufferRMS(buffer);
+    // audioSource.copyBuffer(buffer);
 }
 
 void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::MidiBuffer &midiMessages)
@@ -352,7 +352,7 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::
     if (totalNumInputChannels < totalNumOutputChannels)
         buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
 
-    audioSource.getBufferRMS(buffer);
+    // audioSource.copyBuffer(buffer);
 }
 
 //==============================================================================
@@ -382,8 +382,6 @@ void GammaAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
         apvts.replaceState(ValueTree::fromXml(*xml));
 
     currentPreset = xml->getStringAttribute("Preset");
-
-    // loadedWIthNoState = false;
 }
 
 //==============================================================================
