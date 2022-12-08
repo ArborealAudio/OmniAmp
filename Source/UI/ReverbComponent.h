@@ -2,85 +2,16 @@
 
 #pragma once
 
-struct ReverbButton : TextButton
+class ReverbComponent : public Component
 {
-    enum Placement
-    {
-        Left,
-        Center,
-        Right
-    };
+    Knob reverbAmount{KnobType::Simple}, reverbDecay{KnobType::Simple}, reverbSize{KnobType::Simple}, predelay{KnobType::Simple};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> amtAttach, decayAttach, sizeAttach, predelayAttach;
 
-    struct LookAndFeelMethods : LookAndFeel_V4
-    {
-        void drawButtonBackground(Graphics &g, Button &button, const Colour &backgroundColour, bool drawAsHighlighted, bool drawAsDown) override
-        {
-            auto bounds = button.getLocalBounds().reduced(5, 15);
-
-#define DIMENSIONS bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight()
-#define CORNERS 5.f, 5.f
-
-            Path p;
-
-            switch (placement)
-            {
-            case Left:
-                p.addRoundedRectangle(DIMENSIONS, CORNERS, true, false, true, false);
-                break;
-            case Center:
-                p.addRectangle(DIMENSIONS);
-                break;
-            case Right:
-                p.addRoundedRectangle(DIMENSIONS, CORNERS, false, true, false, true);
-                break;
-            default:
-                p.addRectangle(DIMENSIONS);
-                break;
-            }
-
-            g.setColour(Colours::black);
-            g.strokePath(p, PathStrokeType(1.f));
-
-            g.setColour(drawAsHighlighted ? backgroundColour.withMultipliedBrightness(1.5f) : backgroundColour);
-            g.fillPath(p);
-        }
-
-        void setPlacement(Placement newPlacement) { placement = newPlacement; }
-
-    private:
-        Placement placement = Placement::Center;
-    };
-
-    ReverbButton(Placement p) : placement(p)
-    {
-        setLookAndFeel(&lnf);
-        lnf.setPlacement(placement);
-    }
-
-    ~ReverbButton()
-    {
-        setLookAndFeel(nullptr);
-    }
-
-protected:
-    Placement placement;
-    LookAndFeelMethods lnf;
-};
-
-class ReverbComponent : public Component, private Timer
-{
-    Knob reverbAmount{KnobType::Simple}, reverbDecay{KnobType::Simple}, reverbSize{KnobType::Simple};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> amtAttach, decayAttach, sizeAttach;
-
-    std::array<ReverbButton, 2> reverb{ReverbButton::Placement::Left, ReverbButton::Placement::Right};
-
-    std::array<String, 2> names{"Room", "Hall"};
-
-    std::atomic<float> *reverbType;
-    int lastType = 0;
+    ChoiceMenu reverb;
+    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> reverbAttach;
 
 public:
-    ReverbComponent(AudioProcessorValueTreeState &v)
+    ReverbComponent(AudioProcessorValueTreeState &v) : reverb(v.getParameter("reverbType")->getAllValueStrings())
     {
         addAndMakeVisible(reverbAmount);
         amtAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbAmt", reverbAmount);
@@ -103,84 +34,38 @@ public:
         reverbSize.setValueToStringFunction([](float val)
                                               { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
 
-        reverbType = v.getRawParameterValue("reverbType");
+        addAndMakeVisible(predelay);
+        predelayAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbPredelay", predelay);
+        predelay.setLabel("Predelay");
+        predelay.setTooltip("Predelay in ms of reverb");
+        predelay.setValueToStringFunction([](float val)
+                                          { auto str = String(val, 0); str.append("ms", 2); return str; });
 
-        for (int i = 0; i < reverb.size(); ++i)
-        {
-            addAndMakeVisible(reverb[i]);
-            reverb[i].setColour(TextButton::ColourIds::buttonColourId, Colours::grey);
-            reverb[i].setColour(TextButton::ColourIds::buttonOnColourId, Colours::darkslategrey);
-
-            reverb[i].setButtonText(names[i]);
-
-            reverb[i].setClickingTogglesState(true);
-            reverb[i].setToggleState(i + 1 == (int)*reverbType, NotificationType::sendNotification);
-        }
-
-        reverb[0].onClick = [&]
-        {
-            if (reverb[0].getToggleState())
-            {
-                reverb[1].setToggleState(false, NotificationType::dontSendNotification);
-                v.getParameterAsValue("reverbType") = 1;
-            }
-            else
-                v.getParameterAsValue("reverbType") = 0;
-        };
-        reverb[1].onClick = [&]
-        {
-            if (reverb[1].getToggleState())
-            {
-                reverb[0].setToggleState(false, NotificationType::dontSendNotification);
-                v.getParameterAsValue("reverbType") = 2;
-            }
-            else
-                v.getParameterAsValue("reverbType") = 0;
-        };
-
-        startTimerHz(15);
-    }
-
-    ~ReverbComponent()
-    {
-        stopTimer();
-    }
-
-    void updateState()
-    {
-        for (int i = 0; i < reverb.size(); ++i)
-            reverb[i].setToggleState(i + 1 == (int)*reverbType, NotificationType::dontSendNotification);
+        addAndMakeVisible(reverb);
+        reverbAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(v, "reverbType", reverb);
     }
 
     void paint(Graphics &g) override
     {
         g.setColour(Colour(0xff256184));
         g.drawRoundedRectangle(getLocalBounds().reduced(1).toFloat(), 5.f, 3.f);
+        reverb.lnf.backgroundColor = reverb.getSelectedId() > 1 ? Colours::darkslategrey : Colours::grey;
     }
 
     void resized() override
     {
         auto b = getLocalBounds().reduced(10);
-        {
-            auto bottom = b.removeFromBottom(b.getHeight() / 2);
-            auto chunk = b.getWidth() / 3;
-            auto amountBounds = bottom.removeFromRight(chunk);
-            auto sizeBounds = bottom.removeFromRight(chunk);
-            auto decayBounds = bottom;
-            reverbAmount.setBounds(amountBounds);
-            reverbSize.setBounds(sizeBounds);
-            reverbDecay.setBounds(decayBounds);
-        }
+        auto bottom = b.removeFromBottom(b.getHeight() / 2);
+        auto chunk = b.getWidth() / 4;
+        auto amountBounds = bottom.removeFromRight(chunk);
+        auto sizeBounds = bottom.removeFromRight(chunk);
+        auto decayBounds = bottom.removeFromRight(chunk);
+        auto predelayBounds = bottom;
+        reverbAmount.setBounds(amountBounds);
+        reverbSize.setBounds(sizeBounds);
+        reverbDecay.setBounds(decayBounds);
+        predelay.setBounds(predelayBounds);
 
-        auto half = b.getWidth() / reverb.size();
-        reverb[0].setBounds(b.removeFromLeft(half));
-        reverb[1].setBounds(b);
-    }
-
-    void timerCallback() override
-    {
-        if (lastType != (int)*reverbType)
-            updateState();
-        lastType = (int)*reverbType;
+        reverb.setBounds(b.reduced(30 , 15));
     }
 };
