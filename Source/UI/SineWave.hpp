@@ -5,10 +5,16 @@
 namespace strix
 {
 
-struct AudioSource
+struct AudioSource : Timer
 {
-    AudioSource() { newBuf = false; }
-    ~AudioSource(){}
+    AudioSource()
+    {
+        startTimerHz(45);
+    }
+    ~AudioSource()
+    {
+        stopTimer();
+    }
 
     void prepare(const dsp::ProcessSpec& spec)
     {
@@ -38,24 +44,63 @@ struct AudioSource
         }
 
         for (auto& b : band)
-            b.setSize(2, spec.maximumBlockSize);
+            b.setSize(1, spec.maximumBlockSize, false, true, false);
+
+        numSamplesToRead = spec.maximumBlockSize;
+        mainBuf.setSize(1, 44100, false, true, false);
+        fifo.setTotalSize(numSamplesToRead);
     }
 
+    /* no locking, must be real-time safe! */
     template <typename T>
-    void getBufferRMS(const juce::AudioBuffer<T>& buf)
+    void copyBuffer(const AudioBuffer<T> &buffer)
     {
-        splitBuffers(buf);
-
-        for (int i = 0; i < 6; ++i)
+        const auto numSamples = buffer.getNumSamples();
+        const auto scope = fifo.write(numSamples);
+        if (scope.blockSize1 > 0)
         {
-            rms[i] = band[i].getRMSLevel(0, 0, band[i].getNumSamples());
+            auto *dest = mainBuf.getWritePointer(0) + scope.startIndex1;
+            const auto *src = buffer.getReadPointer(0);
+            for (size_t i = 0; i < scope.blockSize1; ++i)
+                dest[i] = static_cast<float>(src[i]);
+        }
+        if (scope.blockSize2 > 0)
+        {
+            auto *dest = mainBuf.getWritePointer(0) + scope.startIndex2;
+            const auto *src = buffer.getReadPointer(0);
+            for (size_t i = 0; i < scope.blockSize2; ++i)
+                dest[i] = static_cast<float>(src[i]);
+        }
+        bufCopied = true;
+    }
 
-            if (src[i].size() > 0) {
-                src[i][ptr] = rms[i];
-                ptr = (ptr + 1) % src[i].size();
+    void timerCallback() override
+    {
+        if (bufCopied)
+        {
+            calcBufferRMS();
+            bufCopied = false;
+        }
+    }
+
+    /* locking, message-thread operation */
+    void calcBufferRMS()
+    {
+        {
+            std::unique_lock lock(mutex);
+            splitBuffers();
+
+            for (int i = 0; i < 6; ++i)
+            {
+                rms[i] = band[i].getRMSLevel(0, 0, band[i].getNumSamples());
+
+                if (src[i].size() > 0) {
+                    src[i][ptr] = rms[i];
+                    ptr = (ptr + 1) % src[i].size();
+                }
+                else
+                    sum[i] = rms[i];
             }
-            else
-                sum[i] = rms[i];
         }
 
         newBuf = true;
@@ -76,9 +121,7 @@ struct AudioSource
         return b_rms;
     }
 
-    void setFlag(bool newFlag) { newBuf = newFlag; }
-
-    bool getFlag() const { return newBuf; }
+    std::atomic<bool> newBuf = false;
 
 private:
     float rmsSize = 0.f;
@@ -90,22 +133,36 @@ private:
     dsp::LinkwitzRileyFilter<float> hp[5];
     juce::AudioBuffer<float> band[6];
 
-    std::atomic<bool> newBuf;
+    AbstractFifo fifo{1024};
+    AudioBuffer<float> mainBuf;
+    int numSamplesToRead = 0;
 
-    template <typename T>
-    void splitBuffers(const juce::AudioBuffer<T>& buf)
+    std::atomic<bool> bufCopied = false;
+
+    std::mutex mutex;
+
+    void splitBuffers()
     {
-        for (auto& b : band)
         {
-            b.clear();
-            b.makeCopyOf(buf, true);
+            const auto scope = fifo.read(numSamplesToRead);
+            for (auto &b : band)
+            {
+                if (scope.blockSize1 > 0)
+                {
+                    b.copyFrom(0, 0, mainBuf.getReadPointer(0) + scope.startIndex1, scope.blockSize1);
+                }
+                if (scope.blockSize2 > 0)
+                {
+                    b.copyFrom(0, scope.blockSize1, mainBuf.getReadPointer(0) + scope.startIndex2, scope.blockSize2);
+                }
+            }
         }
 
         for (int i = 0; i < 5; ++i)
         {
             auto hpf = band[i + 1].getWritePointer(0);
             auto lpf = band[i].getWritePointer(0);
-            for (auto j = 0; j < buf.getNumSamples(); ++j)
+            for (auto j = 0; j < band[i].getNumSamples(); ++j)
             {
                 auto mono = hpf[j];
                 hpf[j] = hp[i].processSample(0, mono);
@@ -193,8 +250,8 @@ struct SineWaveComponent : Component, Timer
 
     void timerCallback() override
     {
-        if (src.getFlag()) {
-            src.setFlag(false);
+        if (src.newBuf) {
+            src.newBuf = false;
             needsRepaint = true;
             repaint(getLocalBounds());
         }
