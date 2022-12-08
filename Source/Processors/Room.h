@@ -231,7 +231,12 @@ class Room
             hp.setCutoffFreq(150.0);
         }
 
-        /* TODO: make a method for changing mod freq */
+        /* call an update on the mod freq, after updating the global value */
+        void changeModFreq()
+        {
+            for (int ch = 0; ch < channels; ++ch)
+                osc[ch].setFrequency(std::pow(modFreq, (double)ch / channels));
+        }
 
         /* use this to change the feedback's delay times (don't change delayMS directly) */
         void changeDelay(float newDelayMs)
@@ -444,7 +449,7 @@ public:
     /* our local reverb parameters */
     ReverbParams params;
 
-    strix::Delay<double> preDelay{4410}; /* this needs to have a different interpolation (i.e. any interpolation at all) */
+    dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> preDelay{4410}; /* this needs to have a different interpolation (i.e. any interpolation at all) */
 
     Room(ReverbType initType)
     {
@@ -507,6 +512,8 @@ public:
         feedback.decayGain = std::pow(10.0, dbPerCycle * 0.05);
         feedback.dampening = params.dampening;
         feedback.modFreq = params.modulation;
+        if (!init)
+            feedback.changeModFreq();
     }
 
     void setPredelay(float newPredelay)
@@ -607,7 +614,8 @@ public:
         downsampleBuffer(buf, numSamples);
 
         dsp::AudioBlock<double> dsBlock (dsBuf);
-        preDelay.processBlock(dsBlock);
+        // preDelay.processBlock(dsBlock);
+        preDelay.process(dsp::ProcessContextReplacing<double>(dsBlock));
 
         upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), hNumSamples);
 
