@@ -11,7 +11,7 @@ struct AudioSource : Timer
     {
         startTimerHz(45);
     }
-    ~AudioSource()
+    ~AudioSource() override
     {
         stopTimer();
     }
@@ -60,16 +60,16 @@ struct AudioSource : Timer
         if (scope.blockSize1 > 0)
         {
             auto *dest = mainBuf.getWritePointer(0) + scope.startIndex1;
-            const auto *src = buffer.getReadPointer(0);
+            const auto *source = buffer.getReadPointer(0);
             for (size_t i = 0; i < scope.blockSize1; ++i)
-                dest[i] = static_cast<float>(src[i]);
+                dest[i] = static_cast<float>(source[i]);
         }
         if (scope.blockSize2 > 0)
         {
             auto *dest = mainBuf.getWritePointer(0) + scope.startIndex2;
-            const auto *src = buffer.getReadPointer(0);
+            const auto *source = buffer.getReadPointer(0);
             for (size_t i = 0; i < scope.blockSize2; ++i)
-                dest[i] = static_cast<float>(src[i]);
+                dest[i] = static_cast<float>(source[i]);
         }
         bufCopied = true;
     }
@@ -110,7 +110,7 @@ struct AudioSource : Timer
     {
         std::array<float, 6> b_rms;
 
-        for (int i = 0; i < 6; ++i)
+        for (size_t i = 0; i < 6; ++i)
         {
             if (src[i].size() > 0)
                 b_rms[i] = std::sqrt(std::accumulate(src[i].begin(), src[i].end(), 0.f) / (float)src[i].size());
@@ -215,35 +215,39 @@ struct SineWaveComponent : Component, Timer
         float scale[6]{0.025f, 0.0275f, 0.03f, 0.0325f, 0.035f, 0.0375f};
         float lineThickness[6]{3.f, 2.75f, 2.5f, 1.25f, 1.f, 0.75f};
 
-        auto drawWave = [&](int i)
+        auto drawWave = [&](size_t i)
         {
             p[i].startNewSubPath(-1, getLocalBounds().getCentreY());
             std::vector<float> x;
             for (int j = 0; j < w; ++j)
-                x.emplace_back(j);
+                x.emplace_back((float)j);
             FloatVectorOperations::multiply(x.data(), scale[i], x.size());
             FloatVectorOperations::add(x.data(), -f, x.size()); /*much faster w/ float vec ops!*/
-            for (int j = 0; j < w; ++j)
+            for (size_t j = 0; j < w; ++j)
                 p[i].lineTo(j, map(std::sin(x[j]) * rms[i]));
         };
 
-        for (int i = 0; i < 6; ++i)
-        {
+        for (size_t i = 0; i < 6; ++i)
             drawWave(i);
+
+        for (size_t i = 5; i > 0; --i)
+        {
+            g.setColour(colors[i]);
+            g.strokePath(p[i], PathStrokeType(lineThickness[i]));
         }
 
-        g.setColour(Colour(0xff975792));
-        g.strokePath(p[5], PathStrokeType(0.75f));
-        g.setColour(Colour(0xff516692));
-        g.strokePath(p[4], PathStrokeType(1.f));
-        g.setColour(Colour(0xff499481));
-        g.strokePath(p[3], PathStrokeType(1.25f));
-        g.setColour(Colour(0xff859358));
-        g.strokePath(p[2], PathStrokeType(2.5f));
-        g.setColour(Colour(0xff977757));
-        g.strokePath(p[1], PathStrokeType(2.75f));
-        g.setColour(Colour(0xff975755));
-        g.strokePath(p[0], PathStrokeType(3.f));
+        // g.setColour(Colour(0xff975792));
+        // g.strokePath(p[5], PathStrokeType(0.75f));
+        // g.setColour(Colour(0xff516692));
+        // g.strokePath(p[4], PathStrokeType(1.f));
+        // g.setColour(Colour(0xff499481));
+        // g.strokePath(p[3], PathStrokeType(1.25f));
+        // g.setColour(Colour(0xff859358));
+        // g.strokePath(p[2], PathStrokeType(2.5f));
+        // g.setColour(Colour(0xff977757));
+        // g.strokePath(p[1], PathStrokeType(2.75f));
+        // g.setColour(Colour(0xff975755));
+        // g.strokePath(p[0], PathStrokeType(3.f));
 
         needsRepaint = false;
     }
