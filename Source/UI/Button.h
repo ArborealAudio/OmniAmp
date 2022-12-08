@@ -8,7 +8,6 @@ struct ButtonLookAndFeel : LookAndFeel_V4
 
     void drawButtonBackground(Graphics &g, Button &button, const Colour &backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
     {
-        float cornerRadius = button.getHeight() * 0.25;
         g.setColour(Colours::white);
         g.drawRoundedRectangle(button.getLocalBounds().reduced(3).toFloat(), cornerRadius, 1.f);
         if (button.getToggleState())
@@ -27,13 +26,14 @@ struct ButtonLookAndFeel : LookAndFeel_V4
             g.setColour(Colours::white);
         g.drawText(text, button.getLocalBounds(), Justification::centred, false);
     }
+
+    float cornerRadius = 0.f;
 };
 
-class LightButton : public TextButton
+struct LightButton : TextButton
 {
     ButtonLookAndFeel lnf;
 
-public:
     LightButton()
     {
         setLookAndFeel(&lnf);
