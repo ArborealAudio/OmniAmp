@@ -24,7 +24,7 @@ struct PreComponent : Component,
         emphasis.setLabel("Stereo Emphasis");
         emphasis.setTooltip("Stereo emphasis control--a compensated drive control for the stereo width going *into* the processing.\n\nUse this for fine-tuning the compression or saturation of the stereo sides.");
         emphasis.setValueToStringFunction([](float val)
-                                        { val = jmap(val, -100.f, 100.f);
+                                          { val = jmap(val, -100.f, 100.f);
                                         String s((int)val); return s + "%"; });
 
         doublerAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "doubler", doubler);
@@ -32,7 +32,7 @@ struct PreComponent : Component,
         doubler.setLabel("Doubler");
         doubler.setTooltip("Synthesize a stereo signal from a mono input.");
         doubler.setValueToStringFunction([](float val)
-                                        { String s(int(val * 100)); return s + "%"; });
+                                         { String s(int(val * 100)); return s + "%"; });
 
         msAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "m/s", midSide);
         midSide.setButtonText(midSide.getToggleState() ? "M/S" : "Stereo");
@@ -73,12 +73,12 @@ struct PreComponent : Component,
         compPosAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "compPos", compPos);
         compPos.setButtonText("Comp Pos.");
 
-        distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "dist", dist);
-        dist.setDefaultValue(vts.getParameter("dist")->getDefaultValue());
-        dist.setLabel("Overdrive");
-        dist.setValueToStringFunction([](float val)
-                                      { return String(val * 10.0, 1); });
-        dist.setTooltip("A one-knob distortion pedal. Fully bypassed at 0.");
+        // distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "dist", dist);
+        // dist.setDefaultValue(vts.getParameter("dist")->getDefaultValue());
+        // dist.setLabel("Overdrive");
+        // dist.setValueToStringFunction([](float val)
+        //                               { return String(val * 10.0, 1); });
+        // dist.setTooltip("A one-knob distortion pedal. Fully bypassed at 0.");
 
         grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
         grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
@@ -108,20 +108,29 @@ struct PreComponent : Component,
     {
         auto bounds = getLocalBounds().reduced(2);
         auto w = bounds.getWidth();
-        auto topSection = bounds.removeFromTop(getHeight() * 0.66f);
-        auto chunk = w / getComps().size();
-        for (auto c : getComps())
-            c->setBounds(topSection.removeFromLeft(chunk));
+        int chunk = w / getComps().size();
+        for (auto *c : getComps())
+        {
+            if (c == &midSide)
+            {
+                c->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f, bounds.getHeight() * 0.25f));
+                midSide.lnf.cornerRadius = c->getHeight() * 0.5f;
+            }
+            else
+                c->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f));
+        }
     }
 
 private:
     AudioProcessorValueTreeState &vts;
 
-    Knob emphasis{KnobType::Aux}, doubler{KnobType::Aux}, lfEmph{KnobType::Aux}, hfEmph{KnobType::Aux}, comp{KnobType::Aux}, dist{KnobType::Aux};
+    Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
+
+    Knob emphasis{knobFlags}, doubler{knobFlags}, lfEmph{knobFlags}, hfEmph{knobFlags}, comp{knobFlags};
 
     LightButton midSide, compLink, compPos;
 
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> emphasisAttach, doublerAttach, lfAttach, hfAttach, compAttach, distAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> emphasisAttach, doublerAttach, lfAttach, hfAttach, compAttach;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> msAttach, compLinkAttach, compPosAttach;
 
     strix::VolumeMeterComponent grMeter;
@@ -134,7 +143,6 @@ private:
             &lfEmph,
             &hfEmph,
             &doubler,
-            &comp,
-            &dist};
+            &comp};
     }
 };

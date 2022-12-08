@@ -67,7 +67,8 @@ private:
 
     AmpControls ampControls;
 
-    Knob gate{KnobType::Simple}, inGain{KnobType::Simple}, outGain{KnobType::Simple}, width{KnobType::Simple}, mix{KnobType::Simple};
+    Knob::flags_t knobFlags = 0;
+    Knob gate{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, width{knobFlags}, mix{knobFlags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach, mixAttach;
 
     LightButton link;

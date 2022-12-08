@@ -101,7 +101,8 @@ struct EnhancerComponent : Component
 private:
     std::unique_ptr<Drawable> mesh;
 
-    Knob hfEnhance{KnobType::Aux}, lfEnhance{KnobType::Aux};
+    Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
+    Knob hfEnhance{knobFlags}, lfEnhance{knobFlags};
     LightButton hfInvert, lfInvert;
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hfInvAttach, lfInvAttach;
