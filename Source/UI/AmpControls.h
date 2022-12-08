@@ -137,6 +137,7 @@ struct AmpControls : Component, private Timer
 
     ~AmpControls()
     {
+        subMode = nullptr;
         stopTimer();
     }
 
@@ -352,10 +353,10 @@ struct AmpControls : Component, private Timer
         auto subModeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.25f);
         auto powerBounds = bounds.reduced(w * 0.1);
 
-        mode.setSize(getWidth() * 0.125f, getHeight() * 0.15f);
+        mode.setSize(getWidth() * 0.15f, getHeight() * 0.15f);
         mode.setCentrePosition(modeBounds.getCentreX(), modeBounds.getCentreY());
 
-        subMode->setSize(getWidth() * 0.125f, getHeight() * 0.15f);
+        subMode->setSize(getWidth() * 0.15f, getHeight() * 0.15f);
         subMode->setCentrePosition(subModeBounds.getCentreX(), subModeBounds.getCentreY());
 
         power.setSize(powerBounds.getHeight(), powerBounds.getHeight());
