@@ -100,10 +100,9 @@ class Room
     {
         /**
          * @param seed seed for delay time RNG
-        */
+         */
         Diffuser(int64_t seed) : seed(seed)
         {
-            // rand.setSeed(seed);
         }
 
         /**
@@ -111,14 +110,12 @@ class Room
         */
         Diffuser(float delayRangeinS, int64_t seed) : delayRange(delayRangeinS), seed(seed)
         {
-            // rand.setSeed(seed);
         }
 
         /* delay range should be initialized before this is called */
         void prepare(dsp::ProcessSpec spec)
         {
             spec.numChannels = 1;
-
             SR = spec.sampleRate;
 
             invert.clear();
@@ -189,6 +186,7 @@ class Room
         }
 
         float delayRange;
+
     private:
         std::array<dsp::DelayLine<T>, channels> delay;
         std::array<int, channels> randDelay;
@@ -446,13 +444,13 @@ public:
     /* our local reverb parameters */
     ReverbParams params;
 
-    strix::Delay<double> preDelay{4410};
+    strix::Delay<double> preDelay{4410}; /* this needs to have a different interpolation (i.e. any interpolation at all) */
 
     Room(ReverbType initType)
     {
         for (size_t i = 0; i < 4; ++i)
             diff.emplace_back((int64_t)i);
-        
+
         switch (initType)
         {
         case ReverbType::Off: /* just use Room as the default if initialized to Off */
@@ -464,7 +462,7 @@ public:
         case ReverbType::Hall:
             setReverbParams(ReverbParams{75.0f, 2.0f, 0.5f, 1.0f, 5.0f, 0.f});
             break;
-            }
+        }
     }
 
     Room(const ReverbParams &_params)
@@ -475,7 +473,7 @@ public:
     }
 
     /**
-     * method for setting all reverb parameters, useful for changing btw reverb types 
+     * method for setting all reverb parameters, useful for changing btw reverb types
      * @param init whether or not this is the initial call to setReverbParams. True by default, this defers setting up the diffuser delay lines until prepare(). If false, this will change the diffuser delay lines. Pass false if changing params after initialization*/
     void setReverbParams(const ReverbParams &newParams, bool init = true)
     {
@@ -608,8 +606,8 @@ public:
 
         downsampleBuffer(buf, numSamples);
 
-        // auto dsBlock = dsp::AudioBlock<double>(dsBuf);
-        // preDelay.processBlock(dsBlock);
+        dsp::AudioBlock<double> dsBlock (dsBuf);
+        preDelay.processBlock(dsBlock);
 
         upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), hNumSamples);
 
@@ -729,7 +727,7 @@ public:
             d = jmax(0.01f, d);
             float s = *size;
             s = jmax(0.01f, s);
-            float p = *predelay * 1000.f * SR;
+            float p = *predelay * 0.001f * SR;
             switch ((ReverbType)type->getIndex())
             {
             case ReverbType::Room:
@@ -744,7 +742,7 @@ public:
             break;
         }
         case PREDELAY:
-            float p = *predelay * 1000.f * SR;
+            float p = *predelay * 0.001f * SR;
             rev.setPredelay(p);
             break;
         }
