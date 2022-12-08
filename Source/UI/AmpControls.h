@@ -366,7 +366,9 @@ struct AmpControls : Component, private Timer
 private:
     AudioProcessorValueTreeState &vts;
 
-    Knob inGain{KnobType::Amp}, outGain{KnobType::Amp}, bass{KnobType::Amp}, mid{KnobType::Amp}, treble{KnobType::Amp};
+    Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_TICKS | Knob::DRAW_SHADOW;
+
+    Knob inGain{knobFlags}, outGain{knobFlags}, bass{knobFlags}, mid{knobFlags}, treble{knobFlags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
 
     ChoiceMenu mode, guitarMode, bassMode, channelMode;

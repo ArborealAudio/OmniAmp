@@ -3,16 +3,18 @@
 #pragma once
 #include "gin_gui/gin_gui.h"
 
-enum KnobType
-{
-    Amp,
-    Aux,
-    Simple
-};
-
 struct Knob : Slider
 {
-    Knob(KnobType t) : lnf(t)
+    enum
+    {
+        DRAW_GRADIENT = 1,
+        DRAW_SHADOW = 1 << 2,
+        DRAW_ARC = 1 << 3,
+        DRAW_TICKS = 1 << 4
+    };
+    typedef uint8_t flags_t;
+
+    Knob(flags_t f) : lnf(f)
     {
         setLookAndFeel(&lnf);
         lnf.autoGain = &autoGain;
@@ -87,9 +89,8 @@ struct Knob : Slider
 private:
     struct KnobLookAndFeel : LookAndFeel_V4
     {
-        KnobType type;
-
         Colour baseColor = Colours::antiquewhite, accentColor = Colours::grey, textColor = Colours::black;
+        flags_t flags;
 
         std::unique_ptr<String> label = nullptr;
 
@@ -97,7 +98,7 @@ private:
 
         std::atomic<bool> *autoGain;
 
-        KnobLookAndFeel(KnobType newType) : type(newType)
+        KnobLookAndFeel(flags_t f) : flags(f)
         {
             label = std::make_unique<String>("");
         }
@@ -108,7 +109,7 @@ private:
             // g.setFont(jlimit(12.f, 18.f, 0.1f * height)); /*try to set variable font height*/
             g.setFont(14.f);
 
-            auto drawCustomSlider = [&](bool drawTicks = false, bool drawShadow = false, bool drawArc = false)
+            auto drawCustomSlider = [&](/* bool drawTicks = false, bool drawShadow = false, bool drawArc = false */)
             {
                 auto radius = (float)jmin(width / 2, height / 2) - 4.f;
                 auto centerX = (float)slider.getLocalBounds().getCentreX();
@@ -118,7 +119,7 @@ private:
                 auto rw = radius * 2.f;
                 auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-                if (drawTicks)
+                if ((flags & DRAW_TICKS) > 0)
                 {
                     /* draw ticks around knob */
                     for (int i = 0; i < 11; ++i)
@@ -135,7 +136,7 @@ private:
                         g.fillPath(p);
                     }
                 }
-                if (drawShadow)
+                if ((flags & DRAW_SHADOW) > 0)
                 {
                     /* shadow & highlight */
                     Image shadow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
@@ -154,7 +155,7 @@ private:
                     g.drawImageAt(highlight, x + 3, y - 3);
                 }
 
-                if (type == KnobType::Simple)
+                if ((flags & DRAW_GRADIENT) == 0)
                 {
                     g.setColour(slider.isMouseOverOrDragging() ? accentColor : baseColor);
                     g.drawEllipse(rx, ry, rw, rw, 3.f);
@@ -191,7 +192,7 @@ private:
                     g.fillPath(p);
                 }
 
-                if (drawArc)
+                if ((flags & DRAW_ARC) > 0)
                 {
                     auto defaultVal = dynamic_cast<Knob *>(&slider)->getDefaultValue();
                     /* arc */
@@ -207,24 +208,25 @@ private:
             width *= 0.75;
             height *= 0.75;
 
-            switch (type)
-            {
-            case Amp:
-            {
-                drawCustomSlider(true, true, false);
-                break;
-            }
-            case Aux:
-            {
-                drawCustomSlider(false, true, true);
-                break;
-            }
-            case Simple:
-            {
-                drawCustomSlider(false, false, false);
-                break;
-            }
-            }
+            drawCustomSlider();
+            // switch (type)
+            // {
+            // case Amp:
+            // {
+            //     drawCustomSlider(true, true, false);
+            //     break;
+            // }
+            // case Aux:
+            // {
+            //     drawCustomSlider(false, true, true);
+            //     break;
+            // }
+            // case Simple:
+            // {
+            //     drawCustomSlider(false, false, false);
+            //     break;
+            // }
+            // }
 
             /* label */
             g.setColour(accentColor);
