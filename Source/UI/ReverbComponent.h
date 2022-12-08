@@ -49,7 +49,7 @@ public:
     {
         g.setColour(Colour(0xff256184));
         g.drawRoundedRectangle(getLocalBounds().reduced(1).toFloat(), 5.f, 3.f);
-        reverb.lnf.backgroundColor = reverb.getSelectedId() > 1 ? Colours::darkslategrey : Colours::grey;
+        reverb.lnf.backgroundColor = reverb.getSelectedId() > 1 ? Colour(0xff256184) : Colours::grey;
     }
 
     void resized() override
