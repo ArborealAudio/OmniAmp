@@ -12,5 +12,4 @@ PRIVATE
     Menu.h
     EnhancerComponent.h
     DownloadManager.h
-    Splash.h
-    Init.h)
+    Splash.h)
