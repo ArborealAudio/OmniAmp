@@ -3,8 +3,8 @@
 
 #pragma once
 
-#define BACKGROUND_COLOR 0xffaa8875 // unused atm
-#define TOP_TRIM 0xff293236
+// #define BACKGROUND_COLOR 0xffaa8875 // unused atm
+#define BACKGROUND_COLOR 0xff293236
 #define DEEP_BLUE 0xff194545
 
 static const Typeface::Ptr getCustomFont()

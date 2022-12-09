@@ -12,8 +12,8 @@
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
-      preComponent(p.getActiveGRSource(), p.apvts),
       ampControls(p.apvts),
+      preComponent(p.getActiveGRSource(), p.apvts),
       cabComponent(p.apvts.getRawParameterValue("cabType")),
       reverbComp(p.apvts),
       enhancers(p.audioSource, p.apvts),
@@ -189,7 +189,7 @@ void GammaAudioProcessorEditor::resetWindowSize() noexcept
 //==============================================================================
 void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
-    g.fillAll(Colour(TOP_TRIM));
+    g.fillAll(Colour(BACKGROUND_COLOR));
     auto trimmedTop = getLocalBounds().removeFromTop(getHeight() * 0.15f);
     logoBounds = trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).toFloat();
     logo->drawWithin(g, logoBounds.reduced(5.f), RectanglePlacement::centred, 1.f);

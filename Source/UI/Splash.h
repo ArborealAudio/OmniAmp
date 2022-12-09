@@ -22,7 +22,7 @@ struct Splash : Component
         auto h = b.getHeight();
 
         g.drawImage(img, b, RectanglePlacement::centred);
-        g.setColour(Colour(TOP_TRIM).withAlpha(0.5f));
+        g.setColour(Colour(BACKGROUND_COLOR).withAlpha(0.5f));
         g.fillRoundedRectangle(b, 5.f);
         g.setColour(Colours::white);
         g.drawRoundedRectangle(b, 5.f, 2.f);
