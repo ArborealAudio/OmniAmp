@@ -10,7 +10,8 @@ struct Knob : Slider
         DRAW_GRADIENT = 1,
         DRAW_SHADOW = 1 << 2,
         DRAW_ARC = 1 << 3,
-        DRAW_TICKS = 1 << 4
+        DRAW_TICKS = 1 << 4,
+        REAR_KNOB = 1 << 5
     };
     typedef uint8_t flags_t;
 
