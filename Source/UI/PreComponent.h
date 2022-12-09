@@ -102,22 +102,37 @@ struct PreComponent : Component,
     {
         g.setColour(Colours::antiquewhite);
         g.drawRoundedRectangle(getLocalBounds().reduced(1).toFloat(), 5.f, 3.f);
+        // for (auto *c : getComps())
+        //     g.drawRect(c->getBounds());
     }
 
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(2);
+        auto compSection = bounds.removeFromRight(bounds.getWidth() * 0.25f);
+        auto compSectW = compSection.getWidth();
         auto w = bounds.getWidth();
-        int chunk = w / getComps().size();
+        int chunk = w / 5;
         for (auto *c : getComps())
         {
-            if (c == &midSide)
+            if (auto *k = dynamic_cast<Knob*>(c))
+            {
+                if (k == &comp)
+                    k->setBounds(compSection.removeFromTop(bounds.getHeight() * 0.75f));
+                else
+                    k->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f));
+            }
+            else if (c == &midSide)
             {
                 c->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f, bounds.getHeight() * 0.25f));
                 midSide.lnf.cornerRadius = c->getHeight() * 0.5f;
             }
-            else
-                c->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f));
+            else if (c == &compPos || c == &compLink)
+            {
+                c->setBounds(compSection.removeFromLeft(compSectW * 0.5f).reduced(compSectW * 0.05f, 0));
+                auto *b = (LightButton *)c;
+                b->lnf.cornerRadius = b->getHeight() * 0.5f;
+            }
         }
     }
 
@@ -143,6 +158,8 @@ private:
             &lfEmph,
             &hfEmph,
             &doubler,
-            &comp};
+            &comp,
+            &compPos,
+            &compLink};
     }
 };
