@@ -40,7 +40,7 @@ public:
         predelay.setLabel("Predelay");
         predelay.setTooltip("Predelay in ms of reverb");
         predelay.setValueToStringFunction([](float val)
-                                          { auto str = String(val, 0); str.append("ms", 2); return str; });
+                                          { auto str = String((int)val); str.append("ms", 2); return str; });
 
         addAndMakeVisible(reverb);
         reverbAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(v, "reverbType", reverb);
