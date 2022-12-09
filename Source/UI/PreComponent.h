@@ -9,14 +9,13 @@ struct PreComponent : Component,
 {
 
     PreComponent(strix::VolumeMeterSource &vs, AudioProcessorValueTreeState &v) : vts(v),
-                                                                                  grMeter(vs, vts.getRawParameterValue("comp"))
+                                                                                  grMeter(vs, strix::VolumeMeterComponent::Reduction, vts.getRawParameterValue("comp"))
     {
-
         for (auto c : getComps())
         {
             addAndMakeVisible(*c);
             if (auto k = dynamic_cast<Knob *>(c))
-                k->setColor(Colours::grey, Colours::antiquewhite);
+                k->setColor(Colour(BACKGROUND_COLOR), Colours::antiquewhite);
         }
 
         emphasisAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "stereoEmphasis", emphasis);
@@ -80,9 +79,7 @@ struct PreComponent : Component,
         //                               { return String(val * 10.0, 1); });
         // dist.setTooltip("A one-knob distortion pedal. Fully bypassed at 0.");
 
-        grMeter.setMeterType(strix::VolumeMeterComponent::Type::Reduction);
-        grMeter.setMeterLayout(strix::VolumeMeterComponent::Layout::Horizontal);
-        grMeter.setMeterColor(Colours::oldlace);
+        grMeter.meterColor = Colours::oldlace;
         addAndMakeVisible(grMeter);
 
         startTimerHz(30);
@@ -102,6 +99,9 @@ struct PreComponent : Component,
     {
         g.setColour(Colours::antiquewhite);
         g.drawRoundedRectangle(getLocalBounds().reduced(1).toFloat(), 5.f, 3.f);
+
+        float div = doubler.getRight() + (grMeter.getX() - doubler.getRight()) / 2;
+        g.fillRoundedRectangle(div - 1.5f, 5.f, 3.f, getHeight() - 5.f, 3.f);
         // for (auto *c : getComps())
         //     g.drawRect(c->getBounds());
     }
@@ -109,8 +109,9 @@ struct PreComponent : Component,
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(2);
-        auto compSection = bounds.removeFromRight(bounds.getWidth() * 0.25f);
+        auto compSection = bounds.removeFromRight(bounds.getWidth() * 0.263f);
         auto compSectW = compSection.getWidth();
+        grMeter.setBounds(compSection.removeFromLeft(compSectW / 3));
         auto w = bounds.getWidth();
         int chunk = w / 5;
         for (auto *c : getComps())
