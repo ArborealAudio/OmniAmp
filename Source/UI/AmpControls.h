@@ -339,19 +339,25 @@ struct AmpControls : Component, private Timer
     {
         auto bounds = getLocalBounds();
 
-        auto mb = bounds.removeFromTop(bounds.getHeight() * 0.7f);
-        auto w = mb.getWidth() / getKnobs().size();
+        auto mb = bounds.removeFromTop(bounds.getHeight() * 0.7f); // bounds becomes bottom section
+        auto w = mb.getWidth() / getKnobs().size(); // knob chunk
 
         for (auto &k : getKnobs())
+        {
             k->setBounds(mb.removeFromLeft(w).reduced(5));
+            k->setOffset(0, -5);
+        }
 
         auto hiGainBounds = bounds.removeFromLeft(w);
         hiGain.setSize(getWidth() * 0.07f, getHeight() * 0.15f);
         hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
 
-        auto modeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.25f);
-        auto subModeBounds = bounds.removeFromLeft(bounds.getWidth() * 0.25f);
-        auto powerBounds = bounds.reduced(w * 0.1);
+        // bounds is bottom w/ boost removed from left
+        auto botItemBounds = bounds.reduced(w * 0.5f, 0);
+        float third = botItemBounds.getWidth() / 3;
+        auto modeBounds = botItemBounds.removeFromLeft(third);
+        auto subModeBounds = botItemBounds.removeFromLeft(third);
+        auto powerBounds = botItemBounds.removeFromLeft(third);
 
         mode.setSize(getWidth() * 0.15f, getHeight() * 0.15f);
         mode.setCentrePosition(modeBounds.getCentreX(), modeBounds.getCentreY());
