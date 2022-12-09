@@ -85,7 +85,6 @@ target_link_libraries(Gamma
         BinaryData
         juce::juce_audio_utils
         juce::juce_dsp
-        juce::juce_opengl
         juce::juce_cryptography
         gin
         gin_gui
@@ -94,3 +93,9 @@ target_link_libraries(Gamma
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+if (NOT APPLE)
+target_link_libraries(Gamma
+    PRIVATE
+    juce::juce_opengl)
+endif()
