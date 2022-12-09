@@ -229,6 +229,8 @@ void GammaAudioProcessorEditor::resized()
             c->setBounds(topKnobs.removeFromLeft(knobFrac));
         else
             c->setBounds(knobsBottom.removeFromLeft(knobFrac));
+        if (auto *k = dynamic_cast<Knob*>(c))
+            k->setOffset(0, -c->getHeight() * 0.1f);
     }
 
     /* rest of UI */

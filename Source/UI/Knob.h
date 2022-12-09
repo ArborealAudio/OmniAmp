@@ -23,7 +23,7 @@ struct Knob : Slider
 
         setBufferedToImage(true);
     }
-    ~Knob()
+    ~Knob() override
     {
         setLookAndFeel(nullptr);
     }
@@ -84,6 +84,12 @@ struct Knob : Slider
         lnf.textColor = newTextColor;
     }
 
+    void setOffset(int xOffset, int yOffset)
+    {
+        lnf.xOffset = xOffset;
+        lnf.yOffset = yOffset;
+    }
+
     std::atomic<bool> autoGain = false;
 
 private:
@@ -92,11 +98,13 @@ private:
         Colour baseColor = Colours::antiquewhite, accentColor = Colours::grey, textColor = Colours::black;
         flags_t flags;
 
+        int xOffset = 0, yOffset = 0;
+
         std::unique_ptr<String> label = nullptr;
 
         std::function<String(float)> valueToString = nullptr;
 
-        std::atomic<bool> *autoGain;
+        std::atomic<bool> *autoGain = nullptr;
 
         KnobLookAndFeel(flags_t f) : flags(f)
         {
@@ -106,14 +114,13 @@ private:
         void drawRotarySlider(Graphics &g, int x, int y, int width, int height, float sliderPos,
                               const float rotaryStartAngle, const float rotaryEndAngle, Slider &slider) override
         {
-            // g.setFont(jlimit(12.f, 18.f, 0.1f * height)); /*try to set variable font height*/
             g.setFont(14.f);
 
-            auto drawCustomSlider = [&](/* bool drawTicks = false, bool drawShadow = false, bool drawArc = false */)
+            auto drawCustomSlider = [&]
             {
                 auto radius = (float)jmin(width / 2, height / 2) - 4.f;
                 auto centerX = (float)slider.getLocalBounds().getCentreX();
-                auto centerY = (float)slider.getLocalBounds().getCentreY();
+                auto centerY = (float)slider.getLocalBounds().getCentreY() + yOffset;
                 auto rx = centerX - radius;
                 auto ry = centerY - radius;
                 auto rw = radius * 2.f;
@@ -144,7 +151,7 @@ private:
                     Graphics sg(shadow);
                     Graphics hg(highlight);
                     sg.setColour(Colours::black.withAlpha(0.5f));
-                    hg.setColour(Colours::white.withAlpha(0.5f));
+                    hg.setColour(Colours::white.withAlpha(0.33f));
                     sg.fillEllipse(rx, ry, rw, rw);
                     hg.fillEllipse(rx, ry, rw, rw);
 
@@ -194,7 +201,7 @@ private:
 
                 if ((flags & DRAW_ARC) > 0)
                 {
-                    auto defaultVal = dynamic_cast<Knob *>(&slider)->getDefaultValue();
+                    auto defaultVal = static_cast<Knob *>(&slider)->getDefaultValue();
                     /* arc */
                     float arcStart = defaultVal == 0.f ? rotaryStartAngle : 0.f;
                     float arcAngle = defaultVal == 0.f ? angle : angle - 2.f * MathConstants<float>::pi;
@@ -209,24 +216,6 @@ private:
             height *= 0.75;
 
             drawCustomSlider();
-            // switch (type)
-            // {
-            // case Amp:
-            // {
-            //     drawCustomSlider(true, true, false);
-            //     break;
-            // }
-            // case Aux:
-            // {
-            //     drawCustomSlider(false, true, true);
-            //     break;
-            // }
-            // case Simple:
-            // {
-            //     drawCustomSlider(false, false, false);
-            //     break;
-            // }
-            // }
 
             /* label */
             g.setColour(accentColor);
@@ -235,12 +224,10 @@ private:
                 text = valueToString(slider.getValue());
             else if (label)
                 text = *label;
-            g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(height * 0.2), Justification::centred, 2);
+            g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(slider.getHeight() / 6), Justification::centred, 2);
         }
     };
-
     KnobLookAndFeel lnf;
     String label;
-
     float defaultValue = 0.f;
 };
