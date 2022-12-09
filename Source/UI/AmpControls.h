@@ -234,7 +234,7 @@ struct AmpControls : Component, private Timer
                 backgroundColor = Colour(XRAY);
                 break;
             }
-            secondaryColor = Colour(TOP_TRIM).contrasting(1.f);
+            secondaryColor = Colour(BACKGROUND_COLOR).contrasting(1.f);
             for (auto &k : getKnobs())
             {
                 k->setColor(Colours::antiquewhite, secondaryColor);
@@ -301,7 +301,7 @@ struct AmpControls : Component, private Timer
     void paint(Graphics &g) override
     {
         // g.setColour(backgroundColor);
-        ColourGradient grad(backgroundColor, getLocalBounds().getCentreX(), getLocalBounds().getCentreY(), Colour(TOP_TRIM), getWidth(), getHeight(), true);
+        ColourGradient grad(backgroundColor, getLocalBounds().getCentreX(), getLocalBounds().getCentreY(), Colour(BACKGROUND_COLOR), getWidth(), getHeight(), true);
         g.setGradientFill(grad);
         g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f);
         g.setColour(secondaryColor);
