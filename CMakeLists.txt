@@ -54,7 +54,7 @@ target_include_directories(Gamma PRIVATE "modules/chowdsp_wdf/include")
 juce_add_modules(
     "modules/gin/modules/gin"
     "modules/gin/modules/gin_gui"
-    "$ENV{HOME}/modules/Arbor_modules")
+    "modules/Arbor_modules")
 
 target_compile_definitions(Gamma
     PUBLIC
