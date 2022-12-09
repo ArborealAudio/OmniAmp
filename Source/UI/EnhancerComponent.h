@@ -60,19 +60,8 @@ struct EnhancerComponent : Component
     {
         auto bounds = getLocalBounds().reduced(1).toFloat();
 
-        // g.setColour(background.withMultipliedLightness(0.5));
-        // g.fillRoundedRectangle(bounds, 5.f);
         g.setColour(Colours::grey);
         g.drawRoundedRectangle(bounds, 5.f, 2.f);
-
-        // Image img(Image::PixelFormat::ARGB, bounds.getWidth(), bounds.getHeight(), true);
-        // Graphics img_g(img);
-
-        // mesh->drawWithin(img_g, bounds.reduced(1.f), RectanglePlacement::fillDestination, 0.7f);
-
-        // Blur::blurImage<1, true>(img);
-
-        // g.drawImage(img, bounds);
 
         g.setFont(getHeight() * 0.1f);
         g.setColour(Colours::white);
