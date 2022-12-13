@@ -48,6 +48,14 @@ struct PreComponent : Component,
                                         return str; });
         lfEmph.setTooltip("Adds or subtracts low-end before all saturation and compression, then an equal and opposite compensation after the saturation and compression. Useful for getting more saturation from the low-end without boosting it in volume.");
 
+        addAndMakeVisible(lfFreq);
+        lfFreq.outlineColor = Colours::white;
+        lfFreq.baseColor = Colours::white;
+
+        addAndMakeVisible(hfFreq);
+        hfFreq.outlineColor = Colours::white;
+        hfFreq.baseColor = Colours::white;
+
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "hfEmphasis", hfEmph);
         hfEmph.setDefaultValue(vts.getParameter("hfEmphasis")->getDefaultValue());
         hfEmph.setLabel("HF Emphasis");
@@ -135,6 +143,10 @@ struct PreComponent : Component,
                 b->lnf.cornerRadius = b->getHeight() * 0.5f;
             }
         }
+        lfFreq.setBounds(lfEmph.getBounds().translated(0, getHeight() * 0.5f).reduced(0, lfEmph.getHeight() * 0.25f));
+        lfFreq.cornerRadius = lfFreq.getHeight() * 0.5f;
+        hfFreq.setBounds(hfEmph.getBounds().translated(0, getHeight() * 0.5f).reduced(0, hfEmph.getHeight() * 0.25f));
+        hfFreq.cornerRadius = hfFreq.getHeight() * 0.5f;
     }
 
 private:
@@ -143,6 +155,7 @@ private:
     Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
 
     Knob emphasis{knobFlags}, doubler{knobFlags}, lfEmph{knobFlags}, hfEmph{knobFlags}, comp{knobFlags};
+    SimpleSlider lfFreq, hfFreq;
 
     LightButton midSide, compLink, compPos;
 
