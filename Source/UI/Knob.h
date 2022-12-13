@@ -1,17 +1,60 @@
 // Knob.h
 
 #pragma once
-#include "gin_gui/gin_gui.h"
+// #include "gin_gui/gin_gui.h"
+
+struct SimpleSlider : Slider
+{
+    SimpleSlider() : lnf(*this)
+    {
+        setLookAndFeel(&lnf);
+        setSliderStyle(Slider::SliderStyle::LinearHorizontal);
+        setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
+        setBufferedToImage(true);
+    }
+    ~SimpleSlider()
+    {
+        setLookAndFeel(nullptr);
+    }
+
+    Colour outlineColor, baseColor;
+    float cornerRadius = 0.f;
+
+    struct LNF : LookAndFeel_V4
+    {
+        LNF(SimpleSlider &s) : owner(s)
+        {}
+
+        void drawLinearSlider(Graphics &g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos,	const Slider::SliderStyle style, Slider &slider) override
+        {
+            auto bounds = slider.getLocalBounds().reduced(2).toFloat();
+            g.setColour(owner.outlineColor);
+            g.drawRoundedRectangle(bounds, owner.cornerRadius, 2.f);
+            Path fill;
+            fill.startNewSubPath(2, 2);
+            fill.addRoundedRectangle(Rectangle<float>(bounds.getX(), bounds.getY(), bounds.getWidth() * sliderPos, bounds.getHeight()), 0.f, owner.cornerRadius);
+            g.setColour(owner.baseColor);
+        }
+
+        void drawLinearSliderThumb 	(Graphics &g, int x, int y, int width, int height, float sliderPos,	float minSliderPos, float maxSliderPos, const Slider::SliderStyle style, Slider &slider) override
+        {
+        }
+
+        SimpleSlider &owner;
+    };
+
+    LNF lnf;
+};
 
 struct Knob : Slider
 {
     enum
     {
         DRAW_GRADIENT = 1,
-        DRAW_SHADOW = 1 << 2,
-        DRAW_ARC = 1 << 3,
-        DRAW_TICKS = 1 << 4,
-        REAR_KNOB = 1 << 5
+        DRAW_SHADOW = 1 << 1,
+        DRAW_ARC = 1 << 2,
+        DRAW_TICKS = 1 << 3,
+        REAR_KNOB = 1 << 4
     };
     typedef uint8_t flags_t;
 
