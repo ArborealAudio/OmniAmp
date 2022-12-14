@@ -9,11 +9,13 @@ struct ButtonLookAndFeel : LookAndFeel_V4
     void drawButtonBackground(Graphics &g, Button &button, const Colour &backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
     {
         g.setColour(Colours::white);
-        g.drawRoundedRectangle(button.getLocalBounds().reduced(3).toFloat(), cornerRadius, 1.f);
+        auto bounds = button.getLocalBounds().reduced(3).toFloat();
+        // bounds.setHeight(jmax(bounds.getWidth(), bounds.getHeight() * 0.33f));
+        g.drawRoundedRectangle(bounds, cornerRadius, 1.f);
         if (button.getToggleState())
         {
             g.setColour(Colours::white);
-            g.fillRoundedRectangle(button.getLocalBounds().reduced(3).toFloat(), cornerRadius);
+            g.fillRoundedRectangle(bounds, cornerRadius);
         }
     }
 

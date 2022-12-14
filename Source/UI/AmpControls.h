@@ -348,9 +348,9 @@ struct AmpControls : Component, private Timer
             k->setOffset(0, -5);
         }
 
-        auto hiGainBounds = bounds.removeFromLeft(w);
-        hiGain.setSize(getWidth() * 0.07f, getHeight() * 0.15f);
-        hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
+        hiGain.setBounds(bounds.removeFromLeft(w));
+        // hiGain.setSize(getWidth() * 0.07f, getHeight() * 0.15f);
+        // hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
 
         // bounds is bottom w/ boost removed from left
         auto botItemBounds = bounds.reduced(w * 0.5f, 0);
