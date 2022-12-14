@@ -1,9 +1,18 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(Gamma VERSION 0.6)
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9 CACHE INTERNAL "")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if (PRODUCTION_BUILD)
+    if (WIN32)
+        set(CMAKE_SYSTEM_VERSION 7 CACHE INTERNAL "")
+    elseif(APPLE)
+        set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE INTERNAL "")
+    endif()
+    set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "")
+endif()
+
+project(Gamma VERSION 0.6)
 
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
