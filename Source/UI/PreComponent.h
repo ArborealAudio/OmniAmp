@@ -48,13 +48,17 @@ struct PreComponent : Component,
                                         return str; });
         lfEmph.setTooltip("Adds or subtracts low-end before all saturation and compression, then an equal and opposite compensation after the saturation and compression. Useful for getting more saturation from the low-end without boosting it in volume.");
 
-        addAndMakeVisible(lfFreq);
+        lfFreqAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "lfEmphasisFreq", lfFreq);
         lfFreq.outlineColor = Colours::white;
-        lfFreq.baseColor = Colours::white;
+        lfFreq.baseColor = Colour(BACKGROUND_COLOR).withMultipliedLightness(2.f).withMultipliedSaturation(1.25f);
+        lfFreq.minValue = 30.0;
+        lfFreq.maxValue = 1800.0;
 
-        addAndMakeVisible(hfFreq);
+        hfFreqAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "hfEmphasisFreq", hfFreq);
         hfFreq.outlineColor = Colours::white;
-        hfFreq.baseColor = Colours::white;
+        hfFreq.baseColor = Colour(BACKGROUND_COLOR).withMultipliedLightness(2.f).withMultipliedSaturation(1.25f);
+        hfFreq.minValue = 1800.0;
+        hfFreq.maxValue = 18000.0;
 
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "hfEmphasis", hfEmph);
         hfEmph.setDefaultValue(vts.getParameter("hfEmphasis")->getDefaultValue());
@@ -75,10 +79,14 @@ struct PreComponent : Component,
         comp.setTooltip("An opto-style compressor, with program-dependent attack and release. Increasing values give more compression and sustain, and can also boost the volume going into the amp.");
 
         compLinkAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "compLink", compLink);
-        compLink.setButtonText("Stereo Link");
+        compLink.setButtonText("Link");
 
         compPosAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "compPos", compPos);
-        compPos.setButtonText("Comp Pos.");
+        compPos.setButtonText(compPos.getToggleState() ? "Post" : "Pre");
+        compPos.onStateChange = [&]
+        {
+            compPos.setButtonText(compPos.getToggleState() ? "Post" : "Pre");
+        };
 
         // distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "dist", dist);
         // dist.setDefaultValue(vts.getParameter("dist")->getDefaultValue());
@@ -93,7 +101,7 @@ struct PreComponent : Component,
         startTimerHz(30);
     }
 
-    ~PreComponent() { stopTimer(); }
+    ~PreComponent() override{ stopTimer(); }
 
     void timerCallback() override
     {
@@ -110,8 +118,6 @@ struct PreComponent : Component,
 
         float div = doubler.getRight() + (grMeter.getX() - doubler.getRight()) / 2;
         g.fillRoundedRectangle(div - 1.5f, 5.f, 3.f, getHeight() - 5.f, 3.f);
-        // for (auto *c : getComps())
-        //     g.drawRect(c->getBounds());
     }
 
     void resized() override
@@ -119,34 +125,51 @@ struct PreComponent : Component,
         auto bounds = getLocalBounds().reduced(2);
         auto compSection = bounds.removeFromRight(bounds.getWidth() * 0.263f);
         auto compSectW = compSection.getWidth();
-        grMeter.setBounds(compSection.removeFromLeft(compSectW / 3));
+        grMeter.setBounds(compSection.removeFromLeft(compSectW / 3).reduced(compSectW * 0.1f, 0));
         auto w = bounds.getWidth();
         int chunk = w / 5;
-        for (auto *c : getComps())
+        for (auto *c : getSelectComps(MidSide | StereoEmphasis | LFEmph | HFEmph | Doubler))
         {
-            if (auto *k = dynamic_cast<Knob*>(c))
+            if (c == &lfEmph)
             {
-                if (k == &comp)
-                    k->setBounds(compSection.removeFromTop(bounds.getHeight() * 0.75f));
-                else
-                    k->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f));
+                auto subBounds = bounds.removeFromLeft(chunk);
+                layoutComponents(getSelectComps(LFEmph | LFFreq), subBounds, true, 0.75f);
+                lfFreq.cornerRadius = lfFreq.getHeight() * 0.5f;
             }
-            else if (c == &midSide)
+            else if (c == &hfEmph)
             {
-                c->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f, bounds.getHeight() * 0.25f));
-                midSide.lnf.cornerRadius = c->getHeight() * 0.5f;
+                auto subBounds = bounds.removeFromLeft(chunk);
+                layoutComponents(getSelectComps(HFEmph | HFFreq), subBounds, true, 0.75f);
+                hfFreq.cornerRadius = hfFreq.getHeight() * 0.5f;
             }
-            else if (c == &compPos || c == &compLink)
-            {
-                c->setBounds(compSection.removeFromLeft(compSectW * 0.5f).reduced(compSectW * 0.05f, 0));
-                auto *b = (LightButton *)c;
-                b->lnf.cornerRadius = b->getHeight() * 0.5f;
-            }
+            else
+                c->setBounds(bounds.removeFromLeft(chunk));
+            // if (auto *k = dynamic_cast<Knob *>(c))
+            // {
+            //     if (k == &comp)
+            //     {
+            //         k->setBounds(compSection.removeFromTop(bounds.getHeight() * 0.75f));
+            //         compPos.setBounds(compSection.removeFromLeft(compSectW * 0.33f).reduced(compSectW * 0.05f, 0));
+            //         compLink.setBounds(compSection.removeFromRight(compSectW * 0.33f).reduced(compSectW * 0.05f, 0));
+            //         compPos.lnf.cornerRadius = compPos.getHeight() * 0.5f;
+            //         compLink.lnf.cornerRadius = compLink.getHeight() * 0.5f;
+            //     }
+            //     else
+            //         k->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f));
+            // }
+            // else if (c == &midSide)
+            // {
+            //     c->setBounds(bounds.removeFromLeft(chunk * 0.75f).reduced(chunk * 0.1f, bounds.getHeight() * 0.25f));
+            //     midSide.lnf.cornerRadius = c->getHeight() * 0.5f;
+            // }
         }
-        lfFreq.setBounds(lfEmph.getBounds().translated(0, getHeight() * 0.5f).reduced(0, lfEmph.getHeight() * 0.25f));
-        lfFreq.cornerRadius = lfFreq.getHeight() * 0.5f;
-        hfFreq.setBounds(hfEmph.getBounds().translated(0, getHeight() * 0.5f).reduced(0, hfEmph.getHeight() * 0.25f));
-        hfFreq.cornerRadius = hfFreq.getHeight() * 0.5f;
+
+        // lfFreq.setBounds(lfEmph.getBounds().translated(0, lfEmph.getHeight() * 0.33f).reduced(0, lfEmph.getHeight() * 0.35f));
+        // lfEmph.setBounds(lfEmph.getBounds().translated(0, -lfEmph.getHeight() * 0.25f));
+        // lfFreq.cornerRadius = lfFreq.getHeight() * 0.5f;
+        // hfFreq.setBounds(hfEmph.getBounds().translated(0, hfEmph.getHeight() * 0.33f).reduced(0, hfEmph.getHeight() * 0.35f));
+        // hfEmph.setBounds(hfEmph.getBounds().translated(0, -hfEmph.getHeight() * 0.25f));
+        // hfFreq.cornerRadius = hfFreq.getHeight() * 0.5f;
     }
 
 private:
@@ -159,21 +182,49 @@ private:
 
     LightButton midSide, compLink, compPos;
 
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> emphasisAttach, doublerAttach, lfAttach, hfAttach, compAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> emphasisAttach, doublerAttach, lfAttach, lfFreqAttach, hfAttach, hfFreqAttach, compAttach;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> msAttach, compLinkAttach, compPosAttach;
 
     strix::VolumeMeterComponent grMeter;
 
-    std::vector<Component *> getComps()
+    enum
+    {
+        MidSide = 1,
+        StereoEmphasis = 1 << 1,
+        LFEmph = 1 << 2,
+        LFFreq = 1 << 3,
+        HFEmph = 1 << 4,
+        HFFreq = 1 << 5,
+        Doubler = 1 << 6,
+        Comp = 1 << 7,
+        CompPos = 1 << 8,
+        CompLink = 1 << 9
+    };
+
+    std::vector<Component *> getComps() // returns top knobs & buttons
     {
         return {
             &midSide,
             &emphasis,
             &lfEmph,
+            &lfFreq,
             &hfEmph,
+            &hfFreq,
             &doubler,
             &comp,
             &compPos,
             &compLink};
+    }
+
+    std::vector<Component *> getSelectComps(uint16_t mask) // get a vector of select components using a bitmask
+    {
+        auto c = getComps();
+        std::vector<Component *> out;
+        for (size_t i = 0; i < c.size(); ++i)
+        {
+            if ((1 << i) & mask)
+                out.emplace_back(c[i]);
+        }
+        return out;
     }
 };

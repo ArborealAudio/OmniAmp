@@ -14,6 +14,50 @@ static const Typeface::Ptr getCustomFont()
     return typeface;
 }
 
+/**
+ * will lay out components in vector-wise order, either horizontally or vertically across the bounds provided.
+ * @param components should be a pointer to a vector of components
+ * @param vertical by default stuff will be laid out horizontally
+ * @param proportion a skew value, < 1 will skew every component after initial component in the vector by this fraction of init component's width; > 1 will skew components after initial component to be larger than initial component by said factor
+ * @param padding multiplier of each component's width to be applied as padding
+ */
+static void layoutComponents(std::vector<Component*> comp, Rectangle<int>& bounds, bool vertical = false, float proportion = 1.f, float padding = 1.f)
+{
+    size_t numComp = comp.size();
+    assert(numComp != 0);
+    assert(bounds.getWidth() != 0);
+    assert((bounds.getWidth() / numComp) > 1);
+
+    int chunk = vertical ? bounds.getHeight() / numComp : bounds.getWidth() / numComp;
+    
+    if (!vertical)
+    {
+        {
+            auto b = bounds.removeFromLeft(chunk) * (1.f / proportion);
+            auto size = b.getWidth();
+            comp[0]->setBounds(b);
+        }
+        for (size_t i = 1; i < numComp; ++i)
+        {
+            auto b = bounds.removeFromLeft(chunk) * proportion;
+            auto size = b.getWidth();
+            comp[i]->setBounds(b);
+        }
+    }
+    else
+    {
+        {
+            auto b = bounds.removeFromTop(chunk);
+            comp[0]->setBounds(b.withSizeKeepingCentre(b.getWidth() * (1.f / proportion), b.getHeight() * (1.f / proportion)));
+        }
+        for (size_t i = 1; i < numComp; ++i)
+        {
+            auto b = bounds.removeFromTop(chunk);
+            comp[i]->setBounds(b.withSizeKeepingCentre(b.getWidth() * proportion, b.getHeight() * proportion));
+        }
+    }
+}
+
 static void writeConfigFile(const String& property, int value)
 {
     File config {File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
