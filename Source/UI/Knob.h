@@ -1,7 +1,6 @@
 // Knob.h
 
 #pragma once
-// #include "gin_gui/gin_gui.h"
 
 struct SimpleSlider : Slider
 {
@@ -10,6 +9,7 @@ struct SimpleSlider : Slider
         setLookAndFeel(&lnf);
         setSliderStyle(Slider::SliderStyle::LinearHorizontal);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
+        setSliderSnapsToMousePosition(false);
         setBufferedToImage(true);
     }
     ~SimpleSlider()
@@ -17,8 +17,19 @@ struct SimpleSlider : Slider
         setLookAndFeel(nullptr);
     }
 
+    double proportionOfLengthToValue(double proportion) override
+    {
+        return mapToLog10(proportion, minValue, maxValue);
+    }
+
+    double valueToProportionOfLength(double value) override
+    {
+        return mapFromLog10(value, minValue, maxValue);
+    }
+
     Colour outlineColor, baseColor;
     float cornerRadius = 0.f;
+    double minValue = 0.0, maxValue = 0.0;
 
     struct LNF : LookAndFeel_V4
     {
@@ -31,13 +42,25 @@ struct SimpleSlider : Slider
             g.setColour(owner.outlineColor);
             g.drawRoundedRectangle(bounds, owner.cornerRadius, 2.f);
             Path fill;
-            fill.startNewSubPath(2, 2);
-            fill.addRoundedRectangle(Rectangle<float>(bounds.getX(), bounds.getY(), bounds.getWidth() * sliderPos, bounds.getHeight()), 0.f, owner.cornerRadius);
+            fill.addRoundedRectangle(4, 4, sliderPos, bounds.getHeight() - 4, owner.cornerRadius, owner.cornerRadius, true, false, true, false);
             g.setColour(owner.baseColor);
-        }
+            g.fillPath(fill);
 
-        void drawLinearSliderThumb 	(Graphics &g, int x, int y, int width, int height, float sliderPos,	float minSliderPos, float maxSliderPos, const Slider::SliderStyle style, Slider &slider) override
-        {
+            g.setColour(owner.outlineColor);
+            String valStr;
+            auto val = slider.getValue();
+            if (val > 1000.0)
+            {
+                valStr = String(val / 1000, 2);
+                valStr.append(" kHz", 4);
+            }
+            else
+            {
+                valStr = String((int)val);
+                valStr.append(" Hz", 3);
+            }
+            
+            g.drawFittedText(valStr, bounds.reduced(width * 0.33f, height * 0.1f).toNearestInt(), Justification::centred, 1);
         }
 
         SimpleSlider &owner;
