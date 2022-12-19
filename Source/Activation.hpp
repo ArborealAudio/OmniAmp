@@ -4,7 +4,7 @@
 #pragma once
 #include <future>
 
-#if BETA_BUILD
+#if BETA_BUILD | DEV_BUILD
 
 #define KEY "gamma-beta-1108"
 
