@@ -43,7 +43,7 @@ struct ActivationComponent : Component
 {
     ActivationComponent()
     {
-        future = std::async([&]
+        future = std::async(std::launch::deferred, [&]
                             { checkSite(); });
 
         addAndMakeVisible(editor);
