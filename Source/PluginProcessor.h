@@ -10,16 +10,16 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-#if NDEBUG
-#define USE_SIMD 1
-#else // make sure DBG builds are labeled non-production
-#ifndef PRODUCTION_BUILD
-#define PRODUCTION_BUILD 0
-#endif
-#endif
+    #if NDEBUG
+        #define USE_SIMD 1
+    #else // make sure DBG builds are labeled non-production
+        #ifndef PRODUCTION_BUILD
+            #define PRODUCTION_BUILD 0
+        #endif
+    #endif
 #endif
 #ifndef PRODUCTION_BUILD // use this to control production build parameter
-#define PRODUCTION_BUILD 1
+    #define PRODUCTION_BUILD 1
 #endif
 
 #include <JuceHeader.h>
@@ -28,8 +28,8 @@
 #include "Presets/PresetManager.h"
 #include "UI/UI.h"
 #include "UI/SineWave.hpp"
-#if PRODUCTION_BUILD
-#define BETA_BUILD 1
+#if ! PRODUCTION_BUILD
+    #define DEV_BUILD 1
 #endif
 #include "Activation.hpp"
 
@@ -139,9 +139,6 @@ private:
 
     dsp::NoiseGate<double> gateProc;
 
-    Processors::Guitar guitar;
-    Processors::Bass bass;
-    Processors::Channel channel;
     std::array<dsp::Oversampling<double>, 2> oversample{dsp::Oversampling<double>(2),
                                                         dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR)};
     size_t os_index = 0;
@@ -149,10 +146,16 @@ private:
     AudioBuffer<double> doubleBuffer;
 
 #if USE_SIMD
+    Processors::Guitar<vec> guitar;
+    Processors::Bass<vec> bass;
+    Processors::Channel<vec> channel;
     Processors::Enhancer<vec, Processors::EnhancerType::HF> hfEnhancer{apvts};
     Processors::Enhancer<vec, Processors::EnhancerType::LF> lfEnhancer{apvts};
     Processors::FDNCab<vec> cab;
 #else
+    Processors::Guitar<double> guitar;
+    Processors::Bass<double> bass;
+    Processors::Channel<double> channel;
     Processors::Enhancer<double, Processors::EnhancerType::HF> hfEnhancer{apvts};
     Processors::Enhancer<double, Processors::EnhancerType::LF> lfEnhancer{apvts};
     Processors::FDNCab<double> cab;

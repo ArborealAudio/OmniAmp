@@ -74,7 +74,7 @@ namespace Processors
         }
 
         template <typename Block, typename T>
-        inline void clip(Block& block, T pLim, T nLim)
+        inline void clip(Block &block, T pLim, T nLim)
         {
             for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
                 clip(block.getChannelPointer(ch), block.getNumSamples(), pLim, nLim);
@@ -149,7 +149,7 @@ namespace Processors
             apvts.removeParameterListener("compPos", this);
         }
 
-        void parameterChanged(const String &parameterID, float newValue) override
+        void parameterChanged(const String &parameterID, float) override
         {
             if (parameterID == "comp" || parameterID == "compPos")
                 comp.setComp(*p_comp);
@@ -234,6 +234,7 @@ namespace Processors
         Pentode<double> pentode;
 #endif
         Preamp preamp;
+
         strix::FloatParameter *inGain, *outGain, *p_comp, *dist;
         strix::BoolParameter *inGainAuto, *outGainAuto, *hiGain, *linked, *eqAutoGain;
         double lastInGain, lastOutGain;
@@ -245,17 +246,15 @@ namespace Processors
         dsp::ProcessSpec lastSpec;
     };
 
+    template <typename T>
     struct Guitar : Processor
     {
         Guitar(AudioProcessorValueTreeState &a, strix::VolumeMeterSource &s) : Processor(a, ProcessorType::Guitar, s)
         {
             guitarMode = dynamic_cast<strix::ChoiceParameter *>(apvts.getParameter("guitarMode"));
             currentType = static_cast<GuitarMode>(guitarMode->getIndex());
-#if USE_SIMD
-            toneStack = std::make_unique<ToneStackNodal<vec>>(eqCoeffs);
-#else
-            toneStack = std::make_unique<ToneStackNodal<double>>(eqCoeffs);
-#endif
+            toneStack = std::make_unique<ToneStackNodal<T>>(eqCoeffs);
+
             gtrPre.hiGain = hiGain;
             gtrPre.type = currentType;
             triode.resize(4);
@@ -292,16 +291,16 @@ namespace Processors
             switch (currentType)
             {
             case GammaRay:
-                eqCoeffs = (ToneStackNodal<vec>::Coeffs((vec)0.25e-9, (vec)25e-9, (vec)22e-9, (vec)300e3, (vec)1e6, (vec)20e3, (vec)65e3));
+                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.25e-9, (T)25e-9, (T)22e-9, (T)300e3, (T)1e6, (T)20e3, (T)65e3));
                 break;
             case Sunbeam:
-                eqCoeffs = (ToneStackNodal<vec>::Coeffs((vec)0.25e-9, (vec)15e-9, (vec)250e-9, (vec)300e3, (vec)400e3, (vec)1e3, (vec)20e3));
+                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.25e-9, (T)15e-9, (T)250e-9, (T)300e3, (T)400e3, (T)1e3, (T)20e3));
                 break;
             case Moonbeam:
-                eqCoeffs = (ToneStackNodal<vec>::Coeffs((vec)0.25e-9, (vec)20e-9, (vec)50e-9, (vec)300e3, (vec)500e3, (vec)15e3, (vec)12e3));
+                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.25e-9, (T)20e-9, (T)50e-9, (T)300e3, (T)500e3, (T)15e3, (T)12e3));
                 break;
             case XRay:
-                eqCoeffs = (ToneStackNodal<vec>::Coeffs((vec)0.5e-9, (vec)22e-9, (vec)22e-9, (vec)250e3, (vec)1e6, (vec)25e3, (vec)33e3));
+                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.5e-9, (T)22e-9, (T)22e-9, (T)250e3, (T)1e6, (T)25e3, (T)33e3));
                 break;
             }
 
@@ -429,13 +428,13 @@ namespace Processors
             }
         }
 
-        template <typename T>
-        void processBlock(dsp::AudioBlock<T> &block)
+        template <typename FloatType>
+        void processBlock(dsp::AudioBlock<FloatType> &block)
         {
-            T gain_raw = jmap(inGain->get(), 1.f, 8.f);
-            T out_raw = jmap(outGain->get(), 1.f, 8.f);
+            FloatType gain_raw = jmap(inGain->get(), 1.f, 8.f);
+            FloatType out_raw = jmap(outGain->get(), 1.f, 8.f);
 
-            T autoGain = 1.0;
+            FloatType autoGain = 1.0;
 
             if (!*apvts.getRawParameterValue("compPos"))
                 comp.processBlock(block, *p_comp, *linked);
@@ -494,26 +493,20 @@ namespace Processors
         strix::ChoiceParameter *guitarMode;
         std::atomic<bool> ampChanged = false;
 
-        ToneStackNodal<vec>::Coeffs eqCoeffs;
+        typename ToneStackNodal<T>::Coeffs eqCoeffs;
 
-#if USE_SIMD
-        GuitarPreFilter<vec> gtrPre;
-#else
-        GuitarPreFilter<double> gtrPre;
-#endif
+        GuitarPreFilter<T> gtrPre;
     };
 
+    template <typename T>
     struct Bass : Processor
     {
         Bass(AudioProcessorValueTreeState &a, strix::VolumeMeterSource &s) : Processor(a, ProcessorType::Bass, s)
         {
             bassMode = dynamic_cast<strix::ChoiceParameter *>(apvts.getParameter("bassMode"));
             currentType = static_cast<BassMode>(bassMode->getIndex());
-#if USE_SIMD
-            toneStack = std::make_unique<ToneStackNodal<vec>>(eqCoeffs);
-#else
-            toneStack = std::make_unique<ToneStackNodal<double>>(eqCoeffs);
-#endif
+            toneStack = std::make_unique<ToneStackNodal<T>>(eqCoeffs);
+
             preFilter.hiGain = hiGain;
             preFilter.type = currentType;
             triode.resize(4);
@@ -550,13 +543,13 @@ namespace Processors
             switch (currentType)
             {
             case Cobalt:
-                eqCoeffs = ToneStackNodal<vec>::Coeffs((vec)0.5e-9, (vec)10e-9, (vec)15e-9, (vec)250e3, (vec)0.5e6, (vec)100e3, (vec)200e3);
+                eqCoeffs = typename ToneStackNodal<T>::Coeffs((T)0.5e-9, (T)10e-9, (T)15e-9, (T)250e3, (T)0.5e6, (T)100e3, (T)200e3);
                 break;
             case Emerald:
-                eqCoeffs = ToneStackNodal<vec>::Coeffs((vec)0.45e-9, (vec)12e-9, (vec)10e-9, (vec)500e3, (vec)5e6, (vec)50e3, (vec)150e3);
+                eqCoeffs = typename ToneStackNodal<T>::Coeffs((T)0.45e-9, (T)12e-9, (T)10e-9, (T)500e3, (T)5e6, (T)50e3, (T)150e3);
                 break;
             case Quartz:
-                eqCoeffs = ToneStackNodal<vec>::Coeffs((vec)0.6e-9, (vec)8e-9, (vec)12e-9, (vec)250e3, (vec)0.5e6, (vec)100e3, (vec)200e3);
+                eqCoeffs = typename ToneStackNodal<T>::Coeffs((T)0.6e-9, (T)8e-9, (T)12e-9, (T)250e3, (T)0.5e6, (T)100e3, (T)200e3);
                 break;
             }
 
@@ -657,13 +650,13 @@ namespace Processors
             }
         }
 
-        template <typename T>
-        void processBlock(dsp::AudioBlock<T> &block)
+        template <typename FloatType>
+        void processBlock(dsp::AudioBlock<FloatType> &block)
         {
-            T gain_raw = jmap(inGain->get(), 1.f, 8.f);
-            T out_raw = jmap(outGain->get(), 1.f, 8.f);
+            FloatType gain_raw = jmap(inGain->get(), 1.f, 8.f);
+            FloatType out_raw = jmap(outGain->get(), 1.f, 8.f);
 
-            T autoGain = 1.0;
+            FloatType autoGain = 1.0;
 
             if (!*apvts.getRawParameterValue("compPos"))
                 comp.processBlock(block, *p_comp, *linked);
@@ -725,15 +718,12 @@ namespace Processors
     private:
         strix::ChoiceParameter *bassMode = nullptr;
         BassMode currentType;
-#if USE_SIMD
-        ToneStackNodal<vec>::Coeffs eqCoeffs;
-        BassPreFilter<vec> preFilter;
-#else
-        ToneStackNodal<double>::Coeffs eqCoeffs;
-#endif
+        typename ToneStackNodal<T>::Coeffs eqCoeffs;
+        BassPreFilter<T> preFilter;
         std::atomic<bool> ampChanged = false;
     };
 
+    template <typename T>
     struct Channel : Processor
     {
         Channel(AudioProcessorValueTreeState &a, strix::VolumeMeterSource &s) : Processor(a, ProcessorType::Channel, s)
@@ -843,14 +833,14 @@ namespace Processors
             setEQAutoGain();
         }
 
-        template <typename T>
-        void processBlock(dsp::AudioBlock<T> &block)
+        template <typename FloatType>
+        void processBlock(dsp::AudioBlock<FloatType> &block)
         {
-            double gain_raw = jmap(inGain->get(), 1.f, 4.f);
-            double out_raw = jmap(outGain->get(), 1.f, 4.f);
+            FloatType gain_raw = jmap(inGain->get(), 1.f, 4.f);
+            FloatType out_raw = jmap(outGain->get(), 1.f, 4.f);
             currentType = (ChannelMode)channelMode->getIndex();
 
-            double autoGain = 1.0;
+            FloatType autoGain = 1.0;
 
             if (!*apvts.getRawParameterValue("compPos"))
                 comp.processBlock(block, *p_comp, *linked);
@@ -867,7 +857,7 @@ namespace Processors
             if (*inGain > 0.f)
             {
                 setPreamp(*inGain);
-                strix::SmoothGain<vec>::applySmoothGain(processBlock, gain_raw, lastInGain);
+                strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
                 triode[0].process(processBlock);
                 if (*hiGain)
                     triode[1].process(processBlock);
@@ -879,12 +869,12 @@ namespace Processors
             processFilters(processBlock);
 
             if (*eqAutoGain)
-                autoGain *= getEQAutoGain();
+                autoGain *= autoGain_m;
 
             if (*outGain > 0.f)
             {
                 setPoweramp(*outGain);
-                strix::SmoothGain<vec>::applySmoothGain(processBlock, out_raw, lastOutGain);
+                strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
                 pentode.processBlockClassB(processBlock);
             }
 
@@ -905,11 +895,7 @@ namespace Processors
     private:
         strix::ChoiceParameter *channelMode;
         ChannelMode currentType;
-#if USE_SIMD
-        dsp::IIR::Filter<vec> low, mid, hi;
-#else
-        dsp::IIR::Filter<double> low, mid, hi;
-#endif
+        dsp::IIR::Filter<T> low, mid, hi;
         double lowGain = 0.0, midGain = 0.0, trebGain = 0.0;
 
         std::atomic<bool> updateFilters = false;
@@ -958,8 +944,6 @@ namespace Processors
                 autoGain_m *= 1.0 / h_mag;
             }
         }
-
-        inline double getEQAutoGain() noexcept { return autoGain_m; }
     };
 
 } // namespace Processors

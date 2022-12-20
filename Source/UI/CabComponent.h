@@ -2,8 +2,9 @@
 
 #pragma once
 
-class CabsComponent : public Component, private Timer
+struct CabsComponent : Component, AudioProcessorValueTreeState::Listener
 {
+private:
     struct Cab : DrawableButton
     {
         Cab(const String &buttonName, ButtonStyle buttonStyle)
@@ -42,9 +43,9 @@ class CabsComponent : public Component, private Timer
                                       downSVG.get(), overOnSVG.get());
         }
 
-        void paint(Graphics &g) override
-        {
-        }
+        // void paint(Graphics &g) override
+        // {
+        // }
 
     private:
         /* internal svg that is passed in */
@@ -53,50 +54,120 @@ class CabsComponent : public Component, private Timer
         Colour color;
     };
 
-    std::array<Cab, 3> cab{{{Cab("2x12", DrawableButton::ButtonStyle::ImageFitted)},
-                            {Cab("4x12", DrawableButton::ButtonStyle::ImageFitted)},
-                            {Cab("6x10", DrawableButton::ButtonStyle::ImageFitted)}}};
+    struct MicComponent : Component
+    {
+        MicComponent(AudioProcessorValueTreeState &a) : apvts(a)
+        {
+            micPos = static_cast<strix::FloatParameter *>(a.getParameter("cabMicPosX"));
+            micDepth = static_cast<strix::FloatParameter *>(a.getParameter("cabMicPosZ"));
+        }
 
-    std::atomic<float> *cabType;
-    int lastType = 0;
+        void paint(Graphics &g) override
+        {
+            auto bounds = getLocalBounds().reduced(2);
+            g.setColour(Colours::black.withAlpha(0.25f));
+            g.fillRoundedRectangle(bounds.toFloat(), 5.f);
 
+            const float pointWidth = 10.f;
+
+            Rectangle<float> micPoint(posX, posY, pointWidth, pointWidth);
+            g.setColour(Colours::white);
+            g.fillEllipse(micPoint);
+        }
+
+        void mouseDrag(const MouseEvent &event) override
+        {
+            if (event.eventComponent == this)
+            {
+                auto x = event.position.getX();
+                auto y = event.position.getY();
+
+                auto bounds = getLocalBounds().reduced(2);
+
+                posX = x;
+                posY = y;
+
+                apvts.getParameterAsValue("cabMicPosX") = posX / bounds.getWidth();
+                apvts.getParameterAsValue("cabMicPosZ") = posY / bounds.getHeight();
+
+                posX = jlimit(7.f, bounds.getWidth() - 12.f, posX);
+                posY = jlimit(7.f, bounds.getHeight() - 12.f, posY);
+
+                repaint();
+            }
+        }
+
+        void mouseDoubleClick(const MouseEvent &event) override
+        {
+            if (event.eventComponent == this)
+            {
+                apvts.getParameterAsValue("cabMicPosX") = 0.5f;
+                apvts.getParameterAsValue("cabMicPosZ") = 1.f;
+                auto bounds = getLocalBounds().reduced(2);
+                posX = bounds.getWidth() * micPos->get();
+                posY = bounds.getHeight() * micDepth->get();
+                repaint();
+            }
+        }
+
+        void resized() override
+        {
+            auto bounds = getLocalBounds().reduced(2);
+            posX = bounds.getWidth() * micPos->get();
+            posY = bounds.getHeight() * micDepth->get();
+        }
+
+    private:
+
+        strix::FloatParameter *micPos, *micDepth;
+        AudioProcessorValueTreeState &apvts;
+
+        float posX = 0.f, posY = 0.f;
+    };
+
+    ChoiceMenu menu;
+    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> menuAttach;
+
+    std::unique_ptr<Drawable> cab_img;
+
+    MicComponent micComp;
+
+    strix::ChoiceParameter *cabType;
+
+    AudioProcessorValueTreeState &apvts;
 public:
     /**
      * @param type pointer to type parameter
      */
-    CabsComponent(std::atomic<float> *type) : cabType(type)
+    CabsComponent(AudioProcessorValueTreeState &a) : menu(a.getParameter("cabType")->getAllValueStrings()), micComp(a), apvts(a)
     {
-        addAndMakeVisible(cab[0]);
-        cab[0].setDrawable(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize);
-        cab[0].setColor(Colours::olivedrab);
-        cab[0].onClick = [&]
-        {
-            auto state = cab[0].getToggleState();
-            setState(state ? 1 : 0);
-            if (cabChanged)
-                cabChanged(state);
-        };
+        apvts.addParameterListener("cabType", this);
 
-        addAndMakeVisible(cab[1]);
-        cab[1].setDrawable(BinaryData::_4x12_svg, BinaryData::_4x12_svgSize);
-        cab[1].setColor(Colours::cadetblue);
-        cab[1].onClick = [&]
-        { setState(cab[1].getToggleState() ? 2 : 0); if (cabChanged) cabChanged(cab[1].getToggleState() ? 2 : 0); };
+        cabType = static_cast<strix::ChoiceParameter*>(apvts.getParameter("cabType"));
 
-        addAndMakeVisible(cab[2]);
-        cab[2].setDrawable(BinaryData::_6x10_svg, BinaryData::_6x10_svgSize);
-        cab[2].setColor(Colours::chocolate);
-        cab[2].onClick = [&]
-        { setState(cab[2].getToggleState() ? 3 : 0); if (cabChanged) cabChanged(cab[2].getToggleState() ? 3 : 0); };
+        addAndMakeVisible(menu);
+        menuAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "cabType", menu);
+
+        addAndMakeVisible(micComp);
+
+        setState();
 
         setBufferedToImage(true);
-
-        startTimerHz(15);
     }
 
     ~CabsComponent()
     {
-        stopTimer();
+        apvts.removeParameterListener("cabType", this);
+        cabType = nullptr;
+    }
+
+    void parameterChanged(const String &paramID, float) override
+    {
+        if (paramID == "cabType")
+        {
+            setState();
+            repaint();
+        }
     }
 
     void paint(Graphics &g) override
@@ -104,51 +175,52 @@ public:
         auto bounds = getLocalBounds().reduced(2).toFloat();
         g.setColour(Colours::beige);
         g.drawRoundedRectangle(bounds, 5.f, 3.f);
+
+        auto img_bounds = bounds.removeFromLeft(bounds.getWidth() * 0.33f).reduced(bounds.getWidth() * 0.1f);
+
+        g.setColour(Colours::darkgrey);
+        g.fillRoundedRectangle(img_bounds.toFloat().expanded(img_bounds.getWidth() * 0.2f), 5.f);
+
+        if (cab_img)
+            cab_img->drawWithin(g, img_bounds, RectanglePlacement::centred, 1.f);
     }
 
-    /// @brief function for setting new parameter pointers if need be
-    /// @param cabType pointer to cab type param
-    void setStatePointers(std::atomic<float> *cabType)
+    /**
+     * @param newState if -1 (default), will read from param value. Otherwise, will override param value and set it from this function
+    */
+    void setState(int newState = -1)
     {
-        this->cabType = cabType;
-    }
+        auto state = cabType->getIndex();
+        if (newState != -1)
+            state = newState;
 
-    void setState(int state)
-    {
-        for (int i = 0; i < 3; ++i)
+        switch (state)
         {
-            if (i + 1 == state)
-            {
-                cab[i].setToggleState(true, NotificationType::dontSendNotification);
-            }
-            else
-            {
-                cab[i].setToggleState(false, NotificationType::dontSendNotification);
-            }
+        case 1:
+            cab_img = Drawable::createFromImageData(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize);
+            cab_img->replaceColour(Colours::transparentBlack, Colours::olivedrab.withAlpha(0.5f));
+            break;
+        case 2:
+            cab_img = Drawable::createFromImageData(BinaryData::_4x12_svg, BinaryData::_4x12_svgSize);
+            cab_img->replaceColour(Colours::transparentBlack, Colours::cadetblue.withAlpha(0.5f));
+            break;
+        case 3:
+            cab_img = Drawable::createFromImageData(BinaryData::_6x10_svg, BinaryData::_6x10_svgSize);
+            cab_img->replaceColour(Colours::transparentBlack, Colours::chocolate.withAlpha(0.5f));
+            break;
+        default:
+            cab_img = nullptr;
+            break;
         }
 
-        lastType = *cabType;
+        if (newState != -1)
+            apvts.getParameterAsValue("cabType") = newState;
     }
 
     void resized() override
     {
-        auto bounds = getLocalBounds();
-        auto third = (float)bounds.getWidth() / 3.f;
+        menu.setBounds(getLocalBounds().removeFromTop(getHeight() * 0.35f).removeFromRight(getWidth() * 0.5f).reduced(20, 5));
 
-        for (int i = 0; i < 3; ++i)
-        {
-            if (i < 2)
-                cab[i].setBounds(bounds.removeFromLeft(third));
-            else
-                cab[i].setBounds(bounds);
-        }
+        micComp.setBounds(getLocalBounds().removeFromBottom(getHeight() * 0.65f).removeFromRight(getWidth() * 0.5f));
     }
-
-    void timerCallback() override
-    {
-        if (lastType != (int)*cabType)
-            setState((int)*cabType);
-    }
-
-    std::function<void(int)> cabChanged;
 };
