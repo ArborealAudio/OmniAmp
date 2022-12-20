@@ -236,7 +236,10 @@ struct AVTriode : PreampProcessor
         {
             auto in = block.getChannelPointer(ch);
 
-            processSamples<type>(in, ch, block.getNumSamples(), bias.first, bias.second);
+            if (type == B)
+                processSamples<true>(in, ch, block.getNumSamples(), bias.first, bias.second);
+            else
+                processSamples<false>(in, ch, block.getNumSamples(), bias.first, bias.second);
         }
     }
 #endif
