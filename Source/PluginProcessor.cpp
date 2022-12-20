@@ -43,7 +43,7 @@ GammaAudioProcessor::GammaAudioProcessor()
     apvts.addParameterListener("bass", this);
     apvts.addParameterListener("mode", this);
     apvts.addParameterListener("dist", this);
-    apvts.addParameterListener("cabType", this);
+    // apvts.addParameterListener("cabType", this);
     // apvts.addParameterListener("reverbType", this);
     // apvts.addParameterListener("roomDecay", this);
     // apvts.addParameterListener("roomSize", this);
@@ -61,7 +61,7 @@ GammaAudioProcessor::~GammaAudioProcessor()
     apvts.removeParameterListener("bass", this);
     apvts.removeParameterListener("mode", this);
     apvts.removeParameterListener("dist", this);
-    apvts.removeParameterListener("cabType", this);
+    // apvts.removeParameterListener("cabType", this);
     // apvts.removeParameterListener("reverbType", this);
     // apvts.removeParameterListener("roomDecay", this);
     // apvts.removeParameterListener("roomSize", this);
@@ -179,7 +179,6 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     hfEnhancer.prepare(spec);
 
     cab.prepare(spec);
-    cab.setCabType((Processors::CabType)apvts.getRawParameterValue("cabType")->load());
 
     reverb.setDownsampleRatio(2);
     reverb.prepare(spec);
@@ -259,10 +258,10 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         bass.setDistParam(logval);
         channel.setDistParam(logval);
     }
-    else if (parameterID == "cabType")
-    {
-        cab.setCabType((int)newValue);
-    }
+    // else if (parameterID == "cabType")
+    // {
+    //     cab.setCabType((int)newValue);
+    // }
     // else if (parameterID == "reverbType" || parameterID == "roomDecay" || parameterID == "roomSize")
     //     reverb.updateRoom();
     else if (parameterID == "gate")
@@ -439,6 +438,8 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<bParam>(ParameterID("lfEnhanceAuto", 1), "LF Enhancer Auto Gain", false));
     params.emplace_back(std::make_unique<bParam>(ParameterID("lfEnhanceInvert", 1), "LF Enhancer Invert", false));
     params.emplace_back(std::make_unique<cParam>(ParameterID("cabType", 1), "Cab Type", StringArray("Off", "2x12", "4x12", "6x10"), 0));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("cabMicPosX", 1), "Cab Mic Pos", 0.f, 1.f, 0.5f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("cabMicPosZ", 1), "Cab Mic Depth", 0.f, 1.f, 1.f));
     params.emplace_back(std::make_unique<cParam>(ParameterID("reverbType", 1), "Reverb Type", StringArray("Off", "Room", "Hall"), 0));
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbAmt", 1), "Reverb Amount", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbDecay", 1), "Reverb Decay", 0.f, 2.f, 1.f));

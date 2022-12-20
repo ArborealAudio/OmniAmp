@@ -14,7 +14,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
       ampControls(p.apvts),
       preComponent(p.getActiveGRSource(), p.apvts),
-      cabComponent(p.apvts.getRawParameterValue("cabType")),
+      cabComponent(p.apvts),
       reverbComp(p.apvts),
       enhancers(p.audioSource, p.apvts),
       menu(p.apvts, 200),
@@ -41,7 +41,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(pluginTitle);
     String title = "GAMMA";
     Colour titleColor = Colours::antiquewhite;
-#if !PRODUCTION_BUILD
+#if !PRODUCTION_BUILD && DEV_BUILD
     title.append("\nDEV", 5);
     titleColor = Colours::red;
 #elif BETA_BUILD
@@ -126,11 +126,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(preComponent);
     addAndMakeVisible(ampControls);
     addAndMakeVisible(cabComponent);
-    cabComponent.setState(*p.apvts.getRawParameterValue("cabType"));
-    cabComponent.cabChanged = [&](int newType)
-    {
-        p.apvts.getParameterAsValue("cabType") = newType;
-    };
+    // cabComponent.setState(*p.apvts.getRawParameterValue("cabType"));
+    // cabComponent.cabChanged = [&](int newType)
+    // {
+    //     p.apvts.getParameterAsValue("cabType") = newType;
+    // };
     addAndMakeVisible(reverbComp);
     addAndMakeVisible(enhancers);
 
@@ -150,10 +150,13 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     activation.onSiteCheck = [&](bool result)
     {
         activation.m_betaLive = result;
-        activation.setVisible(!result);
-        activation.editor.setVisible(result);
-        activation.submit.setVisible(result);
-        activation.repaint();
+        {
+            const MessageManagerLock lock;
+            activation.setVisible(!result);
+            activation.editor.setVisible(result);
+            activation.submit.setVisible(result);
+            activation.repaint();
+        }
         if (result)
             activation.readFile();
         p.lockProcessing(!result);

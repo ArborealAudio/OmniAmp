@@ -99,16 +99,16 @@ class Room
     struct Diffuser
     {
         /**
-         * @param seed seed for delay time RNG
+         * @param seed_ seed for delay time RNG
          */
-        Diffuser(int64_t seed) : seed(seed)
+        Diffuser(int64_t seed_) : seed(seed_)
         {
         }
 
         /**
         @param delayRangeinS you guessed it, delay range in seconds
         */
-        Diffuser(float delayRangeinS, int64_t seed) : delayRange(delayRangeinS), seed(seed)
+        Diffuser(float delayRangeinS, int64_t seed_) : delayRange(delayRangeinS), seed(seed_)
         {
         }
 
@@ -123,9 +123,9 @@ class Room
             Random rand(seed);
 
             int i = 0;
+            auto delayRangeSamples = delayRange * SR;
             for (auto &d : delay)
             {
-                auto delayRangeSamples = delayRange * SR;
                 double minDelay = delayRangeSamples * i / channels;
                 double maxDelay = delayRangeSamples * (i + 1) / channels;
                 d.prepare(spec);
@@ -190,7 +190,7 @@ class Room
     private:
         std::array<dsp::DelayLine<T>, channels> delay;
         std::array<int, channels> randDelay;
-        int64_t seed;
+        const int64_t seed;
         std::vector<bool> invert;
         double SR = 44100.0;
     };
@@ -391,7 +391,6 @@ class Room
 
         for (auto ch = 0; ch < buf.getNumChannels(); ++ch)
         {
-            // int j = 0;
             for (auto i = 0; i < numSamples; ++i)
             {
                 auto f = in[ch][i];
@@ -399,7 +398,6 @@ class Room
                     f = lp.processSample(f); // processes full SR
                 auto n = i / ratio;
                 out[ch][n] = f;
-                // j += 2;
             }
 
             // copy L->R if the input is mono
@@ -418,13 +416,10 @@ class Room
 
         for (auto ch = 0; ch < outBuf.getNumChannels(); ++ch)
         {
-            // int j = 0;
             for (auto i = 0; i < numSamples / ratio; ++i)
             {
                 auto n = i * ratio;
                 out[ch][n] = in[ch][i]; // copy every even sample
-                // out[ch][j + 1] = in[ch][i] / 2.0;
-                // j += 2;
                 for (int j = n + 1; j < n + ratio; ++j)
                     out[ch][j] = 0.0;
             }
@@ -522,7 +517,8 @@ public:
         preDelay.setDelay(params.preDelay);
     }
 
-    /* call this before Prepare! sets a ratio to downsample the internal processing, defaults to 1 */
+    /** PROBLEM: We're not accounting for samplerates higher than 44.1kHz! We need to refactor it to hardcode a SR of 22kHz
+     *  call this before Prepare! sets a ratio to downsample the internal processing, defaults to 1 */
     void setDownsampleRatio(int dsRatio) { ratio = dsRatio; }
 
     /* pass in the down-sampled specs */
@@ -542,7 +538,7 @@ public:
 
         feedback.prepare(spec);
 
-        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(spec.sampleRate / (double)ratio, spec.sampleRate * (double)ratio, 8);
+        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(spec.sampleRate / ratio, spec.sampleRate * (double)ratio, 8);
 
         dsLP[0].clear();
         dsLP[1].clear();
@@ -557,6 +553,8 @@ public:
             usLP[0].emplace_back(dsp::IIR::Filter<double>(c));
             usLP[1].emplace_back(dsp::IIR::Filter<double>(c));
         }
+
+        // ratio *= spec.sampleRate / 44100.0;
 
         auto filterSpec = spec;
         filterSpec.sampleRate *= (double)ratio;

@@ -177,7 +177,7 @@ struct BassPreFilter : PreampProcessor
             break;
         }
     }
-
+#if USE_SIMD
     void process(strix::AudioBlock<vec> &block) override
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
@@ -187,7 +187,17 @@ struct BassPreFilter : PreampProcessor
                 in[i] = filter[ch].processSample(in[i]);
         }
     }
-
+#else
+    void process(dsp::AudioBlock<double> &block) override
+    {
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+                in[i] = filter[ch].processSample(in[i]);
+        }
+    }
+#endif
     strix::BoolParameter *hiGain = nullptr;
     BassMode type;
 
