@@ -21,7 +21,7 @@ static const Typeface::Ptr getCustomFont()
  * @param proportion a skew value, < 1 will skew every component after initial component in the vector by this fraction of init component's width; > 1 will skew components after initial component to be larger than initial component by said factor
  * @param padding multiplier of each component's width to be applied as padding
  */
-static void layoutComponents(std::vector<Component*> comp, Rectangle<int>& bounds, bool vertical = false, float proportion = 1.f, float padding = 1.f)
+static void layoutComponents(std::vector<Component*> comp, Rectangle<int> &bounds, bool vertical = false, float proportion = 1.f, float padding = 0.f)
 {
     size_t numComp = comp.size();
     assert(numComp != 0);
@@ -33,27 +33,25 @@ static void layoutComponents(std::vector<Component*> comp, Rectangle<int>& bound
     if (!vertical)
     {
         {
-            auto b = bounds.removeFromLeft(chunk) * (1.f / proportion);
-            auto size = b.getWidth();
-            comp[0]->setBounds(b);
+            auto b = bounds.removeFromLeft(chunk * (1.f / proportion));
+            comp[0]->setBounds(b.reduced(b.getWidth() * padding));
         }
         for (size_t i = 1; i < numComp; ++i)
         {
-            auto b = bounds.removeFromLeft(chunk) * proportion;
-            auto size = b.getWidth();
-            comp[i]->setBounds(b);
+            auto b = bounds.removeFromLeft(chunk * proportion);
+            comp[i]->setBounds(b.reduced(b.getWidth() * padding));
         }
     }
     else
     {
         {
-            auto b = bounds.removeFromTop(chunk);
-            comp[0]->setBounds(b.withSizeKeepingCentre(b.getWidth() * (1.f / proportion), b.getHeight() * (1.f / proportion)));
+            auto b = bounds.removeFromTop(chunk * (1.f / proportion));
+            comp[0]->setBounds(b.reduced(b.getWidth() * padding));
         }
         for (size_t i = 1; i < numComp; ++i)
         {
-            auto b = bounds.removeFromTop(chunk);
-            comp[i]->setBounds(b.withSizeKeepingCentre(b.getWidth() * proportion, b.getHeight() * proportion));
+            auto b = bounds.removeFromTop(chunk * proportion);
+            comp[i]->setBounds(b.reduced(b.getWidth() * padding));
         }
     }
 }

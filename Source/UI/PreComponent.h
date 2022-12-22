@@ -49,13 +49,13 @@ struct PreComponent : Component,
         lfEmph.setTooltip("Adds or subtracts low-end before all saturation and compression, then an equal and opposite compensation after the saturation and compression. Useful for getting more saturation from the low-end without boosting it in volume.");
 
         lfFreqAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "lfEmphasisFreq", lfFreq);
-        lfFreq.outlineColor = Colours::white;
+        lfFreq.outlineColor = Colours::antiquewhite;
         lfFreq.baseColor = Colour(BACKGROUND_COLOR).withMultipliedLightness(2.f).withMultipliedSaturation(1.25f);
         lfFreq.minValue = 30.0;
         lfFreq.maxValue = 1800.0;
 
         hfFreqAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "hfEmphasisFreq", hfFreq);
-        hfFreq.outlineColor = Colours::white;
+        hfFreq.outlineColor = Colours::antiquewhite;
         hfFreq.baseColor = Colour(BACKGROUND_COLOR).withMultipliedLightness(2.f).withMultipliedSaturation(1.25f);
         hfFreq.minValue = 1800.0;
         hfFreq.maxValue = 18000.0;
@@ -133,13 +133,13 @@ struct PreComponent : Component,
             if (c == &lfEmph)
             {
                 auto subBounds = bounds.removeFromLeft(chunk);
-                layoutComponents(getSelectComps(LFEmph | LFFreq), subBounds, true, 0.75f);
+                layoutComponents(getSelectComps(LFEmph | LFFreq), subBounds, true, 0.65f, 0.025f);
                 lfFreq.cornerRadius = lfFreq.getHeight() * 0.5f;
             }
             else if (c == &hfEmph)
             {
                 auto subBounds = bounds.removeFromLeft(chunk);
-                layoutComponents(getSelectComps(HFEmph | HFFreq), subBounds, true, 0.75f);
+                layoutComponents(getSelectComps(HFEmph | HFFreq), subBounds, true, 0.65f, 0.025f);
                 hfFreq.cornerRadius = hfFreq.getHeight() * 0.5f;
             }
             else
