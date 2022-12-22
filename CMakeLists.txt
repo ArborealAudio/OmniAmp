@@ -77,6 +77,8 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/2x12.svg"
     "Resources/4x12.svg"
     "Resources/6x10.svg"
+    "Resources/mic.svg"
+    "Resources/speaker.svg"
     "Resources/amp_mesh_2.svg"
     "Resources/logo.svg"
     "Resources/LiberationSans-Regular.ttf"
