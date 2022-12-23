@@ -5,55 +5,6 @@
 struct CabsComponent : Component, AudioProcessorValueTreeState::Listener
 {
 private:
-    struct Cab : DrawableButton
-    {
-        Cab(const String &buttonName, ButtonStyle buttonStyle)
-            : DrawableButton(buttonName, buttonStyle)
-        {
-            setEdgeIndent(10);
-            setClickingTogglesState(true);
-        }
-
-        void setDrawable(const void *svgData, size_t svgSize)
-        {
-            svg = Drawable::createFromImageData(svgData, svgSize);
-        }
-
-        void setColor(Colour newColor)
-        {
-            color = newColor.withAlpha(0.5f);
-            svg->replaceColour(Colours::transparentBlack, Colours::grey);
-
-            setImages();
-        }
-
-        /* call after drawables and color have been set */
-        void setImages()
-        {
-            auto overSVG = svg->createCopy();
-            auto downSVG = svg->createCopy();
-
-            overSVG->replaceColour(Colours::black, Colours::white);
-            downSVG->replaceColour(Colours::grey, color);
-
-            auto overOnSVG = downSVG->createCopy();
-            overOnSVG->replaceColour(color, color.withMultipliedBrightness(1.5));
-
-            DrawableButton::setImages(svg.get(), overSVG.get(), nullptr, nullptr,
-                                      downSVG.get(), overOnSVG.get());
-        }
-
-        // void paint(Graphics &g) override
-        // {
-        // }
-
-    private:
-        /* internal svg that is passed in */
-        std::unique_ptr<Drawable> svg;
-
-        Colour color;
-    };
-
     struct MicComponent : Component
     {
         MicComponent(AudioProcessorValueTreeState &a) : apvts(a)
@@ -90,17 +41,16 @@ private:
         {
             if (event.eventComponent == this)
             {
-                posX = event.position.x;
-                posY = event.position.y;
-                auto xFrac = posX / micBounds.getWidth();
-                auto yFrac = posY / micBounds.getHeight();
-                DBG("x: " << xFrac);
-                DBG("y: " << yFrac);
+                auto adjBounds = micBounds.reduced(micWidth * 0.5f);
+                posX = event.position.x - (micWidth * 0.5f); // UI x pos
+                float pX = event.position.x; // param x pos
+                posY = event.position.y - (micWidth * 0.5f);
+                float pY = event.position.y; 
+                auto xFrac = (posX - micBounds.getX()) / adjBounds.getWidth();
+                auto yFrac = (posY - (getHeight() - micBounds.getHeight())) / adjBounds.getHeight();
 
                 apvts.getParameterAsValue("cabMicPosX") = xFrac;
                 apvts.getParameterAsValue("cabMicPosZ") = yFrac;
-
-                clampPoints();
 
                 repaint();
             }
@@ -124,7 +74,7 @@ private:
             auto bounds = getLocalBounds().reduced(2);
             auto width = bounds.getWidth();
             auto height = bounds.getHeight();
-            micBounds = bounds.removeFromBottom(height * 0.65f).withWidth(width * 0.5f + (micWidth * 0.5f)).toFloat();
+            micBounds = bounds.removeFromBottom(height * 0.65f).withWidth(width * 0.5f + (micWidth * 0.5f)).withTrimmedLeft(width * 0.1f).toFloat();
             spkrBounds = bounds.toFloat();
             posX = micBounds.getWidth() * micPos->get();
             posY = micBounds.getHeight() * micDepth->get();
@@ -139,7 +89,7 @@ private:
         std::unique_ptr<Drawable> mic_img, spkr_img;
 
         float posX = 0.f, posY = 0.f;
-        const float micWidth = 40.f;
+        const float micWidth = 35.f;
         Rectangle<float> micBounds, spkrBounds;
     };
 
