@@ -43,10 +43,6 @@ GammaAudioProcessor::GammaAudioProcessor()
     apvts.addParameterListener("bass", this);
     apvts.addParameterListener("mode", this);
     apvts.addParameterListener("dist", this);
-    // apvts.addParameterListener("cabType", this);
-    // apvts.addParameterListener("reverbType", this);
-    // apvts.addParameterListener("roomDecay", this);
-    // apvts.addParameterListener("roomSize", this);
     apvts.addParameterListener("hq", this);
 
     LookAndFeel::getDefaultLookAndFeel().setDefaultSansSerifTypeface(getCustomFont());
@@ -61,10 +57,6 @@ GammaAudioProcessor::~GammaAudioProcessor()
     apvts.removeParameterListener("bass", this);
     apvts.removeParameterListener("mode", this);
     apvts.removeParameterListener("dist", this);
-    // apvts.removeParameterListener("cabType", this);
-    // apvts.removeParameterListener("reverbType", this);
-    // apvts.removeParameterListener("roomDecay", this);
-    // apvts.removeParameterListener("roomSize", this);
     apvts.removeParameterListener("hq", this);
 }
 
@@ -182,7 +174,6 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
     reverb.setDownsampleRatio(2);
     reverb.prepare(spec);
-    // reverb.updateRoom();
 
     mixer.prepare(spec);
     mixer.setMixingRule(dsp::DryWetMixingRule::linear);
@@ -258,12 +249,6 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         bass.setDistParam(logval);
         channel.setDistParam(logval);
     }
-    // else if (parameterID == "cabType")
-    // {
-    //     cab.setCabType((int)newValue);
-    // }
-    // else if (parameterID == "reverbType" || parameterID == "roomDecay" || parameterID == "roomSize")
-    //     reverb.updateRoom();
     else if (parameterID == "gate")
         gateProc.setThreshold(*gate);
     else if (parameterID == "gainLink")
