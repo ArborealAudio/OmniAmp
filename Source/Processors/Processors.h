@@ -300,7 +300,7 @@ namespace Processors
                 eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.25e-9, (T)20e-9, (T)50e-9, (T)300e3, (T)500e3, (T)15e3, (T)12e3));
                 break;
             case XRay:
-                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.5e-9, (T)22e-9, (T)22e-9, (T)250e3, (T)1e6, (T)25e3, (T)33e3));
+                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)250e-9, (T)22e-9, (T)20e-9, (T)270e3, (T)1e6, (T)125e3, (T)65e3));
                 break;
             }
 
@@ -407,8 +407,8 @@ namespace Processors
             {
             case GammaRay:
                 pentode.type = PentodeType::Nu;
-                pentode.bias.first = 0.6;
-                pentode.bias.second = 0.6;
+                pentode.bias.first = 2.0;
+                pentode.bias.second = 2.0;
                 break;
             case Sunbeam:
                 pentode.type = PentodeType::Classic;
@@ -417,8 +417,8 @@ namespace Processors
                 break;
             case Moonbeam:
                 pentode.type = PentodeType::Nu;
-                pentode.bias.first = 0.6;
-                pentode.bias.second = 0.6;
+                pentode.bias.first = 2.0;
+                pentode.bias.second = 2.0;
                 break;
             case XRay:
                 pentode.type = PentodeType::Classic;
@@ -431,8 +431,10 @@ namespace Processors
         template <typename FloatType>
         void processBlock(dsp::AudioBlock<FloatType> &block)
         {
-            FloatType gain_raw = jmap(inGain->get(), 1.f, 8.f);
-            FloatType out_raw = jmap(outGain->get(), 1.f, 8.f);
+            FloatType gain_raw = jmap(inGain->get(), 1.f, 12.f);
+            FloatType out_raw = jmap(outGain->get(), 1.f, 12.f);
+
+            gtrPre.inGain = gain_raw;
 
             FloatType autoGain = 1.0;
 
@@ -655,6 +657,8 @@ namespace Processors
         {
             FloatType gain_raw = jmap(inGain->get(), 1.f, 8.f);
             FloatType out_raw = jmap(outGain->get(), 1.f, 8.f);
+
+            preFilter.inGain = gain_raw;
 
             FloatType autoGain = 1.0;
 
