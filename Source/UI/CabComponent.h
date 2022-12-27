@@ -60,6 +60,7 @@ private:
         {
             if (event.eventComponent == this)
             {
+                auto adjBounds = micBounds.reduced(micWidth * 0.5f);
                 apvts.getParameterAsValue("cabMicPosX") = 0.5f;
                 apvts.getParameterAsValue("cabMicPosZ") = 1.f;
                 posX = micBounds.getWidth() * micPos->get();
@@ -75,7 +76,7 @@ private:
             auto width = bounds.getWidth();
             auto height = bounds.getHeight();
             micBounds = bounds.removeFromBottom(height * 0.65f).withWidth(width * 0.5f + (micWidth * 0.5f)).withTrimmedLeft(width * 0.1f).toFloat();
-            spkrBounds = bounds.toFloat();
+            spkrBounds = bounds.withTrimmedBottom(height * 0.1f).toFloat();
             posX = micBounds.getWidth() * micPos->get();
             posY = micBounds.getHeight() * micDepth->get();
             clampPoints();
