@@ -47,8 +47,13 @@ struct Pentode
         }
 
         sc_lp.prepare(spec);
-        sc_lp.setCutoffFreq(5.0);
         sc_lp.setType(strix::FilterType::lowpass);
+        sc_lp.setCutoffFreq(5.0);
+
+        dynBP.prepare(spec);
+        dynBP.setType(strix::FilterType::bandpass);
+        dynBP.setCutoffFreq(2500.0);
+        dynBP.setResonance(0.5);
     }
 
     void reset()
@@ -61,8 +66,6 @@ struct Pentode
     template <typename Block>
     void processBlockClassB(Block &block)
     {
-        // if (type == PentodeType::Nu)
-        //     block *= 2.0;
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
@@ -75,12 +78,15 @@ struct Pentode
 
     bias_t bias;
     PentodeType type = PentodeType::Nu;
+    float inGain = 1.f;
 
 private:
     void processSamplesNu(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
+        float dynBPGain = jmap(inGain, -0.7f, 0.7f);
         for (size_t i = 0; i < numSamples; ++i)
         {
+            in[i] += dynBPGain * dynBP.processSample(ch, in[i]);
             in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
             in[i] = saturateSym(in[i], gp);
         }
@@ -88,8 +94,10 @@ private:
 
     void processSamplesClassic(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
+        float dynBPGain = jmap(inGain, -0.7f, 0.7f);
         for (size_t i = 0; i < numSamples; ++i)
         {
+            in[i] += dynBPGain * dynBP.processSample(ch, in[i]);
             in[i] -= 0.8 * processEnvelopeDetector(in[i], ch);
 
             T yn_pos = classicPentode(in[i], gn, gp, 4.0);
@@ -152,7 +160,7 @@ private:
     }
 
     std::array<strix::SVTFilter<T>, 2> dcBlock; /*need 2 for pos & neg signals*/
-    strix::SVTFilter<T> sc_lp;
+    strix::SVTFilter<T> sc_lp, dynBP;
 };
 
 /**
