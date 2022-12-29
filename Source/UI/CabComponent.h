@@ -97,6 +97,10 @@ private:
     ChoiceMenu menu;
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> menuAttach;
 
+    Knob::flags_t flags {Knob::DRAW_GRADIENT | Knob::DRAW_ARC | Knob::DRAW_SHADOW};
+    Knob resoLo{flags}, resoHi{flags};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> resoLoAttach, resoHiAttach;
+
     std::unique_ptr<Drawable> cab_img;
     Rectangle<float> cabBounds;
 
@@ -117,6 +121,22 @@ public:
 
         addAndMakeVisible(menu);
         menuAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "cabType", menu);
+
+        addAndMakeVisible(resoLo);
+        resoLo.setDefaultValue(1.f);
+        resoLo.setLabel("Reso Lo");
+        resoLo.setColor(Colour(BACKGROUND_COLOR), Colours::antiquewhite);
+        resoLo.setValueToStringFunction([](float val)
+                                        { String s(int(val * 100)); return s + "%"; });
+        resoLoAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "cabResoLo", resoLo);
+
+        addAndMakeVisible(resoHi);
+        resoHi.setDefaultValue(1.f);
+        resoHi.setLabel("Reso Hi");
+        resoHi.setColor(Colour(BACKGROUND_COLOR), Colours::antiquewhite);
+        resoHi.setValueToStringFunction([](float val)
+                                        { String s(int(val * 100)); return s + "%"; });
+        resoHiAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "cabResoHi", resoHi);
 
         addAndMakeVisible(micComp);
 
@@ -187,9 +207,12 @@ public:
 
     void resized() override
     {
-        menu.setBounds(getLocalBounds().removeFromTop(getHeight() * 0.35f).removeFromLeft(getWidth() * 0.5f).reduced(20, 5));
-        micComp.setBounds(getLocalBounds().removeFromRight(getHeight()));
-        auto bounds = getLocalBounds().reduced(2);
-        cabBounds = bounds.removeFromLeft(bounds.getWidth() * 0.5f).removeFromBottom(bounds.getHeight() * 0.65f).toFloat();
+        auto bounds = getLocalBounds().reduced(5);
+        micComp.setBounds(bounds.removeFromRight(bounds.getHeight()));
+        auto resoBounds = bounds.removeFromRight(bounds.getWidth() * 0.25f);
+        resoLo.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
+        resoHi.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
+        menu.setBounds(bounds.removeFromTop(getHeight() * 0.35f).removeFromLeft(getWidth() * 0.5f).reduced(20, 5));
+        cabBounds = bounds.toFloat();
     }
 };
