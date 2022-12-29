@@ -77,11 +77,12 @@ struct Knob : Slider
         DRAW_SHADOW = 1 << 1,
         DRAW_ARC = 1 << 2,
         DRAW_TICKS = 1 << 3,
-        REAR_KNOB = 1 << 4
+        LOG_KNOB = 1 << 4 // used for setting log mapping i.e. for freq. params
     };
     typedef uint8_t flags_t;
+    flags_t flags;
 
-    Knob(flags_t f) : lnf(f)
+    Knob(flags_t f) : lnf(f), flags(f)
     {
         setLookAndFeel(&lnf);
         lnf.autoGain = &autoGain;
@@ -109,6 +110,20 @@ struct Knob : Slider
     {
         e.source.enableUnboundedMouseMovement(true);
         Slider::mouseDrag(e);
+    }
+
+    double proportionOfLengthToValue(double proportion) override
+    {
+        if (flags & LOG_KNOB)
+            return mapToLog10(proportion, getMinimum(), getMaximum());
+        return Slider::proportionOfLengthToValue(proportion);
+    }
+
+    double valueToProportionOfLength(double value) override
+    {
+        if (flags & LOG_KNOB)
+            return mapFromLog10(value, getMinimum(), getMaximum());
+        return Slider::valueToProportionOfLength(value);
     }
 
     void setLabel(String newLabel)
