@@ -4,6 +4,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9 CACHE INTERNAL "")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (PRODUCTION_BUILD)
+    message("Setting PRODUCTION_BUILD")
     if (WIN32)
         set(CMAKE_SYSTEM_VERSION 7 CACHE INTERNAL "")
     elseif(APPLE)
@@ -13,6 +14,8 @@ if (PRODUCTION_BUILD)
 endif()
 
 project(Gamma VERSION 0.6)
+
+
 
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
@@ -46,6 +49,11 @@ clap_juce_extensions_plugin(TARGET Gamma
     CLAP_ID "com.ArborealAudio.Gamma.clap"
     CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 32
     CLAP_FEATURES amp "channel strip" guitar bass)
+
+if (BETA_BUILD)
+    message("Setting BETA_BUILD")
+    target_compile_definitions(Gamma PUBLIC BETA_BUILD=1)
+endif()
 
 juce_generate_juce_header(Gamma)
 
