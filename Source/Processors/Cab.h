@@ -160,7 +160,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
 
     CabType type;
 
-    strix::FloatParameter *micPos;
+    strix::FloatParameter *micPos, *resoLo, *resoHi;
     strix::ChoiceParameter *type_p;
 
     std::atomic<bool> updateType = false;
@@ -170,9 +170,13 @@ public:
     {
         micPos = static_cast<strix::FloatParameter *>(apvts.getParameter("cabMicPosX"));
         type_p = static_cast<strix::ChoiceParameter *>(apvts.getParameter("cabType"));
+        resoLo = static_cast<strix::FloatParameter *>(apvts.getParameter("cabResoLo"));
+        resoHi = static_cast<strix::FloatParameter *>(apvts.getParameter("cabResoHi"));
         apvts.addParameterListener("cabMicPosX", this);
         // apvts.addParameterListener("cabMicPosZ", this);
         apvts.addParameterListener("cabType", this);
+        apvts.addParameterListener("cabResoLo", this);
+        apvts.addParameterListener("cabResoHi", this);
     }
 
     ~FDNCab()
@@ -180,6 +184,8 @@ public:
         apvts.removeParameterListener("cabMicPosX", this);
         // apvts.removeParameterListener("cabMicPosZ", this);
         apvts.removeParameterListener("cabType", this);
+        apvts.removeParameterListener("cabResoLo", this);
+        apvts.removeParameterListener("cabResoHi", this);
     }
 
     void parameterChanged(const String &paramID, float newValue) override
@@ -191,6 +197,8 @@ public:
         }
         else if (paramID == "cabType")
             updateType = true;
+        else if (paramID == "cabResoLo" || paramID == "cabResoHi")
+            setParams();
     }
 
     void setCabType()
@@ -242,36 +250,36 @@ public:
     void setParams()
     {
         auto mic_ = jmap(micPos->get(), 0.75f, 1.f);
+        auto resoLo_ = resoLo->get();
+        auto resoHi_ = resoHi->get();
 
         switch (type)
         {
         case small:
             hp.setCutoffFreq(90.0);
-            hp.setResonance(0.7);
+            hp.setResonance(0.7 * resoLo_);
             lp1.setCutoffFreq(6500.0 * mic_);
-            lp1.setResonance(0.7);
+            lp1.setResonance(0.7 * resoHi_);
             lp2.setCutoffFreq(5067.0 * mic_);
-            lp2.setResonance(1.5);
+            lp2.setResonance(1.5 * resoHi_);
             break;
         case med:
             hp.setCutoffFreq(70.0);
-            hp.setResonance(1.0);
-            lp1.setCutoffFreq(5011.0 * mic_);
-            lp1.setResonance(0.7);
+            hp.setResonance(1.0 * resoLo_);
+            lp1.setCutoffFreq(5511.0 * mic_);
+            lp1.setResonance(0.7 * resoHi_);
             lp2.setCutoffFreq(4500.0 * mic_);
-            lp2.setResonance(1.29);
+            lp2.setResonance(1.29 * resoHi_);
             lowshelf.setCutoffFreq(232.0);
             break;
         case large:
             hp.setCutoffFreq(80.0);
-            hp.setResonance(2.0);
+            hp.setResonance(2.0 * resoLo_);
             lp1.setCutoffFreq(6033.0 * mic_);
-            lp1.setResonance(1.21);
+            lp1.setResonance(1.21 * resoHi_);
             lp2.setCutoffFreq(3193.0 * mic_);
-            lp2.setResonance(1.5);
+            lp2.setResonance(1.5 * resoHi_);
             lowshelf.setCutoffFreq(307.0);
-            break;
-        default:
             break;
         }
 
