@@ -435,6 +435,7 @@ namespace Processors
             FloatType out_raw = jmap(outGain->get(), 1.f, 12.f);
 
             gtrPre.inGain = gain_raw;
+            pentode.inGain = *outGain;
 
             FloatType autoGain = 1.0;
 
@@ -659,6 +660,7 @@ namespace Processors
             FloatType out_raw = jmap(outGain->get(), 1.f, 8.f);
 
             preFilter.inGain = gain_raw;
+            pentode.inGain = *outGain;
 
             FloatType autoGain = 1.0;
 
@@ -736,6 +738,22 @@ namespace Processors
             channelMode = dynamic_cast<strix::ChoiceParameter *>(apvts.getParameter("channelMode"));
             currentType = static_cast<ChannelMode>(channelMode->getIndex());
             triode.resize(2);
+            apvts.addParameterListener("channelMode", this);
+        }
+
+        ~Channel()
+        {
+            apvts.removeParameterListener("channelMode", this);
+        }
+
+        void parameterChanged(const String &paramID, float) override
+        {
+            if (paramID == "channelMode")
+            {
+                currentType = (ChannelMode)channelMode->getIndex();
+                updateFilters = true;
+                // FIX: not working fully, gains reset to 0 for some reason
+            }
         }
 
         void prepare(const dsp::ProcessSpec &spec) override
@@ -818,19 +836,26 @@ namespace Processors
             switch (index)
             {
             case 0:
-                *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
+                if (currentType == A)
+                    *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
+                else
+                    *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 300.0, 0.66, gain);
                 break;
             case 1:
             {
                 double Q = 0.707;
                 Q *= 1.0 / gain;
-                *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
+                if (currentType == A)
+                    *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
+                else
+                    *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 800.0, Q, gain);
             }
             break;
             case 2:
-                *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.5, gain);
-                break;
-            default:
+                if (currentType == A)
+                    *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
+                else
+                    *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 6500.0, 0.5, gain);
                 break;
             }
 
@@ -842,7 +867,6 @@ namespace Processors
         {
             FloatType gain_raw = jmap(inGain->get(), 1.f, 4.f);
             FloatType out_raw = jmap(outGain->get(), 1.f, 4.f);
-            currentType = (ChannelMode)channelMode->getIndex();
 
             FloatType autoGain = 1.0;
 
