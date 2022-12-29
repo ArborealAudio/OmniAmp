@@ -169,6 +169,8 @@ private:
 
     strix::MonoToStereo<double> doubler;
 
+    Processors::CutFilters cutFilters;
+
     dsp::DryWetMixer<double> mixer{8};
 
     strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
@@ -275,6 +277,9 @@ private:
             doubler.process(block, dubAmt);
 
         reverb.process(buffer, *apvts.getRawParameterValue("reverbAmt"));
+
+        // final cut filters
+        cutFilters.process(block);
 
         // apply output gain
         strix::SmoothGain<float>::applySmoothGain(block, outGain_raw, lastOutGain);

@@ -25,7 +25,8 @@ GammaAudioProcessor::GammaAudioProcessor()
       cab(apvts, (Processors::CabType)apvts.getRawParameterValue("cabType")->load()),
       emphLow((strix::FloatParameter *)apvts.getParameter("lfEmphasis"), (strix::FloatParameter *)apvts.getParameter("lfEmphasisFreq")),
       emphHigh((strix::FloatParameter *)apvts.getParameter("hfEmphasis"), (strix::FloatParameter *)apvts.getParameter("hfEmphasisFreq")),
-      reverb(apvts)
+      reverb(apvts),
+      cutFilters(apvts)
 #endif
 {
     inGain = apvts.getRawParameterValue("inputGain");
@@ -169,6 +170,7 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     hfEnhancer.setMode((Processors::ProcessorType)currentMode);
     lfEnhancer.prepare(spec);
     hfEnhancer.prepare(spec);
+    cutFilters.prepare(spec);
 
     cab.prepare(spec);
 
@@ -195,6 +197,7 @@ void GammaAudioProcessor::releaseResources()
     channel.reset();
     hfEnhancer.reset();
     lfEnhancer.reset();
+    cutFilters.reset();
     emphLow.reset();
     emphHigh.reset();
     cab.reset();
@@ -381,6 +384,9 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
 {
     std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
+    NormalisableRange<float> resoRange (0.5f, 2.f, 0.01f);
+    resoRange.setSkewForCentre(1.f);
+
     using fParam = strix::FloatParameter;
     using bParam = strix::BoolParameter;
     using cParam = strix::ChoiceParameter;
@@ -422,9 +428,13 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<fParam>(ParameterID("lfEnhance", 1), "LF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("lfEnhanceAuto", 1), "LF Enhancer Auto Gain", false));
     params.emplace_back(std::make_unique<bParam>(ParameterID("lfEnhanceInvert", 1), "LF Enhancer Invert", false));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("lfCut", 1), "LF Cut", 5.f, 1000.0, 5.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("hfCut", 1), "HF Cut", 1500.f, 22000.0, 22000.f));
     params.emplace_back(std::make_unique<cParam>(ParameterID("cabType", 1), "Cab Type", StringArray("Off", "2x12", "4x12", "6x10"), 0));
     params.emplace_back(std::make_unique<fParam>(ParameterID("cabMicPosX", 1), "Cab Mic Pos", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("cabMicPosZ", 1), "Cab Mic Depth", 0.f, 1.f, 1.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("cabResoLo", 1), "Cab Low Reso", resoRange, 1.f));
+    params.emplace_back(std::make_unique<fParam>(ParameterID("cabResoHi", 1), "Cab Hi Reso", resoRange, 1.f));
     params.emplace_back(std::make_unique<cParam>(ParameterID("reverbType", 1), "Reverb Type", StringArray("Off", "Room", "Hall"), 0));
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbAmt", 1), "Reverb Amount", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbDecay", 1), "Reverb Decay", 0.f, 2.f, 1.f));
