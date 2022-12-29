@@ -83,6 +83,7 @@ struct GuitarPreFilter : PreampProcessor
 #if USE_SIMD
     void process(strix::AudioBlock<vec> &block) override
     {
+        auto dynHPGain = 1.f / jmax(inGain, 1.f);
         if (*hiGain)
         {
             for (int ch = 0; ch < block.getNumChannels(); ++ch)
