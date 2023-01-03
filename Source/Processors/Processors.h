@@ -836,6 +836,7 @@ namespace Processors
             switch (index)
             {
             case 0:
+                lowGain = newValue;
                 if (currentType == A)
                     *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
                 else
@@ -843,6 +844,7 @@ namespace Processors
                 break;
             case 1:
             {
+                midGain = newValue;
                 double Q = 0.707;
                 Q *= 1.0 / gain;
                 if (currentType == A)
@@ -852,6 +854,7 @@ namespace Processors
             }
             break;
             case 2:
+                trebGain = newValue;
                 if (currentType == A)
                     *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
                 else
