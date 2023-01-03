@@ -2,6 +2,8 @@
 
 #pragma once
 
+#define REVERB_COLOR 0xff256184
+
 class ReverbComponent : public Component
 {
     Knob::flags_t knobFlags = 0;
@@ -10,6 +12,8 @@ class ReverbComponent : public Component
 
     ChoiceMenu reverb;
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> reverbAttach;
+
+    Label title;
 
 public:
     ReverbComponent(AudioProcessorValueTreeState &v) : reverb(v.getParameter("reverbType")->getAllValueStrings())
@@ -44,18 +48,24 @@ public:
 
         addAndMakeVisible(reverb);
         reverbAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(v, "reverbType", reverb);
+
+        addAndMakeVisible(title);
+        title.setText("Reverb", NotificationType::dontSendNotification);
+        title.setJustificationType(Justification::centred);
     }
 
     void paint(Graphics &g) override
     {
-        g.setColour(Colour(0xff256184));
-        g.drawRoundedRectangle(getLocalBounds().reduced(1).toFloat(), 5.f, 3.f);
-        reverb.lnf.backgroundColor = reverb.getSelectedId() > 1 ? Colour(0xff256184) : Colours::grey;
+        g.setColour(Colour(REVERB_COLOR));
+        g.drawRoundedRectangle(getLocalBounds().reduced(2).toFloat(), 5.f, 3.f);
+        reverb.lnf.backgroundColor = reverb.getSelectedId() > 1 ? Colour(REVERB_COLOR) : Colours::transparentBlack;
     }
 
     void resized() override
     {
         auto b = getLocalBounds().reduced(10);
+        title.setBounds(b.removeFromTop(b.getHeight() * 0.15f));
+        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
         auto bottom = b.removeFromBottom(b.getHeight() / 2);
         auto chunk = b.getWidth() / 4;
         auto amountBounds = bottom.removeFromRight(chunk);

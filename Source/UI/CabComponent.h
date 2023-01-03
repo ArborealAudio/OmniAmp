@@ -106,6 +106,8 @@ private:
 
     MicComponent micComp;
 
+    Label title;
+
     strix::ChoiceParameter *cabType;
 
     AudioProcessorValueTreeState &apvts;
@@ -139,6 +141,10 @@ public:
         resoHiAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "cabResoHi", resoHi);
 
         addAndMakeVisible(micComp);
+
+        addAndMakeVisible(title);
+        title.setText("Cab", NotificationType::dontSendNotification);
+        title.setJustificationType(Justification::centred);
 
         setState();
 
@@ -208,11 +214,13 @@ public:
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(5);
+        title.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.15f));
+        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
         micComp.setBounds(bounds.removeFromRight(bounds.getHeight()));
         auto resoBounds = bounds.removeFromRight(bounds.getWidth() * 0.25f);
         resoLo.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
         resoHi.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
-        menu.setBounds(bounds.removeFromTop(getHeight() * 0.35f).removeFromLeft(getWidth() * 0.5f).reduced(20, 5));
+        menu.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.3f).removeFromLeft(getWidth() * 0.5f).reduced(20, 5));
         cabBounds = bounds.toFloat();
     }
 };

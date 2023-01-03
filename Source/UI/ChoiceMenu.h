@@ -55,6 +55,24 @@ struct MenuLookAndFeel : LookAndFeel_V4
         g.drawFittedText(label.getText(), label.getLocalBounds(), Justification::centred, 1);
     }
 
+    void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override
+    {
+        if (isHighlighted)
+        {
+            g.setColour(Colours::grey);
+            g.fillRoundedRectangle(area.toFloat(), 10.f);
+        }
+
+        if (isTicked)
+        {
+            g.setColour(Colours::white);
+            g.fillEllipse(area.withTrimmedRight(area.getWidth() - area.getHeight()).reduced(area.getHeight() * 0.33f).toFloat());
+        }
+
+        g.setColour(Colours::white);
+        g.drawFittedText(text, area, Justification::centred, 1);
+    }
+
     Colour outlineColor = Colours::white;
     Colour backgroundColor = Colour(0x00000000);
 };
@@ -63,6 +81,7 @@ struct ChoiceMenu : ComboBox
 {
     ChoiceMenu(StringArray itemList)
     {
+        lnf.setColour(PopupMenu::ColourIds::backgroundColourId, Colour(BACKGROUND_COLOR));
         setLookAndFeel(&lnf);
         addItemList(itemList, 1);
     }
@@ -113,13 +132,6 @@ struct ChoiceMenu : ComboBox
         rightArrow = b.removeFromRight(w / 8.f);
         ComboBox::resized();
     }
-
-    // void paint(Graphics &g) override
-    // {
-    //     g.setColour(Colours::red);
-    //     g.drawRect(leftArrow);
-    //     g.drawRect(rightArrow);
-    // }
 
     MenuLookAndFeel lnf;
 private:

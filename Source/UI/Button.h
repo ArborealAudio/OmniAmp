@@ -10,7 +10,6 @@ struct ButtonLookAndFeel : LookAndFeel_V4
     {
         g.setColour(Colours::white);
         auto bounds = button.getLocalBounds().reduced(3).toFloat();
-        // bounds.setHeight(jmax(bounds.getWidth(), bounds.getHeight() * 0.33f));
         g.drawRoundedRectangle(bounds, cornerRadius, 1.f);
         if (button.getToggleState())
         {
@@ -58,6 +57,7 @@ struct PowerButton : TextButton
     {
         Colour icon, s_backgnd = background;
         auto b = getLocalBounds();
+        b.setWidth(jmin(b.getWidth(), b.getHeight()));
         auto padding = b.getHeight() * 0.1f;
 
         auto drawPowerIcon = [&](Graphics &gc)

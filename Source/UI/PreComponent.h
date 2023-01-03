@@ -9,7 +9,7 @@ struct PreComponent : Component,
 {
 
     PreComponent(strix::VolumeMeterSource &vs, AudioProcessorValueTreeState &v) : vts(v),
-                                                                                  grMeter(vs, strix::VolumeMeterComponent::Reduction, vts.getRawParameterValue("comp"))
+                                                                                  grMeter(vs, strix::VolumeMeterComponent::Horizontal | strix::VolumeMeterComponent::Reduction, vts.getRawParameterValue("comp"))
     {
         for (auto c : getComps())
         {
@@ -88,13 +88,6 @@ struct PreComponent : Component,
             compPos.setButtonText(compPos.getToggleState() ? "Post" : "Pre");
         };
 
-        // distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "dist", dist);
-        // dist.setDefaultValue(vts.getParameter("dist")->getDefaultValue());
-        // dist.setLabel("Overdrive");
-        // dist.setValueToStringFunction([](float val)
-        //                               { return String(val * 10.0, 1); });
-        // dist.setTooltip("A one-knob distortion pedal. Fully bypassed at 0.");
-
         grMeter.meterColor = Colours::oldlace;
         addAndMakeVisible(grMeter);
 
@@ -113,22 +106,28 @@ struct PreComponent : Component,
 
     void paint(Graphics &g) override
     {
+        auto bounds = getLocalBounds().reduced(1).toFloat();
         g.setColour(Colours::antiquewhite);
-        g.drawRoundedRectangle(getLocalBounds().reduced(1).toFloat(), 5.f, 3.f);
+        g.drawRoundedRectangle(bounds, 5.f, 3.f);
 
         float div = doubler.getRight() + (grMeter.getX() - doubler.getRight()) / 2;
-        g.fillRoundedRectangle(div - 1.5f, 5.f, 3.f, getHeight() - 5.f, 3.f);
+        g.fillRoundedRectangle(div - 1.5f, 5.f, 3.f, getHeight() - 10.f, 3.f);
     }
 
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(2);
-        auto compSection = bounds.removeFromRight(bounds.getWidth() * 0.263f);
-        auto compSectW = compSection.getWidth();
-        grMeter.setBounds(compSection.removeFromLeft(compSectW / 3).reduced(compSectW * 0.1f, 0));
+        auto compSection = bounds.removeFromRight(bounds.getWidth() * 0.3f);
+        const auto compSectW = compSection.getWidth();
+        grMeter.setBounds(compSection.removeFromBottom(compSection.getHeight() * 0.33f).reduced(compSectW * 0.03f));
+        const auto compSectH = compSection.getHeight();
         auto w = bounds.getWidth();
         int chunk = w / 5;
-        for (auto *c : getSelectComps(MidSide | StereoEmphasis | LFEmph | HFEmph | Doubler))
+
+        midSide.setBounds(bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight() * 0.33f));
+        midSide.lnf.cornerRadius = midSide.getHeight() * 0.25f;
+
+        for (auto *c : getSelectComps(StereoEmphasis | LFEmph | HFEmph | Doubler))
         {
             if (c == &lfEmph)
             {
@@ -144,32 +143,14 @@ struct PreComponent : Component,
             }
             else
                 c->setBounds(bounds.removeFromLeft(chunk));
-            // if (auto *k = dynamic_cast<Knob *>(c))
-            // {
-            //     if (k == &comp)
-            //     {
-            //         k->setBounds(compSection.removeFromTop(bounds.getHeight() * 0.75f));
-            //         compPos.setBounds(compSection.removeFromLeft(compSectW * 0.33f).reduced(compSectW * 0.05f, 0));
-            //         compLink.setBounds(compSection.removeFromRight(compSectW * 0.33f).reduced(compSectW * 0.05f, 0));
-            //         compPos.lnf.cornerRadius = compPos.getHeight() * 0.5f;
-            //         compLink.lnf.cornerRadius = compLink.getHeight() * 0.5f;
-            //     }
-            //     else
-            //         k->setBounds(bounds.removeFromLeft(chunk).reduced(chunk * 0.1f));
-            // }
-            // else if (c == &midSide)
-            // {
-            //     c->setBounds(bounds.removeFromLeft(chunk * 0.75f).reduced(chunk * 0.1f, bounds.getHeight() * 0.25f));
-            //     midSide.lnf.cornerRadius = c->getHeight() * 0.5f;
-            // }
         }
 
-        // lfFreq.setBounds(lfEmph.getBounds().translated(0, lfEmph.getHeight() * 0.33f).reduced(0, lfEmph.getHeight() * 0.35f));
-        // lfEmph.setBounds(lfEmph.getBounds().translated(0, -lfEmph.getHeight() * 0.25f));
-        // lfFreq.cornerRadius = lfFreq.getHeight() * 0.5f;
-        // hfFreq.setBounds(hfEmph.getBounds().translated(0, hfEmph.getHeight() * 0.33f).reduced(0, hfEmph.getHeight() * 0.35f));
-        // hfEmph.setBounds(hfEmph.getBounds().translated(0, -hfEmph.getHeight() * 0.25f));
-        // hfFreq.cornerRadius = hfFreq.getHeight() * 0.5f;
+        auto compKnobBounds = compSection.removeFromLeft(compSectW * 0.5f);
+        comp.setBounds(compKnobBounds);
+        compPos.setBounds(compSection.removeFromTop(compSectH * 0.5f).reduced(compSectW * 0.1f, 0));
+        compLink.setBounds(compSection.removeFromTop(compSectH * 0.5f).reduced(compSectW * 0.1f, 0));
+        compPos.lnf.cornerRadius = compPos.getHeight() * 0.25f;
+        compLink.lnf.cornerRadius = compLink.getHeight() * 0.25f;
     }
 
 private:

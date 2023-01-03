@@ -4,246 +4,161 @@
 
 class MenuComponent : public Component
 {
-    enum CommandID
+    struct ListButton : TextButton
     {
-    #if JUCE_WINDOWS || JUCE_LINUX
-        OpenGL,
-    #endif
-        WindowSize,
-        CheckUpdate
-    };
+        bool toggle = false;
 
-    struct ButtonList : Component
-    {
-        enum ButtonType
+        void paint(Graphics &g) override
         {
-            Toggle,
-            PrePost,
-            Default
-        };
+            if (isMouseOver())
+                g.setColour(Colours::lightgrey);
 
-        struct ListButton : TextButton
-        {
-            ListButton()
-            {
-                type = ButtonType::Default;
-            }
+            g.fillRect(getLocalBounds());
 
-            ListButton(ButtonType newType) : type(newType)
-            {
-            }
+            auto text = getButtonText();
 
-            void paint(Graphics& g) override
-            {
-                if (isMouseOver())
-                    g.setColour(Colours::lightslategrey);
-
-                g.fillRect(getLocalBounds());
-
-                auto text = getButtonText();
-
-                auto bounds = getLocalBounds();
-                bounds.reduce(bounds.getWidth() * 0.07, bounds.getHeight() * 0.2);
-                auto textBounds = bounds;
-
-                switch (type)
-                {
-                case ButtonType::Toggle:
-                    textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.5f);
-                    bounds.reduce(bounds.getWidth() * 0.2, 0);
-                    if (getToggleState()) {
-                        g.setColour(Colours::cadetblue);
-                        g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() * 0.5);
-                        g.setColour(Colours::white);
-                        g.fillEllipse(bounds.removeFromRight(bounds.getWidth() / 2).toFloat());
-                    }
-                    else {
-                        g.setColour(Colours::darkgrey);
-                        g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() * 0.5);
-                        g.setColour(Colours::white);
-                        g.fillEllipse(bounds.removeFromLeft(bounds.getWidth() / 2).toFloat());
-                    }
-                    g.setColour(Colours::white);
-                    g.drawFittedText(text, textBounds, Justification::centred, 1);
-                    break;
-                case ButtonType::PrePost:
-                    textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.5f);
-                    bounds.reduce(bounds.getWidth() * 0.2, 0);
-                    g.setColour(Colours::white);
-                    g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() * 0.5);
-                    g.setColour(Colours::black);
-                    if (getToggleState())
-                        g.drawFittedText("Post", bounds, Justification::centred, 1);
-                    else
-                        g.drawFittedText("Pre", bounds, Justification::centred, 1);
-                    g.setColour(Colours::white);
-                    g.drawFittedText(text, textBounds, Justification::centred, 1);
-                    break;
-                case ButtonType::Default:
-                    g.setColour(Colours::white);
-                    g.drawFittedText(text, textBounds, Justification::centred, 1);
-                    break;
-                }
-            }
-        private:
-            ButtonType type;
-        };
-
-        ButtonList()
-        {
-            for (auto& b : getButtons())
-                addAndMakeVisible(b);
-
-#if JUCE_WINDOWS || JUCE_LINUX
-            openGL.setButtonText("OpenGL On/Off");
-            openGL.setClickingTogglesState(true);
-            openGL.setToggleState(readConfigFile("openGL"), NotificationType::sendNotification);
-            openGL.onClick = [&]
-            {
-                if (onItemClick)
-                    onItemClick(CommandID::OpenGL, openGL.getToggleState());
-            };
-#endif
-
-            HQ.setButtonText("HQ");
-            HQ.setClickingTogglesState(true);
-            HQ.setTooltip("Enable 4x oversampling with minimal latency.");
-
-            renderHQ.setButtonText("Render HQ");
-            renderHQ.setClickingTogglesState(true);
-            renderHQ.setTooltip("Enable 4x oversampling when rendering. Useful if you want to save some CPU while mixing.");
-
-            compLink.setButtonText("Comp Stereo Link");
-            compLink.setClickingTogglesState(true);
-            compLink.setTooltip("Stereo linking for Opto compressor. When linked, the maximum amplitude of either channel will be used for the compression. When unlinked, each channel will be compressed independently.");
-
-            compPos.setButtonText("Comp Pos: ");
-            compPos.setClickingTogglesState(true);
-            compPos.setTooltip("Position in the signal chain for the compressor. Pre will place it at the very beginning, and Post will be after the amp, and before the enhancers, cab and reverb.");
-
-            windowSize.setButtonText("Default UI size");
-            windowSize.setClickingTogglesState(false);
-            windowSize.onClick = [&]
-            {
-                if (onItemClick)
-                    onItemClick(CommandID::WindowSize, true);
-            };
-
-            checkUpdate.setButtonText("Check update");
-            checkUpdate.setClickingTogglesState(false);
-            checkUpdate.onClick = [&]
-            {
-                if (onItemClick)
-                    onItemClick(CommandID::CheckUpdate, true);
-            };
-        }
-
-        void resized() override
-        {
             auto bounds = getLocalBounds();
-            int chunk = bounds.getHeight() / getButtons().size();
-            for (auto &b : getButtons())
-                b->setBounds(bounds.removeFromTop(chunk));
-        }
+            bounds.reduce(bounds.getWidth() * 0.07, bounds.getHeight() * 0.2);
+            auto textBounds = bounds;
 
-        std::function<void(CommandID, bool)> onItemClick;
-
-        ListButton HQ{ButtonType::Toggle}, renderHQ{ButtonType::Toggle}, compLink{ButtonType::Toggle}, compPos{ButtonType::PrePost};
-
-    private:
-    #if JUCE_WINDOWS || JUCE_LINUX
-        ListButton openGL{ButtonType::Toggle};
-    #endif
-        ListButton windowSize, checkUpdate;
-
-        std::vector<Component*> getButtons()
-        {
-            return {
-            #if JUCE_WINDOWS || JUCE_LINUX
-                &openGL,
-            #endif
-                &HQ,
-                &renderHQ,
-                &compLink,
-                &compPos,
-                &windowSize,
-                &checkUpdate
-            };
+            if (toggle)
+            {
+                textBounds = bounds.removeFromLeft((float)bounds.getWidth() * 0.5f);
+                bounds.reduce(bounds.getWidth() * 0.2f, 0);
+                if (getToggleState())
+                {
+                    g.setColour(Colours::cadetblue);
+                    g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() * 0.5f);
+                    g.setColour(Colours::white);
+                    g.fillEllipse(bounds.removeFromRight(bounds.getWidth() / 2).toFloat());
+                }
+                else
+                {
+                    g.setColour(Colours::darkgrey);
+                    g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() * 0.5f);
+                    g.setColour(Colours::white);
+                    g.fillEllipse(bounds.removeFromLeft(bounds.getWidth() / 2).toFloat());
+                }
+                g.setColour(Colours::white);
+                g.drawFittedText(text, textBounds, Justification::centred, 1);
+            }
+            else
+            {
+                g.setColour(Colours::white);
+                g.drawFittedText(text, textBounds, Justification::centred, 1);
+            }
         }
     };
 
-    AudioProcessorValueTreeState& vts;
+    AudioProcessorValueTreeState &vts;
 
-    ButtonList list;
     DrawableButton menuButton;
     std::unique_ptr<Drawable> icon;
 
-    SidePanel panel;
+    #if ! JUCE_MAC
+    ListButton openGL;
+    #endif
+    ListButton HQ, renderHQ, windowSize, checkUpdate, showTooltips;
 
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hqAttach, renderHQAttach, compLinkAttach, compPosAttach;
+    bool openGLOn = false, showTooltipsOn = false;
+
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hqAttach, renderHQAttach;
 
 public:
-    MenuComponent(AudioProcessorValueTreeState& a, int width) : vts(a), panel("Options", width, false), menuButton("Menu", DrawableButton::ButtonStyle::ImageFitted)
+    MenuComponent(AudioProcessorValueTreeState &a) : vts(a), menuButton("Menu", DrawableButton::ButtonStyle::ImageFitted)
     {
+#if JUCE_WINDOWS || JUCE_LINUX
+        openGL.setButtonText("OpenGL On/Off");
+        openGL.toggle = true;
+        openGL.setClickingTogglesState(true);
+        openGL.setToggleState(readConfigFile("openGL"), NotificationType::sendNotification);
+#endif
+
+        HQ.setButtonText("HQ");
+        HQ.toggle = true;
+        HQ.setClickingTogglesState(true);
+        HQ.setTooltip("Enable 4x oversampling with minimal latency");
+
+        renderHQ.setButtonText("Render HQ");
+        renderHQ.toggle = true;
+        renderHQ.setClickingTogglesState(true);
+        renderHQ.setTooltip("Enable 4x oversampling when rendering. Useful if you want to save some CPU while mixing.");
+
+        windowSize.setButtonText("Default UI size");
+        windowSize.setTooltip("Reset window size to default dimensions");
+        windowSize.setClickingTogglesState(false);
+
+        checkUpdate.setButtonText("Check update");
+        checkUpdate.setTooltip("Check for new versions of Gamma");
+        checkUpdate.setClickingTogglesState(false);
+
+        showTooltips.setButtonText("Show tooltips");
+        showTooltips.setTooltip("Set whether or not tooltips will show on hover-over");
+        showTooltips.setClickingTogglesState(true);
+        showTooltips.setToggleState(readConfigFile("tooltips"), NotificationType::dontSendNotification);
+        showTooltips.toggle = true;
+
         addAndMakeVisible(menuButton);
         icon = Drawable::createFromImageData(BinaryData::Hamburger_icon_svg, BinaryData::Hamburger_icon_svgSize);
         menuButton.setImages(icon.get());
         menuButton.onClick = [&]
         {
-            panel.showOrHide(!panel.isPanelShowing());
+            PopupMenu m;
+#if !JUCE_MAC
+            openGLOn = (bool)readConfigFile("openGL");
+            openGL.setToggleState(openGL);
+            m.addCustomItem(1, OpenGL, getWidth(), 35, false);
+#endif
+            m.addCustomItem(2, HQ, getWidth(), 35, false, nullptr, "HQ");
+            m.addCustomItem(3, renderHQ, getWidth(), 35, false, nullptr, "Render HQ");
+            showTooltipsOn = (bool)readConfigFile("tooltips");
+            showTooltips.setToggleState(showTooltipsOn, NotificationType::sendNotificationSync);
+            m.addCustomItem(4, showTooltips, getWidth(), 35, true, nullptr, "Show Tooltips");
+            m.addCustomItem(5, windowSize, getWidth(), 35, true, nullptr, "Default window size");
+            m.addCustomItem(6, checkUpdate, getWidth(), 35, true, nullptr, "Check update");
+            m.showMenuAsync(PopupMenu::Options().withMinimumWidth(175).withStandardItemHeight(35),
+                            [&](int result)
+                            {
+                                switch (result)
+                                {
+                                case 1:
+                                    if (openGLCallback)
+                                        openGLCallback(openGLOn);
+                                    break;
+                                case 2:
+                                    HQ.setToggleState(!HQ.getToggleState(), NotificationType::sendNotificationAsync);
+                                    break;
+                                case 3:
+                                    renderHQ.setToggleState(!renderHQ.getToggleState(), NotificationType::sendNotificationAsync);
+                                    break;
+                                case 4:
+                                    if (showTooltipCallback)
+                                        showTooltipCallback(!showTooltipsOn);
+                                    break;
+                                case 5:
+                                    if (windowResizeCallback)
+                                        windowResizeCallback();
+                                    break;
+                                case 6:
+                                    if (checkUpdateCallback)
+                                        checkUpdateCallback();
+                                    break;
+                                }
+                            });
         };
-        panel.onPanelShowHide = [&] (bool state)
-        {
-            state ? toFront(false) : toBack();
-        };
 
-        addAndMakeVisible(panel);
-        panel.setContent(&list, false);
-        panel.setShadowWidth(10);
-
-        list.onItemClick = [&](CommandID id, bool state)
-        {
-            switch (id)
-            {
-        #if JUCE_WINDOWS || JUCE_LINUX
-            case CommandID::OpenGL:
-                if (openGLCallback)
-                    openGLCallback(state);
-                break;
-        #endif
-            case CommandID::WindowSize:
-                if (windowResizeCallback)
-                    windowResizeCallback();
-                break;
-            case CommandID::CheckUpdate:
-                if (checkUpdateCallback)
-                    checkUpdateCallback();
-                break;
-            default:
-                break;
-            };
-        };
-
-        hqAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "hq", list.HQ);
-        renderHQAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "renderHQ", list.renderHQ);
-        compLinkAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "compLink", list.compLink);
-        compPosAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "compPos", list.compPos);
-    }
-
-    ~MenuComponent() override
-    {
-        panel.setContent(nullptr);
+        hqAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "hq", HQ);
+        renderHQAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "renderHQ", renderHQ);
     }
 
     std::function<void()> windowResizeCallback;
     std::function<void()> checkUpdateCallback;
     std::function<void(bool)> openGLCallback;
+    std::function<void(bool)> showTooltipCallback;
 
     void resized() override
     {
         auto w = getLocalBounds().getWidth();
-
         menuButton.setBounds(getLocalBounds().removeFromTop(20).removeFromRight(w / 2));
-        panel.setBounds(getLocalBounds());
     }
 };
