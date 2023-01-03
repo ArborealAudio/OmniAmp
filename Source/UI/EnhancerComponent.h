@@ -101,14 +101,17 @@ struct EnhancerComponent : Component
         auto right = bounds.removeFromRight(div);
         const auto width = bounds.getWidth();
 
-        auto invHeight = left.getHeight() * 0.33f;
+        auto invHeight = left.getHeight() * 0.25f;
+        auto invWidth = left.getWidth() * 0.25f;
 
         // wave.setBounds(bounds.reduced(10, (float)bounds.getHeight() * 0.2f));
         lfCut.setBounds(bounds.removeFromLeft(width * 0.5f));
         hfCut.setBounds(bounds.removeFromLeft(width * 0.5f));
-        lfInvert.setBounds(left.removeFromLeft(left.getWidth() * 0.2).reduced(0, invHeight));
+        lfInvert.setBounds(left.removeFromLeft(invWidth).withSizeKeepingCentre(invWidth, invHeight));
+        lfInvert.lnf.cornerRadius = lfInvert.getHeight() * 0.25f;
         lfEnhance.setBounds(left);
-        hfInvert.setBounds(right.removeFromRight(right.getWidth() * 0.2).reduced(0, invHeight));
+        hfInvert.setBounds(right.removeFromRight(invWidth).withSizeKeepingCentre(invWidth, invHeight));
+        hfInvert.lnf.cornerRadius = hfInvert.getHeight() * 0.25f;
         hfEnhance.setBounds(right);
     }
 

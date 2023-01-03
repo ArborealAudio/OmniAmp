@@ -17,9 +17,9 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       cabComponent(p.apvts),
       reverbComp(p.apvts),
       enhancers(p.audioSource, p.apvts),
-      menu(p.apvts, 200),
+      menu(p.apvts),
       presetMenu(p.apvts),
-      dl(false), tooltip(this, 1000)
+      dl(false)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
@@ -29,6 +29,11 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         opengl.attachTo(*this);
     }
 #endif
+
+    if (readConfigFile("tooltips"))
+    {
+        tooltip = std::make_unique<TooltipWindow>(this, 1000);
+    }
 
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
     logo->setInterceptsMouseClicks(true, false);
@@ -60,6 +65,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         dl.setVisible(dl.checkForUpdate());
         if (!dl.isVisible())
             NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
+    };
+    menu.showTooltipCallback = [&](bool state)
+    {
+        if (state)
+            tooltip = std::make_unique<TooltipWindow>(this, 1000);
+        else
+            tooltip = nullptr;
+        writeConfigFile("tooltips", state);
     };
 #if JUCE_WINDOWS || JUCE_LINUX
     menu.openGLCallback = [&](bool state)
@@ -126,11 +139,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(preComponent);
     addAndMakeVisible(ampControls);
     addAndMakeVisible(cabComponent);
-    // cabComponent.setState(*p.apvts.getRawParameterValue("cabType"));
-    // cabComponent.cabChanged = [&](int newType)
-    // {
-    //     p.apvts.getParameterAsValue("cabType") = newType;
-    // };
     addAndMakeVisible(reverbComp);
     addAndMakeVisible(enhancers);
 
@@ -206,8 +214,8 @@ void GammaAudioProcessorEditor::resized()
     auto topSection = bounds.removeFromTop(h * 0.15f);
     auto mainHeight = bounds.getHeight();
     auto enhancerSection = bounds.removeFromBottom(mainHeight * 0.25f).reduced(1);
-    auto cabVerbSection = bounds.removeFromBottom(mainHeight * 0.25f).reduced(1);
-    auto ampSection = bounds.removeFromBottom(bounds.getHeight() * 0.66f).reduced(1);
+    auto cabVerbSection = bounds.removeFromBottom(mainHeight * 0.3f).reduced(1);
+    auto ampSection = bounds.removeFromBottom(bounds.getHeight() * 0.6f).reduced(1);
     auto preSection = bounds.reduced(1);
 
     /* set bounds of top controls */
@@ -232,7 +240,7 @@ void GammaAudioProcessorEditor::resized()
             c->setBounds(topKnobs.removeFromLeft(knobFrac));
         else
             c->setBounds(knobsBottom.removeFromLeft(knobFrac));
-        if (auto *k = dynamic_cast<Knob*>(c))
+        if (auto *k = dynamic_cast<Knob *>(c))
             k->setOffset(0, -c->getHeight() * 0.1f);
     }
 

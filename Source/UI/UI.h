@@ -16,7 +16,7 @@ static const Typeface::Ptr getCustomFont()
 
 /**
  * will lay out components in vector-wise order, either horizontally or vertically across the bounds provided.
- * @param components should be a pointer to a vector of components
+ * @param components should be a vector of component pointers
  * @param vertical by default stuff will be laid out horizontally
  * @param proportion a skew value, < 1 will skew every component after initial component in the vector by this fraction of init component's width; > 1 will skew components after initial component to be larger than initial component by said factor
  * @param padding multiplier of each component's width to be applied as padding

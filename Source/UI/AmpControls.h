@@ -41,6 +41,11 @@ struct AmpControls : Component, private Timer
             eqFunc = decibels;
         else
             eqFunc = zeroToTen;
+        
+        distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "dist", dist);
+        dist.setLabel("Overdrive");
+        dist.setTooltip("A one-knob distortion pedal. Fully bypassed at 0.");
+        dist.setValueToStringFunction(zeroToTen);
 
         inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
         inGain.setLabel("Preamp");
@@ -339,34 +344,29 @@ struct AmpControls : Component, private Timer
     {
         auto bounds = getLocalBounds();
 
-        auto mb = bounds.removeFromTop(bounds.getHeight() * 0.7f); // bounds becomes bottom section
-        auto w = mb.getWidth() / getKnobs().size(); // knob chunk
+        auto mb = bounds.removeFromTop(bounds.getHeight() * 0.7f)/* .reduced(5) */; // bounds becomes bottom section
+        auto chunk = mb.getWidth() / getKnobs().size(); // knob chunk
 
         for (auto &k : getKnobs())
         {
-            k->setBounds(mb.removeFromLeft(w).reduced(5));
+            k->setBounds(mb.removeFromLeft(chunk).reduced(5));
             k->setOffset(0, -5);
         }
 
-        hiGain.setBounds(bounds.removeFromLeft(w));
-        // hiGain.setSize(getWidth() * 0.07f, getHeight() * 0.15f);
-        // hiGain.setCentrePosition(hiGainBounds.getCentreX(), hiGainBounds.getCentreY());
+        // bounds at this point is bottom 30% 
+        auto botItemBounds = bounds.reduced(chunk, 0); // reduce by knob-width on either side
+        float botChunk = botItemBounds.getWidth() / 4;
+        auto boostBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
+        auto modeBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
+        auto subModeBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
+        auto powerBounds = botItemBounds.removeFromLeft(botChunk).reduced(5);
+        powerBounds.setWidth(powerBounds.getHeight());
 
-        // bounds is bottom w/ boost removed from left
-        auto botItemBounds = bounds.reduced(w * 0.5f, 0);
-        float third = botItemBounds.getWidth() / 3;
-        auto modeBounds = botItemBounds.removeFromLeft(third);
-        auto subModeBounds = botItemBounds.removeFromLeft(third);
-        auto powerBounds = botItemBounds.removeFromLeft(third);
-
-        mode.setSize(getWidth() * 0.15f, getHeight() * 0.15f);
-        mode.setCentrePosition(modeBounds.getCentreX(), modeBounds.getCentreY());
-
-        subMode->setSize(getWidth() * 0.15f, getHeight() * 0.15f);
-        subMode->setCentrePosition(subModeBounds.getCentreX(), subModeBounds.getCentreY());
-
-        power.setSize(powerBounds.getHeight(), powerBounds.getHeight());
-        power.setCentrePosition(powerBounds.getCentreX(), powerBounds.getCentreY());
+        hiGain.setBounds(boostBounds);
+        hiGain.lnf.cornerRadius = hiGain.getHeight() * 0.25f;
+        mode.setBounds(modeBounds);
+        subMode->setBounds(subModeBounds);
+        power.setBounds(powerBounds);
     }
 
 private:
@@ -374,8 +374,8 @@ private:
 
     Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_TICKS | Knob::DRAW_SHADOW;
 
-    Knob inGain{knobFlags}, outGain{knobFlags}, bass{knobFlags}, mid{knobFlags}, treble{knobFlags};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
+    Knob dist{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, bass{knobFlags}, mid{knobFlags}, treble{knobFlags};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> distAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
 
     ChoiceMenu mode, guitarMode, bassMode, channelMode;
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach, gtrModeAttach, bassModeAttach, chanModeAttach;
@@ -394,6 +394,7 @@ private:
     std::vector<Knob *> getKnobs()
     {
         return {
+            &dist,
             &inGain,
             &bass,
             &mid,

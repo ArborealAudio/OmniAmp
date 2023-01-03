@@ -102,7 +102,7 @@ private:
     OpenGLContext opengl;
 #endif
 
-    TooltipWindow tooltip;
+    std::unique_ptr<TooltipWindow> tooltip = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GammaAudioProcessorEditor)
 };
