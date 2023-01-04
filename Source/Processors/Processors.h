@@ -89,7 +89,7 @@ namespace Processors
 #include "Enhancer.h"
 #include "Cab.h"
 #include "DistPlus.h"
-#include "Room.h"
+#include "Reverb/Reverb.hpp"
 
     /**
      * A struct which contains a vector of processors and calls their respective process methods
