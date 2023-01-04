@@ -1,3 +1,4 @@
+add_subdirectory(Reverb)
 target_sources(Gamma
 PRIVATE
     Comp.h
@@ -8,5 +9,4 @@ PRIVATE
     Tube.h
     Enhancer.h
     Cab.h
-    DistPlus.h
-    Room.h)
+    DistPlus.h)
