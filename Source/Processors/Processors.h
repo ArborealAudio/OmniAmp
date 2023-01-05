@@ -36,8 +36,8 @@ namespace Processors
 
     enum ChannelMode
     {
-        A,
-        B
+        Modern,
+        Vintage
     };
 
     /**
@@ -787,13 +787,13 @@ namespace Processors
             auto pre_lim = jmap(base, 0.5f, 1.f);
             triode[0].type = currentType;
             triode[1].type = currentType;
-            if (currentType == B)
+            if (currentType == Vintage)
                 setBias(0, pre_lim, 0.5f * gain_raw);
             else
                 setBias(0, pre_lim * 2.f, pre_lim * 2.f);
             if (*hiGain)
             {
-                if (currentType == B)
+                if (currentType == Vintage)
                     setBias(1, pre_lim, gain_raw);
                 else
                     setBias(1, gain_raw, gain_raw);
@@ -803,7 +803,7 @@ namespace Processors
         inline void setPoweramp(float base)
         {
             float bias = jmap(base, 1.f, 4.f);
-            if (currentType == A)
+            if (currentType == Modern)
             {
                 pentode.type = PentodeType::Nu;
                 pentode.bias.first = bias;
@@ -837,7 +837,7 @@ namespace Processors
             {
             case 0:
                 lowGain = newValue;
-                if (currentType == A)
+                if (currentType == Modern)
                     *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
                 else
                     *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 300.0, 0.66, gain);
@@ -847,7 +847,7 @@ namespace Processors
                 midGain = newValue;
                 double Q = 0.707;
                 Q *= 1.0 / gain;
-                if (currentType == A)
+                if (currentType == Modern)
                     *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
                 else
                     *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 800.0, Q, gain);
@@ -855,7 +855,7 @@ namespace Processors
             break;
             case 2:
                 trebGain = newValue;
-                if (currentType == A)
+                if (currentType == Modern)
                     *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
                 else
                     *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 6500.0, 0.5, gain);

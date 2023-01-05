@@ -270,7 +270,7 @@ struct AmpControls : Component, private Timer
         case Processors::ProcessorType::Channel:
             backgroundColor = Colours::darkgrey;
             secondaryColor = Colours::oldlace;
-            if ((ChannelMode)subMode_p->load() == A)
+            if ((ChannelMode)subMode_p->load() == Modern)
             {
                 for (auto &k : getKnobs())
                 {

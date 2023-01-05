@@ -244,7 +244,7 @@ struct AVTriode : PreampProcessor
         {
             auto in = block.getChannelPointer(ch);
 
-            if (type == B)
+            if (type == Vintage)
                 processSamples<true>(in, ch, block.getNumSamples(), bias.first, bias.second);
             else
                 processSamples<false>(in, ch, block.getNumSamples(), bias.first, bias.second);
@@ -253,7 +253,7 @@ struct AVTriode : PreampProcessor
 #endif
 
     bias_t bias;
-    ChannelMode type = ChannelMode::B;
+    ChannelMode type = ChannelMode::Vintage;
 
 private:
     std::vector<T> y_m;
