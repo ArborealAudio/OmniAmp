@@ -297,6 +297,9 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
+    // if (totalNumInputChannels < totalNumOutputChannels)
+    //     buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
+
     doubleBuffer.makeCopyOf(buffer, true);
 
     processDoubleBuffer(doubleBuffer, doubleBuffer.getNumChannels() < 2);
@@ -322,8 +325,8 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
         }
     }
 
-    if (getActiveEditor())
-        audioSource.copyBuffer(buffer);
+    // if (getActiveEditor())
+    //     audioSource.copyBuffer(buffer);
 }
 
 void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::MidiBuffer &midiMessages)
@@ -340,8 +343,8 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::
     if (totalNumInputChannels < totalNumOutputChannels)
         buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
 
-    if (getActiveEditor())
-        audioSource.copyBuffer(buffer);
+    // if (getActiveEditor())
+    //     audioSource.copyBuffer(buffer);
 }
 
 //==============================================================================
@@ -411,7 +414,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<cParam>(ParameterID("mode", 1), "Mode", StringArray{"Guitar", "Bass", "Channel"}, 2));
     params.emplace_back(std::make_unique<cParam>(ParameterID("guitarMode", 1), "Guitar Amp Type", StringArray{"GammaRay", "Sunbeam", "Moonbeam", "XRay"}, 0));
     params.emplace_back(std::make_unique<cParam>(ParameterID("bassMode", 1), "Bass Amp Type", StringArray{"Cobalt", "Emerald", "Quartz"}, 0));
-    params.emplace_back(std::make_unique<cParam>(ParameterID("channelMode", 1), "Channel Strip", StringArray{"A", "B"}, 0));
+    params.emplace_back(std::make_unique<cParam>(ParameterID("channelMode", 1), "Channel Strip", StringArray{"Modern", "Vintage"}, 0));
     params.emplace_back(std::make_unique<bParam>(ParameterID("ampOn", 1), "Amp On/Off", true));
     params.emplace_back(std::make_unique<fParam>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("preampAutoGain", 1), "Preamp Auto Gain", false));
