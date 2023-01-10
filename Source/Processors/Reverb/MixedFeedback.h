@@ -17,7 +17,7 @@ struct MixedFeedback
             double r = ch * 1.0 / channels;
             delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
             delays[ch].prepare(spec);
-            delays[ch].setMaximumDelayInSamples(2 * delaySamples[ch] + 1);
+            delays[ch].setMaximumDelayInSamples(44100);
 
             osc[ch].initialise([](double x)
                                { return std::sin(x); });
