@@ -136,6 +136,7 @@ struct OptoComp
 
     void processBlock(dsp::AudioBlock<double> &block, T comp, bool linked)
     {
+        CHECK_BLOCK(block)
         if (comp == 0.0) {
             grSource.measureGR(1.0);
             reset();
@@ -150,6 +151,7 @@ struct OptoComp
         }
         else
             processUnlinked(block.getChannelPointer(0), 0, comp, block.getNumSamples());
+        CHECK_BLOCK(block)
     }
 
     strix::VolumeMeterSource& getGRSource() { return grSource; }
