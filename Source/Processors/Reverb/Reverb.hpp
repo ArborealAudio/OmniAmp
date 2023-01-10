@@ -43,8 +43,8 @@ class Room
 public:
     Room(ReverbType initType)
     {
-        for (size_t i = 0; i < 4; ++i)
-            diff.emplace_back((int64_t)i);
+        // for (size_t i = 0; i < 4; ++i)
+        //     diff.emplace_back((int64_t)i);
 
         switch (initType)
         {
@@ -62,8 +62,8 @@ public:
 
     Room(const ReverbParams &_params)
     {
-        for (size_t i = 0; i < 4; ++i)
-            diff.emplace_back((int64_t)i);
+        // for (size_t i = 0; i < 4; ++i)
+        //     diff.emplace_back((int64_t)i);
         setReverbParams(_params);
     }
 
@@ -108,7 +108,7 @@ public:
 
     void setPredelay(float newPredelay)
     {
-        params.preDelay = newPredelay;
+        params.preDelay = newPredelay; /** PROBLEM: Don't we need to account for downsampling? Or no, bc spec passed in is DS */
         preDelay.setDelay(params.preDelay);
     }
 
@@ -121,12 +121,13 @@ public:
     {
         numChannels = spec.numChannels;
 
-        usBuf.setSize(numChannels, spec.maximumBlockSize * ratio);
+        usBuf.setSize(2, spec.maximumBlockSize * ratio);
         splitBuf.setSize(channels, spec.maximumBlockSize);
         erBuf.setSize(channels, spec.maximumBlockSize);
-        dsBuf.setSize(numChannels, spec.maximumBlockSize);
+        dsBuf.setSize(2, spec.maximumBlockSize);
 
         preDelay.prepare(spec);
+        preDelay.setMaximumDelayInSamples(spec.sampleRate);
 
         for (auto &d : diff)
             d.prepare(spec);
@@ -207,7 +208,10 @@ public:
         downsampleBuffer(buf, numSamples);
 
         dsp::AudioBlock<double> dsBlock (dsBuf);
-        // preDelay.processBlock(dsBlock);
+        if (numChannels > 1)
+            dsBlock = dsBlock.getSubBlock(0, hNumSamples);
+        else
+            dsBlock = dsBlock.getSingleChannelBlock(0).getSubBlock(0, hNumSamples);
         preDelay.process(dsp::ProcessContextReplacing<double>(dsBlock));
 
         upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), hNumSamples);
@@ -247,11 +251,11 @@ public:
     }
 private:
     ReverbParams params;
-    std::vector<Diffuser<Type, channels>> diff;
+    std::array<Diffuser<Type, channels>, 4> diff {Diffuser<Type, channels>(0), Diffuser<Type, channels>(1), Diffuser<Type, channels>(2), Diffuser<Type, channels>(3)};
     MixedFeedback<Type, channels> feedback;
     AudioBuffer<double> splitBuf, erBuf, dsBuf, usBuf;
     StereoMultiMixer<Type, channels> upMix;
-    dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> preDelay{4410};
+    dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> preDelay{44100};
     double erLevel = 1.0;
     int ratio = 1;
     int numChannels = 0;
