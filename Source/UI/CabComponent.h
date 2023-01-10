@@ -161,6 +161,7 @@ public:
     {
         if (paramID == "cabType")
         {
+            const MessageManagerLock lock;
             setState();
             repaint(cabBounds.toNearestInt());
         }
