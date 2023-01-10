@@ -139,13 +139,12 @@ private:
 #if USE_SIMD
         return xsimd::select(xn <= 0.0,
                              (g * xn) / (1.0 - ((g * xn) / Ln)),
-                             (g * xn) / (1.0 + ((g * xn) / Lp))) /
-               g;
+                             (g * xn) / (1.0 + ((g * xn) / Lp)));
 #else
         if (xn <= 0.0)
-            return xn / (1.0 - (xn / Ln));
+            return (xn * g) / (1.0 - ((g * xn) / Ln));
         else
-            return xn / (1.0 + (xn / Lp));
+            return (xn * g) / (1.0 + ((g * xn) / Lp));
 #endif
     }
 
@@ -174,54 +173,47 @@ struct AVTriode : PreampProcessor
     void prepare(const dsp::ProcessSpec &spec)
     {
         y_m.resize(spec.numChannels);
+        std::fill(y_m.begin(), y_m.end(), 0.0);
 
         sc_hp.prepare(spec);
-        sc_hp.setType(strix::FilterType::highpass);
-        sc_hp.setCutoffFreq(10.0);
+        sc_hp.setType(strix::FilterType::lowpass);
+        sc_hp.setCutoffFreq(100.0);
     }
 
     void reset()
     {
         std::fill(y_m.begin(), y_m.end(), 0.0);
-
         sc_hp.reset();
     }
 
     template <bool mode = true>
     inline void processSamples(T *x, size_t ch, size_t numSamples, T gp, T gn)
     {
-        auto inc_p = (gp - lastGp) / (T)numSamples;
-        auto inc_n = (gn - lastGn) / (T)numSamples;
-
         if (mode)
         {
             for (size_t i = 0; i < numSamples; ++i)
             {
-                auto f1 = (1.f / lastGp) * strix::fast_tanh(lastGp * x[i]) * y_m[ch];
 #if USE_SIMD
-                auto f2 = (1.f / lastGn) * xsimd::atan(lastGn * x[i]) * (1.0 - y_m[ch]);
+                x[i] = -xsimd::select(x[i] > 0.0,
+                                     (x[i] + (x[i] * x[i])) / (1.0 + (gp * x[i] * x[i])),
+                                     x[i] / (1.0 - gn * x[i]));
 #else
-                auto f2 = (1.f / lastGn) * std::atan(lastGn * x[i]) * (1.0 - y_m[ch]);
+                if (x[i] > 0.0)
+                    x[i] = -1.0 * (x[i] + x[i] * x[i]) / (1.0 + gp * x[i] * x[i]);
+                else
+                    x[i] = -1.0 * x[i] / (1.0 - gn * x[i]);
 #endif
-
-                lastGp += inc_p;
-                lastGn += inc_n;
-
-                x[i] = f1 + f2;
-                y_m[ch] = sc_hp.processSample(ch, x[i]);
             }
+            CHECK_BUFFER(x, numSamples)
         }
         else
         {
             for (size_t i = 0; i < numSamples; ++i)
             {
-                x[i] = (1.f / lastGp) * strix::fast_tanh(lastGp * x[i]);
-                lastGp += inc_p;
+                x[i] = (1.f / gp) * strix::fast_tanh(gp * -x[i]);
             }
+            CHECK_BUFFER(x, numSamples)
         }
-
-        lastGp = gp;
-        lastGn = gn;
     }
 
 #if USE_SIMD
@@ -231,7 +223,7 @@ struct AVTriode : PreampProcessor
         {
             auto in = block.getChannelPointer(ch);
 
-            if (type == B)
+            if (type == Vintage)
                 processSamples<true>(in, ch, block.getNumSamples(), bias.first, bias.second);
             else
                 processSamples<false>(in, ch, block.getNumSamples(), bias.first, bias.second);
@@ -257,8 +249,6 @@ struct AVTriode : PreampProcessor
 
 private:
     std::vector<T> y_m;
-
     strix::SVTFilter<T> sc_hp;
-
     T lastGp = 1.0, lastGn = 1.0;
 };
