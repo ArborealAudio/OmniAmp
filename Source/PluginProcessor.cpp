@@ -302,7 +302,7 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
 
     doubleBuffer.makeCopyOf(buffer, true);
 
-    processDoubleBuffer(doubleBuffer, doubleBuffer.getNumChannels() < 2);
+    processDoubleBuffer(doubleBuffer, buffer.getNumChannels() < 2);
 
     auto L = doubleBuffer.getReadPointer(0);
     auto outL = buffer.getWritePointer(0);
