@@ -191,13 +191,14 @@ private:
     {
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
+        const size_t os_index_ = os_index;
 
         if (*apvts.getRawParameterValue("gainLink"))
             outGain_raw *= 1.0 / inGain_raw;
 
         dsp::AudioBlock<double> block(buffer);
 
-        mixer.pushDrySamples(block); /* causin' segfaults in auval. LORD we need a better solution! */
+        mixer.pushDrySamples(block); /** PROBLEM: segfaults in auval */
 
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
@@ -214,16 +215,16 @@ private:
         float stereoEmph = *apvts.getRawParameterValue("stereoEmphasis");
         if ((bool)stereoEmph && !mono)
         {
-            stereoEmph = jmap(stereoEmph, 0.1f, 10.f); /*create a range from -10 to 10*/
+            stereoEmph = jmap(stereoEmph, 0.1f, 10.f); /* create a range from -10 to 10 */
             emphasisIn.process(block, stereoEmph, ms);
         }
 
         emphLow.processIn(block);
         emphHigh.processIn(block);
 
-        auto osBlock = oversample[os_index].processSamplesUp(block);
+        auto osBlock = oversample[os_index_].processSamplesUp(block);
 
-        if (*apvts.getRawParameterValue("ampOn"))
+        if ((bool)*apvts.getRawParameterValue("ampOn"))
         {
             switch (currentMode)
             {
@@ -239,7 +240,7 @@ private:
             }
         }
 
-        oversample[os_index].processSamplesDown(block);
+        oversample[os_index_].processSamplesDown(block);
 
         auto latency = oversample[os_index].getLatencyInSamples();
         setLatencySamples((int)latency);
@@ -291,6 +292,7 @@ private:
         mixer.setWetLatency(latency);
         mixer.setWetMixProportion(*apvts.getRawParameterValue("mix"));
         mixer.mixWetSamples(block);
+        CHECK_BLOCK(block)
     }
 
     //==============================================================================
