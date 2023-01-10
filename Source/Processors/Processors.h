@@ -297,10 +297,10 @@ namespace Processors
                 eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.25e-9, (T)15e-9, (T)250e-9, (T)300e3, (T)400e3, (T)1e3, (T)20e3));
                 break;
             case Moonbeam:
-                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.25e-9, (T)20e-9, (T)50e-9, (T)300e3, (T)500e3, (T)15e3, (T)12e3));
+                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.25e-9, (T)20e-9, (T)50e-9, (T)300e3, (T)500e3, (T)5e3, (T)12e3));
                 break;
             case XRay:
-                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)250e-9, (T)22e-9, (T)20e-9, (T)270e3, (T)1e6, (T)125e3, (T)65e3));
+                eqCoeffs = (typename ToneStackNodal<T>::Coeffs((T)0.25e-9, (T)22e-9, (T)20e-9, (T)270e3, (T)1e6, (T)50e3, (T)65e3));
                 break;
             }
 
@@ -312,40 +312,37 @@ namespace Processors
             switch (currentType)
             {
             case GammaRay:
-                triode[0].bias.first = 0.5;
+                triode[0].bias.first = 1.0;
                 triode[0].bias.second = 1.0;
                 triode[1].bias.first = 1.4;
                 triode[1].bias.second = 2.4;
                 triode[2].bias.first = 1.4;
-                triode[2].bias.second = 2.4;
-                triode[3].bias.first = 2.0;
-                triode[3].bias.second = 4.0;
+                triode[2].bias.second = 0.5;
+                triode[3].bias.first = 1.0;
+                triode[3].bias.second = .5;
                 break;
             case Sunbeam:
-                triode[0].bias.first = 0.5;
-                triode[0].bias.second = 0.5;
-                triode[1].bias.first = 1.0;
-                triode[1].bias.second = 2.0;
+                for (auto &t : triode)
+                    t.type = ChannelMode::Modern;
+                triode[0].bias.first = 1.5;
+                triode[1].bias.first = 0.55;
                 triode[2].bias.first = 5.0;
-                triode[2].bias.second = 5.0;
                 break;
             case Moonbeam:
-                triode[0].bias.first = 2.0;
-                triode[0].bias.second = 2.5;
-                triode[1].bias.first = 3.0;
-                triode[1].bias.second = 4.0;
-                triode[2].bias.first = 3.0;
-                triode[2].bias.second = 4.0;
-                triode[3].bias.first = 4.0;
-                triode[3].bias.second = 5.0;
+                for (auto &t : triode)
+                    t.type = ChannelMode::Modern;
+                triode[0].bias.first = 1.0;
+                triode[1].bias.first = 2.18;
+                triode[2].bias.first = 4.0;
+                triode[3].bias.first = 5.0;
                 break;
             case XRay:
-                triode[0].bias.first = 0.5;
-                triode[0].bias.second = 1.0;
-                triode[1].bias.first = 1.0;
-                triode[1].bias.second = 2.0;
-                triode[2].bias.first = 3.0;
-                triode[2].bias.second = 4.0;
+                triode[0].bias.first = 1.0;
+                triode[0].bias.second = 2.0;
+                triode[1].bias.first = 2.0;
+                triode[1].bias.second = 3.0;
+                triode[2].bias.first = 2.0;
+                triode[2].bias.second = 3.0;
                 triode[3].bias.first = 2.0;
                 triode[3].bias.second = 4.0;
                 break;
@@ -377,8 +374,8 @@ namespace Processors
                 preamp.procs.push_back(&gtrPre);
                 preamp.procs.push_back(&triode[0]);
                 preamp.procs.push_back(&triode[1]);
-                preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(toneStack.get());
+                preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(&triode[3]);
                 break;
             case XRay:
@@ -407,22 +404,22 @@ namespace Processors
             {
             case GammaRay:
                 pentode.type = PentodeType::Nu;
-                pentode.bias.first = 2.0;
-                pentode.bias.second = 2.0;
+                pentode.bias.first = 0.85;
+                // pentode.bias.second = 2.0;
                 break;
             case Sunbeam:
                 pentode.type = PentodeType::Classic;
-                pentode.bias.first = 3.0;
-                pentode.bias.second = 1.2;
+                pentode.bias.first = 5.0;
+                pentode.bias.second = 5.0;
                 break;
             case Moonbeam:
                 pentode.type = PentodeType::Nu;
-                pentode.bias.first = 2.0;
-                pentode.bias.second = 2.0;
+                pentode.bias.first = 1.5;
+                // pentode.bias.second = 2.0;
                 break;
             case XRay:
                 pentode.type = PentodeType::Classic;
-                pentode.bias.first = 2.0;
+                pentode.bias.first = 5.0;
                 pentode.bias.second = 1.2;
                 break;
             }
@@ -450,6 +447,8 @@ namespace Processors
 #endif
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
+            // else
+            //     mxr.processBlockInit(processBlock);
 
             processBlock.multiplyBy(gain_raw);
 
@@ -474,7 +473,6 @@ namespace Processors
             preamp.process(processBlock);
 
             processBlock.multiplyBy(out_raw);
-
             pentode.processBlockClassB(processBlock);
 
             if (*outGainAuto)
@@ -673,9 +671,10 @@ namespace Processors
 #else
             auto &&processBlock = block;
 #endif
-
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
+            // else
+            //     mxr.processBlockInit(processBlock);
 
             triode[0].process(processBlock);
 
@@ -884,6 +883,8 @@ namespace Processors
 
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
+            // else
+            //     mxr.processBlockInit(processBlock);
 
             if (*inGain > 0.f)
             {
