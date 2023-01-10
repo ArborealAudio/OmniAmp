@@ -14,8 +14,9 @@ struct Diffuser
     }
 
     /**
-    @param delayRangeinS you guessed it, delay range in seconds
-    */
+     * @param delayRangeinS you guessed it, delay range in seconds
+     * @param seed_ seed for delay time RNG
+     */
     Diffuser(float delayRangeinS, int64_t seed_) : delayRange(delayRangeinS), seed(seed_)
     {
     }
@@ -37,28 +38,26 @@ struct Diffuser
             double minDelay = delayRangeSamples * i / channels;
             double maxDelay = delayRangeSamples * (i + 1) / channels;
             d.prepare(spec);
-            d.setMaximumDelayInSamples(2 * maxDelay + 1);
-            randDelay[i] = rand.nextInt(Range<int>(minDelay, maxDelay));
-            d.setDelay(randDelay[i]);
+            d.setMaximumDelayInSamples(44100);
+            d.setDelay((minDelay + maxDelay) / 2.0); // just use the average!
             invert.push_back(rand.nextInt() % 2 == 0);
             ++i;
         }
     }
 
     /* change delay ranges after changing main delayRange */
-    void changeDelay()
+    void changeDelay() /** PROBLEM: Changing delay times means that the limit set in prepare() may be invalid later */
     {
         invert.clear();
 
         Random rand(seed);
 
+        auto delayRangeSamples = delayRange * SR;
         for (size_t i = 0; i < delay.size(); ++i)
         {
-            auto delayRangeSamples = delayRange * SR;
             double minDelay = delayRangeSamples * i / channels;
             double maxDelay = delayRangeSamples * (i + 1) / channels;
-            randDelay[i] = rand.nextInt(Range<int>(minDelay, maxDelay));
-            delay[i].setDelay(randDelay[i]);
+            delay[i].setDelay((minDelay + maxDelay) / 2.0); // just use the average!
             invert.push_back(rand.nextInt() % 2 == 0);
         }
     }
