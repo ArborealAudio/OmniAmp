@@ -284,6 +284,7 @@ namespace Processors
                 currentType = static_cast<GuitarMode>(newValue);
                 ampChanged = true;
             }
+            Processor::parameterChanged(parameterID, newValue);
         }
 
         void setToneStack()
@@ -537,6 +538,7 @@ namespace Processors
                 currentType = static_cast<BassMode>(newValue);
                 ampChanged = true;
             }
+            Processor::parameterChanged(parameterID, newValue);
         }
 
         void setToneStack()
@@ -745,14 +747,14 @@ namespace Processors
             apvts.removeParameterListener("channelMode", this);
         }
 
-        void parameterChanged(const String &paramID, float) override
+        void parameterChanged(const String &paramID, float newValue) override
         {
             if (paramID == "channelMode")
             {
                 currentType = (ChannelMode)channelMode->getIndex();
                 updateFilters = true;
-                // FIX: not working fully, gains reset to 0 for some reason
             }
+            Processor::parameterChanged(paramID, newValue);
         }
 
         void prepare(const dsp::ProcessSpec &spec) override
@@ -914,8 +916,6 @@ namespace Processors
                 autoGain *= 1.0 / out_raw;
 
 #if USE_SIMD
-            processBlock.multiplyBy(autoGain);
-
             simd.deinterleaveBlock(processBlock);
 #else
             processBlock.multiplyBy(autoGain);

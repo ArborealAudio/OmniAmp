@@ -94,41 +94,17 @@ struct OptoComp
     // set threshold based on comp param
     void setComp(double newComp)
     {
-        /*force static threshold if amp mode & post position*/
-        // if (*position && type != ProcessorType::Channel) {
-        //     setThreshold(-24.0);
-        //     return;
-        // }
-
         switch (type)
         {
         case ProcessorType::Guitar:
         case ProcessorType::Bass: {
-            // auto thresh_scale = c_comp / 3.0;
             double c_comp = jmap(newComp, 1.0, 3.0);
             threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
             break;
             }
         case ProcessorType::Channel: {
-            // auto thresh_scale = c_comp / 2.0;
             double c_comp = jmap(newComp, 1.0, 3.0);
             threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
-            break;
-            }
-        }
-    }
-
-    // set threshold directly in dB
-    void setThreshold(double newThresh)
-    {
-        switch (type)
-        {
-        case ProcessorType::Guitar:
-        case ProcessorType::Bass:
-            threshold.store(std::pow(10.0, newThresh * 0.05)); /* static threshold at -36dB */
-            break;
-        case ProcessorType::Channel: {
-            threshold.store(std::pow(10.0, newThresh * 0.05)); /* start at -18dB and scale down 3x */
             break;
             }
         }
@@ -248,7 +224,8 @@ private:
         auto gr = std::pow(10.0, gr_db * 0.05);
         lastGR[ch] = gr;
 
-        grSource.measureGR(lastGR[0]); // TODO: this should average btw L&R if unlinked stereo. Maybe move it to the higher-level block call
+        grSource.measureGR(lastGR[0]);
+        /** TODO: this should average btw L&R if unlinked stereo. Maybe move it to the higher-level block call */
 
         return gr;
     }
