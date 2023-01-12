@@ -194,14 +194,14 @@ struct AVTriode : PreampProcessor
             for (size_t i = 0; i < numSamples; ++i)
             {
 #if USE_SIMD
-                x[i] = -xsimd::select(x[i] > 0.0,
+                x[i] = xsimd::select(x[i] > 0.0,
                                      (x[i] + (x[i] * x[i])) / (1.0 + (gp * x[i] * x[i])),
                                      x[i] / (1.0 - gn * x[i]));
 #else
                 if (x[i] > 0.0)
-                    x[i] = -1.0 * (x[i] + x[i] * x[i]) / (1.0 + gp * x[i] * x[i]);
+                    x[i] = (x[i] + x[i] * x[i]) / (1.0 + gp * x[i] * x[i]);
                 else
-                    x[i] = -1.0 * x[i] / (1.0 - gn * x[i]);
+                    x[i] = x[i] / (1.0 - gn * x[i]);
 #endif
             }
             CHECK_BUFFER(x, numSamples)
@@ -210,7 +210,7 @@ struct AVTriode : PreampProcessor
         {
             for (size_t i = 0; i < numSamples; ++i)
             {
-                x[i] = (1.f / gp) * strix::fast_tanh(gp * -x[i]);
+                x[i] = (1.f / gp) * strix::fast_tanh(gp * x[i]);
             }
             CHECK_BUFFER(x, numSamples)
         }
