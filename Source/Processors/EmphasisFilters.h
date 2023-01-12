@@ -20,6 +20,9 @@ struct EmphasisFilter
     void prepare(const dsp::ProcessSpec &spec)
     {
         SR = spec.sampleRate;
+        float freq_ = *freq;
+        if (*freq >= SR * 0.5)
+            freq_ = SR * 0.49;
         float amount_ = Decibels::decibelsToGain(amount->get());
         float namount_ = Decibels::decibelsToGain(-amount->get());
         for (size_t i = 0; i < 2; ++i)
@@ -28,13 +31,13 @@ struct EmphasisFilter
             fOut[i].prepare(spec);
             if (type == Low)
             {
-                fIn[i].coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, *freq, 0.707, amount_);
-                fOut[i].coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, *freq, 0.707, namount_);
+                fIn[i].coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, freq_, 0.707, amount_);
+                fOut[i].coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, freq_, 0.707, namount_);
             }
             else
             {
-                fIn[i].coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, *freq, 0.707, amount_);
-                fOut[i].coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, *freq, 0.707, namount_);
+                fIn[i].coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, freq_, 0.707, amount_);
+                fOut[i].coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, freq_, 0.707, namount_);
             }
         }
     }
@@ -43,17 +46,18 @@ struct EmphasisFilter
     {
         float amount_ = Decibels::decibelsToGain(amount->get());
         float namount_ = Decibels::decibelsToGain(-amount->get());
+        float freq_ = *freq;
         for (size_t i = 0; i < 2; ++i)
         {
             if (type == Low)
             {
-                *fIn[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, *freq, 0.707, amount_);
-                *fOut[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, *freq, 0.707, namount_);
+                *fIn[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, freq_, 0.707, amount_);
+                *fOut[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, freq_, 0.707, namount_);
             }
             else
             {
-                *fIn[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, *freq, 0.707, amount_);
-                *fOut[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, *freq, 0.707, namount_);
+                *fIn[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq_, 0.707, amount_);
+                *fOut[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq_, 0.707, namount_);
             }
         }
     }
