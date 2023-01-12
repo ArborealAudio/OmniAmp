@@ -177,8 +177,8 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     reverb.setDownsampleRatio(2);
     reverb.prepare(spec);
 
-    mixer.prepare(spec);
-    mixer.setMixingRule(dsp::DryWetMixingRule::linear);
+    mixDelay.prepare(spec);
+    mixDelay.setMaximumDelayInSamples(spec.maximumBlockSize + 256);
 
     doubler.prepare(spec);
     doubler.setDelayTime(18);
@@ -205,7 +205,7 @@ void GammaAudioProcessor::releaseResources()
     emphasisIn.reset();
     emphasisOut.reset();
     doubler.reset();
-    mixer.reset();
+    mixDelay.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -302,7 +302,7 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
 
     doubleBuffer.makeCopyOf(buffer, true);
 
-    processDoubleBuffer(doubleBuffer, buffer.getNumChannels() < 2);
+    processDoubleBuffer(doubleBuffer, totalNumInputChannels < 2);
 
     auto L = doubleBuffer.getReadPointer(0);
     auto outL = buffer.getWritePointer(0);

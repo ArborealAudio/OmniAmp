@@ -171,7 +171,7 @@ private:
 
     Processors::CutFilters cutFilters;
 
-    dsp::DryWetMixer<double> mixer{8};
+    dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> mixDelay;
 
     strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
 
@@ -197,8 +197,14 @@ private:
             outGain_raw *= 1.0 / inGain_raw;
 
         dsp::AudioBlock<double> block(buffer);
+        const int numChannels = mono ? 1 : block.getNumChannels();
 
-        mixer.pushDrySamples(block); /** PROBLEM: segfaults in auval */
+        for (size_t ch = 0; ch < numChannels; ++ch)
+        {
+            const auto *in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+                mixDelay.pushSample(ch, in[i]);
+        }
 
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
@@ -274,7 +280,7 @@ private:
             strix::MSMatrix::msDecode(block);
 
         double dubAmt = *apvts.getRawParameterValue("doubler");
-        if (dubAmt && !mono)
+        if ((bool)dubAmt && !mono)
             doubler.process(block, dubAmt);
 
         reverb.process(buffer, *apvts.getRawParameterValue("reverbAmt"));
@@ -289,9 +295,14 @@ private:
         if (width != 1.f && !mono)
             strix::Balance::processBalance(block, width, false, lastWidth);
 
-        mixer.setWetLatency(latency);
-        mixer.setWetMixProportion(*apvts.getRawParameterValue("mix"));
-        mixer.mixWetSamples(block);
+        mixDelay.setDelay(latency);
+        float mixAmt = *apvts.getRawParameterValue("mix");
+        for (size_t ch = 0; ch < numChannels; ++ch)
+        {
+            auto *out = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+            out[i] = ((1.f - mixAmt) * mixDelay.popSample(ch)) + mixAmt * out[i];
+        }
         CHECK_BLOCK(block)
     }
 
