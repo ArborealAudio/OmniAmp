@@ -99,3 +99,44 @@ struct PowerButton : TextButton
 private:
     Colour background;
 };
+
+/**
+ * A better version of DrawableButton for our gain link button
+*/
+struct LinkButton : DrawableButton
+{
+    LinkButton(AudioProcessorValueTreeState &a) : apvts(a), DrawableButton("Gain Link", DrawableButton::ButtonStyle::ImageFitted)
+    {
+        attach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "gainLink", *this);
+        on = Drawable::createFromImageData(BinaryData::link_svg, BinaryData::link_svgSize);
+        overOn = Drawable::createFromImageData(BinaryData::link_over_on_svg, BinaryData::link_over_on_svgSize);
+        overOff = Drawable::createFromImageData(BinaryData::link_over_off_svg, BinaryData::link_over_off_svgSize);
+        off = Drawable::createFromImageData(BinaryData::link_off_svg, BinaryData::link_off_svgSize);
+        setClickingTogglesState(true);
+        setTooltip("Link Input and Output gains. Output gain can still be adjusted with linking on.");
+    }
+
+    void paint(Graphics &g) override
+    {
+        if (isMouseOver())
+        {
+            if (getToggleState())
+                overOn->drawWithin(g, getLocalBounds().toFloat(), RectanglePlacement::centred, 1.f);
+            else
+                overOff->drawWithin(g, getLocalBounds().toFloat(), RectanglePlacement::centred, 1.f);
+        }
+        else if (getToggleState())
+        {
+            on->drawWithin(g, getLocalBounds().toFloat(), RectanglePlacement::centred, 1.f);
+        }
+        else
+        {
+            off->drawWithin(g, getLocalBounds().toFloat(), RectanglePlacement::centred, 1.f);
+        }
+    }
+
+private:
+    AudioProcessorValueTreeState &apvts;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> attach;
+    std::unique_ptr<Drawable> on, overOn, overOff, off;
+};
