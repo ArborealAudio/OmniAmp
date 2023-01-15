@@ -106,8 +106,8 @@ public:
             PopupMenu m;
 #if !JUCE_MAC
             openGLOn = (bool)readConfigFile("openGL");
-            openGL.setToggleState(openGL);
-            m.addCustomItem(1, OpenGL, getWidth(), 35, false);
+            openGL.setToggleState(openGLOn, NotificationType::dontSendNotification);
+            m.addCustomItem(1, openGL, getWidth(), 35, false);
 #endif
             m.addCustomItem(2, HQ, getWidth(), 35, false, nullptr, "HQ");
             m.addCustomItem(3, renderHQ, getWidth(), 35, false, nullptr, "Render HQ");
