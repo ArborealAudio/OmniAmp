@@ -448,8 +448,8 @@ namespace Processors
 #endif
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
-            // else
-            //     mxr.processBlockInit(processBlock);
+            else
+                mxr.init = true;
 
             processBlock.multiplyBy(gain_raw);
 
@@ -675,8 +675,8 @@ namespace Processors
 #endif
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
-            // else
-            //     mxr.processBlockInit(processBlock);
+            else
+                mxr.init = true;
 
             triode[0].process(processBlock);
 
@@ -789,16 +789,20 @@ namespace Processors
             triode[0].type = currentType;
             triode[1].type = currentType;
             if (currentType == Vintage)
-                setBias(0, pre_lim, 0.5f * gain_raw);
+                setBias(0, pre_lim * 0.5f, 0.25f * gain_raw); // p: .25 - .5 n: .25 - 1
             else
-                setBias(0, pre_lim * 2.f, pre_lim * 2.f);
+                setBias(0, pre_lim * 2.f, pre_lim * 2.f); // p & n: 1 - 2
             if (*hiGain)
             {
                 if (currentType == Vintage)
-                    setBias(1, pre_lim, gain_raw);
+                    setBias(1, pre_lim, gain_raw); // p: 0.5 - 1 n: 1 . - 4
                 else
-                    setBias(1, gain_raw, gain_raw);
+                    setBias(1, gain_raw, gain_raw); // p & n: 1 - 4
             }
+            // setBias(0, JUCE_LIVE_CONSTANT(pre_lim),
+            // JUCE_LIVE_CONSTANT(0.5f * gain_raw));
+            // setBias(1, JUCE_LIVE_CONSTANT(pre_lim),
+            // JUCE_LIVE_CONSTANT(gain_raw));
         }
 
         inline void setPoweramp(float base)
@@ -885,8 +889,8 @@ namespace Processors
 
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
-            // else
-            //     mxr.processBlockInit(processBlock);
+            else
+                mxr.init = true;
 
             if (*inGain > 0.f)
             {
