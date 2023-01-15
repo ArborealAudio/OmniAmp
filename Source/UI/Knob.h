@@ -281,15 +281,14 @@ private:
                     g.fillPath(p);
                 }
 
+                /* arc */
                 if ((flags & DRAW_ARC) > 0)
                 {
                     auto defaultVal = static_cast<Knob *>(&slider)->getDefaultValue();
-                    /* arc */
-                    float arcStart = defaultVal == 0.f ? rotaryStartAngle : 0.f;
-                    float arcAngle = defaultVal == 0.f ? angle : angle - 2.f * MathConstants<float>::pi;
+                    float arcStart = defaultVal * (rotaryEndAngle - rotaryStartAngle) + rotaryStartAngle;
                     g.setColour(accentColor.contrasting(0.3f).withMultipliedSaturation(1.2f));
                     Path arc;
-                    arc.addArc(rx - 4, ry - 4, rw + 8, rw + 8, arcStart, arcAngle, true);
+                    arc.addArc(rx - 4, ry - 4, rw + 8, rw + 8, arcStart, angle, true);
                     g.strokePath(arc, PathStrokeType(4.f, PathStrokeType::beveled, PathStrokeType::rounded));
                 }
             };

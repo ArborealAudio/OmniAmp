@@ -7,8 +7,6 @@ struct EnhancerComponent : Component
 {
     EnhancerComponent(strix::AudioSource &s, AudioProcessorValueTreeState &apvts) : wave(s)
     {
-        mesh = Drawable::createFromImageData(BinaryData::amp_mesh_2_svg, BinaryData::amp_mesh_2_svgSize);
-
         // addAndMakeVisible(wave);
         wave.setInterceptsMouseClicks(false, false);
 
@@ -28,7 +26,7 @@ struct EnhancerComponent : Component
         lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "lfEnhance", lfEnhance);
         lfEnhance.setTooltip("A saturating, low-end boost after the amp and before the cab and reverb. The frequency is calibrated depending on the amp's mode.\n\nAlt/Option-click to enable Auto Gain.");
         lfEnhance.setLabel("LF Enhancer");
-        lfEnhance.setDefaultValue(apvts.getParameter("lfEnhance")->getDefaultValue());
+        lfEnhance.setDefaultValue(0.f);
         lfEnhance.setValueToStringFunction(percent);
         lfEnhance.setColor(Colours::black, Colours::antiquewhite);
         lfEnhance.autoGain.store(*apvts.getRawParameterValue("lfEnhanceAuto"));
@@ -45,7 +43,7 @@ struct EnhancerComponent : Component
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfEnhance", hfEnhance);
         hfEnhance.setTooltip("A saturating, hi-end boost after the amp and before the cab and reverb.\n\nAlt/Option-click to enable Auto Gain.");
         hfEnhance.setLabel("HF Enhancer");
-        hfEnhance.setDefaultValue(apvts.getParameter("hfEnhance")->getDefaultValue());
+        hfEnhance.setDefaultValue(0.f);
         hfEnhance.setValueToStringFunction(percent);
         hfEnhance.setColor(Colours::black, Colours::antiquewhite);
         hfEnhance.autoGain.store(*apvts.getRawParameterValue("hfEnhanceAuto"));
@@ -70,7 +68,7 @@ struct EnhancerComponent : Component
 
          hfCutAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfCut", hfCut);
         hfCut.setLabel("HF Cut");
-        hfCut.setDefaultValue(22000.f);
+        hfCut.setDefaultValue(1.f);
         hfCut.setValueToStringFunction([](float val)
                                        { if (val == 22000.f)
                 return String("Off");
@@ -116,10 +114,9 @@ struct EnhancerComponent : Component
     }
 
 private:
-    std::unique_ptr<Drawable> mesh;
-
     Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
-    Knob hfEnhance{knobFlags}, lfEnhance{knobFlags}, lfCut{Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW}, hfCut{Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::LOG_KNOB};
+    Knob::flags_t hfFlags = knobFlags | Knob::LOG_KNOB;
+    Knob hfEnhance{knobFlags}, lfEnhance{knobFlags}, lfCut{knobFlags}, hfCut{hfFlags};
 
     std::vector<Knob*> getKnobs()
     {

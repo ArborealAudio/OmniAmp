@@ -40,7 +40,7 @@ struct PreComponent : Component,
         { midSide.setButtonText(midSide.getToggleState() ? "M/S" : "Stereo"); };
 
         lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "lfEmphasis", lfEmph);
-        lfEmph.setDefaultValue(vts.getParameter("lfEmphasis")->getDefaultValue());
+        lfEmph.setDefaultValue(0.5f);
         lfEmph.setLabel("LF Emphasis");
         lfEmph.setValueToStringFunction([](float val)
                                         { auto str = String(val, 1);
@@ -61,7 +61,7 @@ struct PreComponent : Component,
         hfFreq.maxValue = 18000.0;
 
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "hfEmphasis", hfEmph);
-        hfEmph.setDefaultValue(vts.getParameter("hfEmphasis")->getDefaultValue());
+        hfEmph.setDefaultValue(0.5f);
         hfEmph.setLabel("HF Emphasis");
         hfEmph.setValueToStringFunction([](float val)
                                         { auto str = String(val, 1);
@@ -147,8 +147,8 @@ struct PreComponent : Component,
 
         auto compKnobBounds = compSection.removeFromLeft(compSectW * 0.5f);
         comp.setBounds(compKnobBounds);
-        compPos.setBounds(compSection.removeFromTop(compSectH * 0.5f).reduced(compSectW * 0.1f, 0));
-        compLink.setBounds(compSection.removeFromTop(compSectH * 0.5f).reduced(compSectW * 0.1f, 0));
+        compPos.setBounds(compSection.removeFromTop(compSectH * 0.45f).reduced(compSectW * 0.12f, 2));
+        compLink.setBounds(compSection.removeFromTop(compSectH * 0.45f).reduced(compSectW * 0.12f, 2));
         compPos.lnf.cornerRadius = compPos.getHeight() * 0.25f;
         compLink.lnf.cornerRadius = compLink.getHeight() * 0.25f;
     }
