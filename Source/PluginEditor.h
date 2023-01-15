@@ -71,8 +71,7 @@ private:
     Knob gate{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, width{knobFlags}, mix{knobFlags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach, mixAttach;
 
-    LightButton link;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> linkAttach;
+    LinkButton link;
 
     std::vector<Component *> getTopComponents()
     {

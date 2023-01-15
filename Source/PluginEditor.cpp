@@ -13,6 +13,7 @@
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
       ampControls(p.apvts),
+      link(p.apvts),
       preComponent(p.getActiveGRSource(), p.apvts),
       cabComponent(p.apvts),
       reverbComp(p.apvts),
@@ -106,10 +107,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     inGain.setTooltip("Input gain before all processing, useful for increasing or decreasing headroom before the amp.");
     inGain.setValueToStringFunction([](float val)
                                     { String str(val, 1); str += "dB"; return str; });
-
-    linkAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "gainLink", link);
-    link.setButtonText("Link");
-    link.setTooltip("Link Input and Output gains. Output gain can still be adjusted with linking on.");
 
     outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
     outGain.setLabel("Output");
@@ -236,6 +233,11 @@ void GammaAudioProcessorEditor::resized()
     for (size_t i = 0; i < topComponents.size(); ++i)
     {
         auto c = topComponents[i];
+        if (c == &link)
+        {
+            c->setBounds(topKnobs.removeFromLeft(knobFrac * 0.4f));
+            continue;
+        }
         if (i < 4)
             c->setBounds(topKnobs.removeFromLeft(knobFrac));
         else
