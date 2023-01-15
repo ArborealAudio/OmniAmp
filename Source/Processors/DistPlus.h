@@ -7,6 +7,9 @@ template <typename T>
 class MXRDistWDF
 {
 public:
+    // whether or not the process method will call an init method within itself
+    bool init = true;
+
     MXRDistWDF() = default;
 
     void prepare(const dsp::ProcessSpec &spec)
@@ -26,6 +29,8 @@ public:
         dcBlock.prepare(spec);
         dcBlock.setCutoffFreq(10.0);
         dcBlock.setType(strix::FilterType::highpass);
+
+        init = true;
     }
 
     /*set the target value for the distortion param*/
@@ -54,7 +59,12 @@ public:
     /*for reg doubles currently just one channel, copies L->R*/
     void processBlock(dsp::AudioBlock<T> &block)
     {
-        CHECK_BLOCK(block)
+        if (init)
+        {
+            processBlockInit(block);
+            init = false;
+            return;
+        }
         auto *inL = block.getChannelPointer(0);
         auto *inR = inL;
         if (block.getNumChannels() > 1)
@@ -67,7 +77,6 @@ public:
                 updateParams();
                 inL[i] = processSample(inL[i]);
             }
-            CHECK_BLOCK(block)
             return;
         }
 
@@ -77,7 +86,6 @@ public:
         {
             inL[i] = processSample(inL[i]);
         }
-        CHECK_BLOCK(block)
     }
 
     void processBlockInit(dsp::AudioBlock<T> &block)
@@ -89,11 +97,16 @@ public:
         {
             processInit(in[i]);
         }
-        CHECK_BLOCK(block)
     }
 #else
     void processBlock(strix::AudioBlock<T> &block)
     {
+        if (init)
+        {
+            processBlockInit(block);
+            init = false;
+            return;
+        }
         auto *in = block.getChannelPointer(0);
         if (dist.isSmoothing())
         {
