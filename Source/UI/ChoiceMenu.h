@@ -4,10 +4,11 @@
 
 struct MenuLookAndFeel : LookAndFeel_V4
 {
-    void drawComboBox(Graphics &g, int width, int height, bool, int, int, int, int, ComboBox &) override
+    void drawComboBox(Graphics &g, int width, int height, bool, int, int, int, int, ComboBox &comboBox) override
     {
         Rectangle<float> box(0.f, 0.f, (float)width, (float)height);
         box.reduce(3, 3);
+        auto labelBounds = box.withSizeKeepingCentre(width * 0.66f, height);
         g.setColour(backgroundColor);
         g.fillRoundedRectangle(box, box.getHeight() * 0.5f);
         g.setColour(outlineColor);
@@ -41,18 +42,12 @@ struct MenuLookAndFeel : LookAndFeel_V4
         drawArrow(box.removeFromLeft(arrowSize).reduced(padding), leftArrow, true);
         Path rightArrow;
         drawArrow(box.removeFromRight(arrowSize).reduced(padding), rightArrow, false);
-    }
 
-    void positionComboBoxText(ComboBox &box, Label &label) override
-    {
-        const auto w = box.getWidth();
-        label.setBounds(box.getLocalBounds().withTrimmedLeft(w / 6).withTrimmedRight(w / 6));
+        g.drawText(comboBox.getItemText(comboBox.getSelectedItemIndex()), labelBounds, Justification::centred);
     }
 
     void drawLabel(Graphics &g, Label &label) override
     {
-        g.setColour(Colours::white);
-        g.drawFittedText(label.getText(), label.getLocalBounds(), Justification::centred, 1);
     }
 
     void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override
@@ -127,9 +122,10 @@ struct ChoiceMenu : ComboBox
     void resized() override
     {
         const float w = getWidth();
+        const float subChunk = w - (w / 8.f);
         auto b = getLocalBounds().toFloat();
-        leftArrow = b.removeFromLeft(w / 8.f);
-        rightArrow = b.removeFromRight(w / 8.f);
+        leftArrow = b.withTrimmedRight(subChunk);
+        rightArrow = b.withTrimmedLeft(subChunk);
         ComboBox::resized();
     }
 
