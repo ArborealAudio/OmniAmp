@@ -125,7 +125,7 @@ public:
         menuAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "cabType", menu);
 
         addAndMakeVisible(resoLo);
-        resoLo.setDefaultValue(1.f);
+        resoLo.setDefaultValue(0.5f);
         resoLo.setLabel("Reso Lo");
         resoLo.setColor(Colour(BACKGROUND_COLOR), Colours::antiquewhite);
         resoLo.setValueToStringFunction([](float val)
@@ -133,7 +133,7 @@ public:
         resoLoAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "cabResoLo", resoLo);
 
         addAndMakeVisible(resoHi);
-        resoHi.setDefaultValue(1.f);
+        resoHi.setDefaultValue(0.5f);
         resoHi.setLabel("Reso Hi");
         resoHi.setColor(Colour(BACKGROUND_COLOR), Colours::antiquewhite);
         resoHi.setValueToStringFunction([](float val)
