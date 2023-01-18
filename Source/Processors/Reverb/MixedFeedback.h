@@ -36,8 +36,8 @@ struct MixedFeedback
         hp.setType(strix::FilterType::firstOrderHighpass);
         hp.setCutoffFreq(150.0);
 
-        sm_delay.reset(SR, 0.1);
-        sm_rt60.reset(SR, 0.1);
+        sm_delay.reset(SR, 0.15);
+        sm_rt60.reset(SR, 0.15);
     }
 
     /* call an update on the mod freq, after updating the global value */
@@ -71,7 +71,6 @@ struct MixedFeedback
     {
         sm_delay.setTargetValue(newDelay);
         sm_rt60.setTargetValue(newRT60);
-        needUpdate = true;
     }
 
     void changeDelayAndDecaySmoothed()
@@ -102,10 +101,9 @@ struct MixedFeedback
     template <typename Block>
     void process(Block &block)
     {
-        if (needUpdate)
+        if (sm_delay.isSmoothing() || sm_rt60.isSmoothing())
         {
             processSmoothed(block);
-            needUpdate = false;
             return;
         }
         for (int i = 0; i < block.getNumSamples(); ++i)
@@ -173,11 +171,10 @@ struct MixedFeedback
 private:
     T delayMs = 150.0;
     std::array<int, channels> delaySamples;
-    std::array<dsp::DelayLine<T>, channels> delays;
+    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Thiran>, channels> delays;
     // container for N number of delayed & filtered samples
     std::array<T, channels> delayed;
     strix::SVTFilter<T> lp, hp;
     std::array<dsp::Oscillator<T>, channels> osc;
     double SR = 44100.0;
-    std::atomic<bool> needUpdate = false;
 };
