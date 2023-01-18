@@ -3,12 +3,6 @@
  * Manager & container classes for reverb
 */
 
-#pragma once
-#include "MixMatrix.h"
-#include "Diffuser.h"
-#include "MixedFeedback.h"
-#include "StereoMultiMixer.h"
-
 /**
  * A struct for containing all reverb parameters, can be modified together or individually
  */
@@ -30,6 +24,12 @@ struct ReverbParams
     float preDelay;
 };
 
+#pragma once
+#include "MixMatrix.h"
+#include "Diffuser.h"
+#include "MixedFeedback.h"
+#include "StereoMultiMixer.h"
+
 enum class ReverbType
 {
     Off,
@@ -43,9 +43,6 @@ class Room
 public:
     Room(ReverbType initType)
     {
-        // for (size_t i = 0; i < 4; ++i)
-        //     diff.emplace_back((int64_t)i);
-
         switch (initType)
         {
         case ReverbType::Off: /* just use Room as the default if initialized to Off */
@@ -55,15 +52,13 @@ public:
             setReverbParams(ReverbParams{30.f, 0.65f, 0.5f, 0.23f, 3.f, 0.f});
             break;
         case ReverbType::Hall:
-            setReverbParams(ReverbParams{75.0f, 2.0f, 0.5f, 1.0f, 5.0f, 0.f});
+            setReverbParams(ReverbParams{75.0f, 2.0f, 0.5f, 1.f, 5.f, 0.f});
             break;
         }
     }
 
     Room(const ReverbParams &_params)
     {
-        // for (size_t i = 0; i < 4; ++i)
-        //     diff.emplace_back((int64_t)i);
         setReverbParams(_params);
     }
 
@@ -91,24 +86,28 @@ public:
 
         erLevel = params.erLevel;
 
-        feedback.changeDelay(params.roomSizeMs);
+        feedback.updateParams(params);
+    }
 
-        double typicalLoopMs = params.roomSizeMs * 1.5;
+    /* change parameters for reverb size. call this if changing decay, too, but just use decay mutliplier first */
+    void setSize(float newRoomSizeMs, float newRT60, float newERLevel)
+    {
+        newRoomSizeMs = jmax(newRoomSizeMs, newRT60 * 10.f);
 
-        double loopsPerRt60 = params.rt60 / (typicalLoopMs * 0.001);
-
-        double dbPerCycle = -60.0 / loopsPerRt60;
-
-        feedback.decayGain = std::pow(10.0, dbPerCycle * 0.05);
-        feedback.dampening = params.dampening;
-        feedback.modFreq = params.modulation;
-        if (!init)
-            feedback.changeModFreq();
+        auto diffusion = (params.roomSizeMs * 0.001);
+        assert(diff.size() == 4);
+        for (int i = 0; i < 4; ++i)
+        {
+            diffusion *= 0.5;
+            diff[i].updateDelay(diffusion);
+        }
+        erLevel = params.erLevel;
+        feedback.updateDelayAndDecay(newRoomSizeMs, newRT60);
     }
 
     void setPredelay(float newPredelay)
     {
-        params.preDelay = newPredelay; /** PROBLEM: Don't we need to account for downsampling? Or no, bc spec passed in is DS */
+        params.preDelay = newPredelay;
         preDelay.setDelay(params.preDelay);
     }
 
@@ -327,7 +326,9 @@ class ReverbManager : AudioProcessorValueTreeState::Listener
 
     enum reverb_flags
     {
-        ANY,
+        TYPE,
+        DECAY,
+        SIZE,
         PREDELAY,
     };
     reverb_flags lastFlag;
@@ -352,7 +353,7 @@ public:
         apvts.addParameterListener("reverbPredelay", this);
     }
 
-    ~ReverbManager()
+    ~ReverbManager() override
     {
         apvts.removeParameterListener("reverbType", this);
         apvts.removeParameterListener("reverbDecay", this);
@@ -382,19 +383,24 @@ public:
 
     void parameterChanged(const String &paramID, float) override
     {
-        if (paramID == "reverbType" || paramID == "reverbDecay" || paramID == "reverbSize")
-            lastFlag = ANY;
+        if (paramID == "reverbType")
+            lastFlag = TYPE;
+        else if (paramID == "reverbDecay")
+            lastFlag = DECAY;
+        else if (paramID == "reverbSize")
+            lastFlag = SIZE;
         else if (paramID == "reverbPredelay")
             lastFlag = PREDELAY;
-
-        needsUpdate = true;
+        else
+            return;
+        manageUpdate(lastFlag);
     }
 
     void manageUpdate(reverb_flags flags)
     {
         switch (flags)
         {
-        case ANY:
+        case TYPE:
         {
             float d = *decay;
             float s = *size;
@@ -415,6 +421,19 @@ public:
             }
             break;
         }
+        case DECAY:
+        case SIZE:
+        {
+            float d = *decay;
+            float s = *size;
+            float ref_mod = s * 0.5f; // btw 0 - 1 w/ midpoint @ 0.5
+            s *= d;
+            s = jmax(0.05f, s);
+            float baseDelay = type->getIndex() > 1 ? 75.f : 30.f;
+            float baseRT60 = type->getIndex() > 1 ? 2.f : 0.65f;
+            rev.setSize(baseDelay * s, baseRT60 * s, 1.f * (1.f - ref_mod));
+            break;
+        }
         case PREDELAY:
             float p = *predelay * 0.001f * SR;
             rev.setPredelay(p);
@@ -424,12 +443,12 @@ public:
 
     void process(AudioBuffer<double> &buffer, float amt)
     {
-        if (needsUpdate)
-        {
-            manageUpdate(lastFlag);
-            needsUpdate = false;
-        }
-        if (!needsUpdate && *type)
+        // if (needsUpdate)
+        // {
+        //     manageUpdate(lastFlag);
+        //     needsUpdate = false;
+        // }
+        if (*type)
             rev.process(buffer, amt);
     }
 };
