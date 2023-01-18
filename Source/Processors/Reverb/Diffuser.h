@@ -43,10 +43,12 @@ struct Diffuser
             invert.push_back(rand.nextInt() % 2 == 0);
             ++i;
         }
+
+        sm_delay.reset(SR, 0.1);
     }
 
     /* change delay ranges after changing main delayRange */
-    void changeDelay() /** PROBLEM: Changing delay times means that the limit set in prepare() may be invalid later */
+    void changeDelay()
     {
         invert.clear();
 
@@ -62,6 +64,19 @@ struct Diffuser
         }
     }
 
+    void changeDelaySmooth()
+    {
+        delayRange = sm_delay.getNextValue();
+        changeDelay();
+    }
+
+    /* post an updated delay parameter for smooth changes */
+    void updateDelay(float newDelay)
+    {
+        sm_delay.setTargetValue(newDelay);
+        needUpdate = true;
+    }
+
     void reset()
     {
         for (auto &d : delay)
@@ -72,6 +87,12 @@ struct Diffuser
     template <typename Block>
     void process(Block &block)
     {
+        if (needUpdate)
+        {
+            processSmooth(block);
+            needUpdate = false;
+            return;
+        }
         for (auto i = 0; i < block.getNumSamples(); ++i)
         {
             std::vector<T> vec;
@@ -92,7 +113,33 @@ struct Diffuser
                 FloatVectorOperations::multiply(block.getChannelPointer(ch), -1.0, block.getNumSamples());
     }
 
+    template <typename Block>
+    void processSmooth(Block &block)
+    {
+        for (auto i = 0; i < block.getNumSamples(); ++i)
+        {
+            changeDelaySmooth();
+
+            std::vector<T> vec;
+
+            for (auto ch = 0; ch < channels; ++ch)
+            {
+                delay[ch].pushSample(0, block.getSample(ch, i));
+                vec.push_back(delay[ch].popSample(0));
+            }
+
+            MixMatrix<channels>::processHadamardMatrix(vec.data());
+
+            for (auto ch = 0; ch < channels; ++ch)
+                block.getChannelPointer(ch)[i] = vec[ch];
+        }
+        for (auto ch = 0; ch < channels; ++ch)
+            if (invert[ch])
+                FloatVectorOperations::multiply(block.getChannelPointer(ch), -1.0, block.getNumSamples());
+    }
+
     float delayRange;
+    SmoothedValue<float> sm_delay;
 
 private:
     std::array<dsp::DelayLine<T>, channels> delay;
@@ -100,4 +147,5 @@ private:
     const int64_t seed;
     std::vector<bool> invert;
     double SR = 44100.0;
+    std::atomic<bool> needUpdate = false;
 };

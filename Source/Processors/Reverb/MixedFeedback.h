@@ -35,6 +35,9 @@ struct MixedFeedback
         hp.prepare(multiSpec);
         hp.setType(strix::FilterType::firstOrderHighpass);
         hp.setCutoffFreq(150.0);
+
+        sm_delay.reset(SR, 0.1);
+        sm_rt60.reset(SR, 0.1);
     }
 
     /* call an update on the mod freq, after updating the global value */
@@ -44,23 +47,52 @@ struct MixedFeedback
             osc[ch].setFrequency(std::pow(modFreq, (double)ch / channels));
     }
 
-    /* use this to change the feedback's delay times (don't change delayMS directly) */
-    void changeDelay(float newDelayMs)
+    /* update all internal parameters */
+    void updateParams(const ReverbParams params)
     {
-        delayMs = newDelayMs;
+        delayMs = params.roomSizeMs;
         double delaySamplesBase = delayMs * 0.001 * SR;
         for (int ch = 0; ch < channels; ++ch)
         {
             double r = ch * 1.0 / channels;
             delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
         }
+        double typicalLoopMs = params.roomSizeMs * 1.5;
+        double loopsPerRt60 = params.rt60 / (typicalLoopMs * 0.001);
+        double dbPerCycle = -60.0 / loopsPerRt60;
+        decayGain = std::pow(10.0, dbPerCycle * 0.05);
+        dampening = params.dampening;
+        modFreq = params.modulation;
+        changeModFreq();
+    }
+
+    /* update delay and rt60 times */
+    void updateDelayAndDecay(float newDelay, float newRT60)
+    {
+        sm_delay.setTargetValue(newDelay);
+        sm_rt60.setTargetValue(newRT60);
+        needUpdate = true;
+    }
+
+    void changeDelayAndDecaySmoothed()
+    {
+        delayMs = sm_delay.getNextValue();
+        double delaySamplesBase = delayMs * 0.001 * SR;
+        for (int ch = 0; ch < channels; ++ch)
+        {
+            double r = ch * 1.0 / channels;
+            delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
+        }
+        double typicalLoopMs = delayMs * 1.5;
+        double loopsPerRt60 = sm_rt60.getNextValue() / (typicalLoopMs * 0.001);
+        double dbPerCycle = -60.0 / loopsPerRt60;
+        decayGain = std::pow(10.0, dbPerCycle * 0.05);
     }
 
     void reset()
     {
         for (auto &d : delays)
             d.reset();
-
         lp.reset();
         hp.reset();
         for (auto &o : osc)
@@ -70,6 +102,12 @@ struct MixedFeedback
     template <typename Block>
     void process(Block &block)
     {
+        if (needUpdate)
+        {
+            processSmoothed(block);
+            needUpdate = false;
+            return;
+        }
         for (int i = 0; i < block.getNumSamples(); ++i)
         {
             for (int ch = 0; ch < channels; ++ch)
@@ -95,24 +133,51 @@ struct MixedFeedback
         }
     }
 
-    T delayMs = 150.0;
-    T decayGain = 0.85;
+    template <typename Block>
+    void processSmoothed(Block &block)
+    {
+        for (int i = 0; i < block.getNumSamples(); ++i)
+        {
+            changeDelayAndDecaySmoothed();
 
+            for (int ch = 0; ch < channels; ++ch)
+            {
+                auto mod = osc[ch].processSample(delaySamples[ch]);
+                auto dtime = delaySamples[ch] - (0.2 * mod);
+                auto d = delays[ch].popSample(0, dtime);
+                d = lp.processSample(ch, d);
+                d = hp.processSample(ch, d);
+                delayed[ch] = d;
+            }
+
+            MixMatrix<channels>::processHouseholder(delayed.data());
+
+            for (int ch = 0; ch < channels; ++ch)
+            {
+                auto in = block.getChannelPointer(ch)[i];
+                auto sum = in + delayed[ch] * decayGain;
+                delays[ch].pushSample(0, sum);
+
+                block.setSample(ch, i, delayed[ch]);
+            }
+        }
+    }
+
+    T decayGain = 0.85;
     /*A fraction of Nyquist, where the lowpass will be placed in the feedback path*/
     T dampening = 1.0;
-
     T modFreq = 1.0;
 
+    SmoothedValue<float> sm_delay, sm_rt60;
+
 private:
+    T delayMs = 150.0;
     std::array<int, channels> delaySamples;
     std::array<dsp::DelayLine<T>, channels> delays;
-
     // container for N number of delayed & filtered samples
     std::array<T, channels> delayed;
-
     strix::SVTFilter<T> lp, hp;
-
     std::array<dsp::Oscillator<T>, channels> osc;
-
     double SR = 44100.0;
+    std::atomic<bool> needUpdate = false;
 };
