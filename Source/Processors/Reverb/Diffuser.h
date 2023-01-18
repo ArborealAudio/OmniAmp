@@ -44,15 +44,15 @@ struct Diffuser
             ++i;
         }
 
-        sm_delay.reset(SR, 0.1);
+        sm_delay.reset(SR, 0.15);
     }
 
     /* change delay ranges after changing main delayRange */
     void changeDelay()
     {
-        invert.clear();
+        // invert.clear();
 
-        Random rand(seed);
+        // Random rand(seed);
 
         auto delayRangeSamples = delayRange * SR;
         for (size_t i = 0; i < delay.size(); ++i)
@@ -60,7 +60,7 @@ struct Diffuser
             double minDelay = delayRangeSamples * i / channels;
             double maxDelay = delayRangeSamples * (i + 1) / channels;
             delay[i].setDelay((minDelay + maxDelay) / 2.0); // just use the average!
-            invert.push_back(rand.nextInt() % 2 == 0);
+            // invert.push_back(rand.nextInt() % 2 == 0);
         }
     }
 
@@ -74,7 +74,6 @@ struct Diffuser
     void updateDelay(float newDelay)
     {
         sm_delay.setTargetValue(newDelay);
-        needUpdate = true;
     }
 
     void reset()
@@ -87,10 +86,9 @@ struct Diffuser
     template <typename Block>
     void process(Block &block)
     {
-        if (needUpdate)
+        if (sm_delay.isSmoothing())
         {
             processSmooth(block);
-            needUpdate = false;
             return;
         }
         for (auto i = 0; i < block.getNumSamples(); ++i)
@@ -142,10 +140,9 @@ struct Diffuser
     SmoothedValue<float> sm_delay;
 
 private:
-    std::array<dsp::DelayLine<T>, channels> delay;
+    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Thiran>, channels> delay;
     std::array<int, channels> randDelay;
     const int64_t seed;
     std::vector<bool> invert;
     double SR = 44100.0;
-    std::atomic<bool> needUpdate = false;
 };

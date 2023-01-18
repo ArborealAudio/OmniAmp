@@ -101,14 +101,15 @@ public:
             diffusion *= 0.5;
             diff[i].updateDelay(diffusion);
         }
-        erLevel = params.erLevel;
+        erLevel = newERLevel;
         feedback.updateDelayAndDecay(newRoomSizeMs, newRT60);
     }
 
     void setPredelay(float newPredelay)
     {
-        params.preDelay = newPredelay;
-        preDelay.setDelay(params.preDelay);
+        sm_predelay.setTargetValue(newPredelay);
+        if (!sm_predelay.isSmoothing())
+            preDelay.setDelay(params.preDelay);
     }
 
     /** PROBLEM: We're not accounting for samplerates higher than 44.1kHz! We need to refactor it to hardcode a SR of 22kHz
@@ -165,6 +166,8 @@ public:
 
         mix.prepare(dsp::ProcessSpec{spec.sampleRate * ratio, spec.maximumBlockSize * ratio, (uint32)numChannels});
         mix.setMixingRule(dsp::DryWetMixingRule::balanced);
+
+        sm_predelay.reset(spec.sampleRate, 0.01);
     }
 
     void reset()
@@ -211,7 +214,11 @@ public:
             dsBlock = dsBlock.getSubBlock(0, hNumSamples);
         else
             dsBlock = dsBlock.getSingleChannelBlock(0).getSubBlock(0, hNumSamples);
-        preDelay.process(dsp::ProcessContextReplacing<double>(dsBlock));
+
+        if (sm_predelay.isSmoothing())
+            processSmoothPredelay(dsBlock);
+        else
+            preDelay.process(dsp::ProcessContextReplacing<double>(dsBlock));
 
         upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), hNumSamples);
 
@@ -255,11 +262,26 @@ private:
     AudioBuffer<double> splitBuf, erBuf, dsBuf, usBuf;
     StereoMultiMixer<Type, channels> upMix;
     dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> preDelay{44100};
+    SmoothedValue<float> sm_predelay;
     double erLevel = 1.0;
     int ratio = 1;
     int numChannels = 0;
     std::vector<dsp::IIR::Filter<Type>> dsLP[2], usLP[2];
     dsp::DryWetMixer<double> mix;
+
+    void processSmoothPredelay(dsp::AudioBlock<double> &block)
+    {
+        for (size_t i = 0; i < block.getNumSamples(); ++i)
+        {
+            float delay_ = sm_predelay.getNextValue();
+            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+            {
+                auto *in = block.getChannelPointer(ch);
+                preDelay.pushSample(ch, in[i]);
+                in[i] = preDelay.popSample(ch, delay_);
+            }
+        }
+    }
 
     /**
      * @param numSamples number of samples in the input buffer
@@ -322,7 +344,6 @@ class ReverbManager : AudioProcessorValueTreeState::Listener
 {
     AudioProcessorValueTreeState &apvts;
     Room<8, double> rev;
-    std::atomic<bool> needsUpdate = false;
 
     enum reverb_flags
     {
@@ -331,13 +352,13 @@ class ReverbManager : AudioProcessorValueTreeState::Listener
         SIZE,
         PREDELAY,
     };
-    reverb_flags lastFlag;
+    std::queue<reverb_flags> msgs;
+    std::mutex mutex;
 
     strix::ChoiceParameter *type;
     strix::FloatParameter *decay, *size, *predelay;
 
     double SR = 44100.0;
-
     int ratio = 1;
 
 public:
@@ -383,22 +404,26 @@ public:
 
     void parameterChanged(const String &paramID, float) override
     {
+        std::scoped_lock<std::mutex> lock(mutex);
+        reverb_flags flag;
         if (paramID == "reverbType")
-            lastFlag = TYPE;
+            flag = TYPE;
         else if (paramID == "reverbDecay")
-            lastFlag = DECAY;
+            flag = DECAY;
         else if (paramID == "reverbSize")
-            lastFlag = SIZE;
+            flag = SIZE;
         else if (paramID == "reverbPredelay")
-            lastFlag = PREDELAY;
+            flag = PREDELAY;
         else
             return;
-        manageUpdate(lastFlag);
+        msgs.emplace(flag);
     }
 
-    void manageUpdate(reverb_flags flags)
+    void manageUpdate()
     {
-        switch (flags)
+        auto flag = msgs.front();
+        msgs.pop();
+        switch (flag)
         {
         case TYPE:
         {
@@ -443,11 +468,9 @@ public:
 
     void process(AudioBuffer<double> &buffer, float amt)
     {
-        // if (needsUpdate)
-        // {
-        //     manageUpdate(lastFlag);
-        //     needsUpdate = false;
-        // }
+        if (!msgs.empty())
+            manageUpdate();
+
         if (*type)
             rev.process(buffer, amt);
     }
