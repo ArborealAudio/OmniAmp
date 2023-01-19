@@ -44,23 +44,25 @@ struct Diffuser
             ++i;
         }
 
-        sm_delay.reset(SR, 0.15);
+        sm_delay.reset(128);
+        sm_delay.setCurrentAndTargetValue(delayRange);
     }
 
     /* change delay ranges after changing main delayRange */
     void changeDelay()
     {
-        // invert.clear();
+        invert.clear();
 
-        // Random rand(seed);
+        Random rand(seed);
 
         auto delayRangeSamples = delayRange * SR;
         for (size_t i = 0; i < delay.size(); ++i)
         {
             double minDelay = delayRangeSamples * i / channels;
             double maxDelay = delayRangeSamples * (i + 1) / channels;
-            delay[i].setDelay((minDelay + maxDelay) / 2.0); // just use the average!
-            // invert.push_back(rand.nextInt() % 2 == 0);
+            auto nDelay = (minDelay + maxDelay) / 2.0;
+            delay[i].setDelay(nDelay); // just use the average!
+            invert.push_back(rand.nextInt() % 2 == 0);
         }
     }
 
@@ -140,7 +142,7 @@ struct Diffuser
     SmoothedValue<float> sm_delay;
 
 private:
-    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Thiran>, channels> delay;
+    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>, channels> delay;
     std::array<int, channels> randDelay;
     const int64_t seed;
     std::vector<bool> invert;
