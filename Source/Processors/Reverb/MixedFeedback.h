@@ -36,8 +36,10 @@ struct MixedFeedback
         hp.setType(strix::FilterType::firstOrderHighpass);
         hp.setCutoffFreq(150.0);
 
-        sm_delay.reset(SR, 0.15);
-        sm_rt60.reset(SR, 0.15);
+        sm_delay.reset(128);
+        sm_delay.setCurrentAndTargetValue(delayMs);
+        sm_rt60.reset(128);
+        sm_rt60.setCurrentAndTargetValue(rt60);
     }
 
     /* call an update on the mod freq, after updating the global value */
@@ -170,8 +172,9 @@ struct MixedFeedback
 
 private:
     T delayMs = 150.0;
+    T rt60 = 0.0;
     std::array<int, channels> delaySamples;
-    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Thiran>, channels> delays;
+    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>, channels> delays;
     // container for N number of delayed & filtered samples
     std::array<T, channels> delayed;
     strix::SVTFilter<T> lp, hp;

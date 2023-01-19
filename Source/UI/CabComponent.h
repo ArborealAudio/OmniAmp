@@ -72,7 +72,7 @@ private:
 
         void resized() override
         {
-            auto bounds = getLocalBounds().reduced(2);
+            auto bounds = getLocalBounds().reduced(10);
             auto width = bounds.getWidth();
             auto height = bounds.getHeight();
             micBounds = bounds.removeFromBottom(height * 0.65f).withWidth(width * 0.5f + (micWidth * 0.5f)).withTrimmedLeft(width * 0.1f).toFloat();
@@ -217,11 +217,11 @@ public:
         auto bounds = getLocalBounds().reduced(5);
         title.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.15f));
         title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
-        micComp.setBounds(bounds.removeFromRight(bounds.getHeight()));
+        micComp.setBounds(bounds.removeFromRight(bounds.getHeight()).reduced(2));
         auto resoBounds = bounds.removeFromRight(bounds.getWidth() * 0.25f);
         resoLo.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
         resoHi.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
         menu.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.3f).removeFromLeft(getWidth() * 0.5f).reduced(20, 5));
-        cabBounds = bounds.toFloat();
+        cabBounds = bounds.reduced(5).toFloat();
     }
 };

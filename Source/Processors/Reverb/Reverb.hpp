@@ -94,7 +94,7 @@ public:
     {
         newRoomSizeMs = jmax(newRoomSizeMs, newRT60 * 10.f);
 
-        auto diffusion = (params.roomSizeMs * 0.001);
+        auto diffusion = (newRoomSizeMs * 0.001);
         assert(diff.size() == 4);
         for (int i = 0; i < 4; ++i)
         {
@@ -109,7 +109,7 @@ public:
     {
         sm_predelay.setTargetValue(newPredelay);
         if (!sm_predelay.isSmoothing())
-            preDelay.setDelay(params.preDelay);
+            preDelay.setDelay(newPredelay);
     }
 
     /** PROBLEM: We're not accounting for samplerates higher than 44.1kHz! We need to refactor it to hardcode a SR of 22kHz
@@ -167,7 +167,7 @@ public:
         mix.prepare(dsp::ProcessSpec{spec.sampleRate * ratio, spec.maximumBlockSize * ratio, (uint32)numChannels});
         mix.setMixingRule(dsp::DryWetMixingRule::balanced);
 
-        sm_predelay.reset(spec.sampleRate, 0.01);
+        sm_predelay.reset(128);
     }
 
     void reset()
