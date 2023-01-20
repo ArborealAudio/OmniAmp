@@ -436,7 +436,7 @@ public:
             switch ((ReverbType)type->getIndex())
             {
             case ReverbType::Room:
-                rev.setReverbParams(ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.23f, 3.f, p}, false);
+                rev.setReverbParams(ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.3f, 3.f, p}, false);
                 break;
             case ReverbType::Hall:
                 rev.setReverbParams(ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p}, false);
