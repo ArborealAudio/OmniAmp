@@ -35,11 +35,6 @@ struct MixedFeedback
         hp.prepare(multiSpec);
         hp.setType(strix::FilterType::firstOrderHighpass);
         hp.setCutoffFreq(150.0);
-
-        sm_delay.reset(128);
-        sm_delay.setCurrentAndTargetValue(delayMs);
-        sm_rt60.reset(128);
-        sm_rt60.setCurrentAndTargetValue(rt60);
     }
 
     /* call an update on the mod freq, after updating the global value */
@@ -53,6 +48,7 @@ struct MixedFeedback
     void updateParams(const ReverbParams params)
     {
         delayMs = params.roomSizeMs;
+        rt60 = params.rt60;
         double delaySamplesBase = delayMs * 0.001 * SR;
         for (int ch = 0; ch < channels; ++ch)
         {
@@ -71,13 +67,13 @@ struct MixedFeedback
     /* update delay and rt60 times */
     void updateDelayAndDecay(float newDelay, float newRT60)
     {
-        sm_delay.setTargetValue(newDelay);
-        sm_rt60.setTargetValue(newRT60);
+        delayMs = newDelay;
+        rt60 = newRT60;
+        changeDelayAndDecay();
     }
 
-    void changeDelayAndDecaySmoothed()
+    void changeDelayAndDecay()
     {
-        delayMs = sm_delay.getNextValue();
         double delaySamplesBase = delayMs * 0.001 * SR;
         for (int ch = 0; ch < channels; ++ch)
         {
@@ -85,7 +81,7 @@ struct MixedFeedback
             delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
         }
         double typicalLoopMs = delayMs * 1.5;
-        double loopsPerRt60 = sm_rt60.getNextValue() / (typicalLoopMs * 0.001);
+        double loopsPerRt60 = rt60 / (typicalLoopMs * 0.001);
         double dbPerCycle = -60.0 / loopsPerRt60;
         decayGain = std::pow(10.0, dbPerCycle * 0.05);
     }
@@ -103,11 +99,12 @@ struct MixedFeedback
     template <typename Block>
     void process(Block &block)
     {
-        if (sm_delay.isSmoothing() || sm_rt60.isSmoothing())
-        {
-            processSmoothed(block);
-            return;
-        }
+        // if (needUpdate)
+        // {
+        //     processSmoothed(block);
+        //     needUpdate = false;
+        //     return;
+        // }
         for (int i = 0; i < block.getNumSamples(); ++i)
         {
             for (int ch = 0; ch < channels; ++ch)
@@ -138,7 +135,7 @@ struct MixedFeedback
     {
         for (int i = 0; i < block.getNumSamples(); ++i)
         {
-            changeDelayAndDecaySmoothed();
+            changeDelayAndDecay();
 
             for (int ch = 0; ch < channels; ++ch)
             {
@@ -168,11 +165,10 @@ struct MixedFeedback
     T dampening = 1.0;
     T modFreq = 1.0;
 
-    SmoothedValue<float> sm_delay, sm_rt60;
-
 private:
     T delayMs = 150.0;
     T rt60 = 0.0;
+    std::atomic<bool> needUpdate = false;
     std::array<int, channels> delaySamples;
     std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>, channels> delays;
     // container for N number of delayed & filtered samples

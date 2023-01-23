@@ -340,7 +340,7 @@ private:
 
 };
 
-class ReverbManager : AudioProcessorValueTreeState::Listener
+class ReverbManager : AudioProcessorValueTreeState::Listener, Timer
 {
     AudioProcessorValueTreeState &apvts;
     std::unique_ptr<Room<8, double>> currentRev, newRev;
@@ -361,7 +361,9 @@ class ReverbManager : AudioProcessorValueTreeState::Listener
     strix::Crossfade fade;
 
     strix::ChoiceParameter *type;
+    uint8 lastType;
     strix::FloatParameter *decay, *size, *predelay;
+    float lastDecay, lastSize, lastPredelay;
 
     double SR = 44100.0;
     int ratio = 1;
@@ -373,37 +375,45 @@ public:
         decay = (strix::FloatParameter *)apvts.getParameter("reverbDecay");
         size = (strix::FloatParameter *)apvts.getParameter("reverbSize");
         predelay = (strix::FloatParameter *)apvts.getParameter("reverbPredelay");
-        apvts.addParameterListener("reverbType", this);
-        apvts.addParameterListener("reverbDecay", this);
-        apvts.addParameterListener("reverbSize", this);
-        apvts.addParameterListener("reverbPredelay", this);
+        // apvts.addParameterListener("reverbType", this);
+        // apvts.addParameterListener("reverbDecay", this);
+        // apvts.addParameterListener("reverbSize", this);
+        // apvts.addParameterListener("reverbPredelay", this);
 
         ReverbParams params;
         float d = *decay;
+        lastDecay = d;
         float s = *size;
+        lastSize = s;
         float p = *predelay;
+        lastPredelay = p;
         float ref_mod = s * 0.5f;
         s *= d;
         s = jmax(0.05f, s);
         if (type->getIndex() < 2)
             params = ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.3f, 3.f, p};
         else
-            params = ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p};
+            params = ReverbParams{75.f * s, 2.f * s, 1.f * (1.f - ref_mod), 1.f, 5.f, p};
 
         currentRev = std::make_unique<Room<8, double>>(params);
+        newRev = std::make_unique<Room<8, double>>(params);
+
+        startTimerHz(10);
     }
 
     ~ReverbManager() override
     {
-        apvts.removeParameterListener("reverbType", this);
-        apvts.removeParameterListener("reverbDecay", this);
-        apvts.removeParameterListener("reverbSize", this);
-        apvts.removeParameterListener("reverbPredelay", this);
+        // apvts.removeParameterListener("reverbType", this);
+        // apvts.removeParameterListener("reverbDecay", this);
+        // apvts.removeParameterListener("reverbSize", this);
+        // apvts.removeParameterListener("reverbPredelay", this);
+        stopTimer();
     }
 
     void setDownsampleRatio(int dsRatio)
     {
         currentRev->setDownsampleRatio(dsRatio);
+        newRev->setDownsampleRatio(dsRatio);
         ratio = dsRatio;
     }
 
@@ -414,6 +424,7 @@ public:
         hSpec.maximumBlockSize /= ratio;
         memSpec = hSpec;
         currentRev->prepare(hSpec);
+        newRev->prepare(hSpec);
         SR = hSpec.sampleRate;
 
         tmp1.setSize(spec.numChannels, spec.maximumBlockSize);
@@ -423,103 +434,143 @@ public:
     void reset()
     {
         currentRev->reset();
-        if (newRev)
-            newRev->reset();
+        newRev->reset();
     }
 
-    void parameterChanged(const String &paramID, float) override
+    void parameterChanged(const String &paramID, float ) override
     {
         std::unique_lock<std::mutex> lock(mutex);
         reverb_flags flag;
         if (paramID == "reverbType")
             flag = TYPE;
         else if (paramID == "reverbDecay")
+        {
             flag = DECAY;
+        }
         else if (paramID == "reverbSize")
+        {
             flag = SIZE;
+        }
         else if (paramID == "reverbPredelay")
             flag = PREDELAY;
         else
             return;
-        manageUpdate(flag);
-        // msgs.emplace(flag);
+
+        msgs.emplace(flag);
+    }
+
+    void timerCallback() override
+    {
+        // if (msgs.size() >= 10)
+        //     return;
+        // std::unique_lock<std::mutex> lock(mutex);
+        // if (lastDecay != *decay)
+        //     msgs.emplace(DECAY);
+        // if (lastSize != *size)
+        //     msgs.emplace(SIZE);
+        // if (lastType != type->getIndex())
+        //     msgs.emplace(TYPE);
+        // if (lastPredelay != *predelay)
+        //     msgs.emplace(PREDELAY);
     }
 
     void manageUpdate(reverb_flags flag)
     {
-        // auto flag = msgs.front();
-        // msgs.pop();
+        float d = *decay;
+        float s = *size;
+        lastDecay = d;
+        lastSize = s;
+        float ref_mod = s * 0.5f; // btw 0 - 1 w/ midpoint @ 0.5
+        s *= d;
+        s = jmax(0.05f, s);
+        float p = *predelay * 0.001f * SR;
+
         switch (flag)
         {
         case DECAY:
         case SIZE:
-        case TYPE:
-        {
-            float d = *decay;
-            float s = *size;
-            float ref_mod = s * 0.5f; // btw 0 - 1 w/ midpoint @ 0.5
-            s *= d;
-            s = jmax(0.05f, s);
-            float p = *predelay * 0.001f * SR;
-            while (processingAudio)
-            {
-                continue;
-            }
+            DBG("Changing params");
             reverbReady = false;
             switch ((ReverbType)type->getIndex())
             {
             case ReverbType::Room:
-                // rev.setReverbParams(ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.3f, 3.f, p}, false);
-                newRev.reset(new Room<8, double>(ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.3f, 3.f, p}));
-                newRev->setDownsampleRatio(ratio);
-                newRev->prepare(memSpec);
+                newRev->setReverbParams(ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.3f, 3.f, p}, false);
                 break;
             case ReverbType::Hall:
-                // rev.setReverbParams(ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p}, false);
-                newRev.reset(new Room<8, double>(ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p}));
-                newRev->setDownsampleRatio(ratio);
-                newRev->prepare(memSpec);
+                newRev->setReverbParams(ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p}, false);
                 break;
             case ReverbType::Off:
-                newRev.reset(nullptr);
                 break;
             }
             // fade incoming, set fade time & flag
             fade.setFadeTime(SR * ratio, 0.5f);
             reverbReady = true;
             break;
+        case TYPE:
+        {
+            DBG("Changing params");
+            reverbReady = false;
+            switch ((ReverbType)type->getIndex())
+            {
+            case ReverbType::Room:
+                newRev->setReverbParams(ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.3f, 3.f, p}, false);
+                break;
+            case ReverbType::Hall:
+                newRev->setReverbParams(ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p}, false);
+                break;
+            case ReverbType::Off:
+                break;
+            }
+            lastType = type->getIndex();
+            // fade incoming, set fade time & flag
+            fade.setFadeTime(SR * ratio, 0.5f);
+            reverbReady = true;
+            break;
         }
         case PREDELAY:
-            float p = *predelay * 0.001f * SR;
             currentRev->setPredelay(p);
+            lastPredelay = p;
             break;
         }
     }
 
     void process(AudioBuffer<double> &buffer, float amt)
     {
-        // if (!msgs.empty())
-        //     manageUpdate();
-        processingAudio = true;
+        if (!processingAudio)
+        {
+            if (lastDecay != *decay)
+                manageUpdate(DECAY);
+            if (lastSize != *size)
+                manageUpdate(SIZE);
+            if (lastType != type->getIndex())
+                manageUpdate(TYPE);
+            if (lastPredelay != *predelay)
+                manageUpdate(PREDELAY);
+        }
 
         if (*type && !reverbReady)
+        {
+            DBG("processing currentRev");
             currentRev->process(buffer, amt);
+        }
         else if (*type && reverbReady && !fade.complete)
         {
+            processingAudio = true;
+            DBG("Processing crossfade");
             tmp1.makeCopyOf(buffer, true);
             tmp2.makeCopyOf(buffer, true);
             currentRev->process(tmp1, amt);
             newRev->process(tmp2, amt);
-            fade.processWithState(tmp1, tmp2);
+            fade.processWithState(tmp1, tmp2, jmin(jmin(buffer.getNumSamples(), tmp1.getNumSamples()), tmp2.getNumSamples()));
             buffer.makeCopyOf(tmp2, true);
             if (fade.complete)
             {
+                DBG("fade complete");
                 currentRev.swap(newRev);
-                newRev.reset(nullptr);
+                // newRev.reset(nullptr);
+                processingAudio = false; // don't allow param changes to dispatch until crossfade from last change is done
                 reverbReady = false;
             }
         }
-
-        processingAudio = false;
     }
 };
