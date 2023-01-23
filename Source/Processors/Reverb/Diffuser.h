@@ -43,9 +43,6 @@ struct Diffuser
             invert.push_back(rand.nextInt() % 2 == 0);
             ++i;
         }
-
-        sm_delay.reset(128);
-        sm_delay.setCurrentAndTargetValue(delayRange);
     }
 
     /* change delay ranges after changing main delayRange */
@@ -66,16 +63,11 @@ struct Diffuser
         }
     }
 
-    void changeDelaySmooth()
-    {
-        delayRange = sm_delay.getNextValue();
-        changeDelay();
-    }
-
     /* post an updated delay parameter for smooth changes */
     void updateDelay(float newDelay)
     {
-        sm_delay.setTargetValue(newDelay);
+        delayRange = newDelay;
+        changeDelay();
     }
 
     void reset()
@@ -88,11 +80,12 @@ struct Diffuser
     template <typename Block>
     void process(Block &block)
     {
-        if (sm_delay.isSmoothing())
-        {
-            processSmooth(block);
-            return;
-        }
+        // if (needUpdate)
+        // {
+        //     processSmooth(block);
+        //     needUpdate = false;
+        //     return;
+        // }
         for (auto i = 0; i < block.getNumSamples(); ++i)
         {
             std::vector<T> vec;
@@ -118,7 +111,7 @@ struct Diffuser
     {
         for (auto i = 0; i < block.getNumSamples(); ++i)
         {
-            changeDelaySmooth();
+            changeDelay();
 
             std::vector<T> vec;
 
@@ -139,7 +132,6 @@ struct Diffuser
     }
 
     float delayRange;
-    SmoothedValue<float> sm_delay;
 
 private:
     std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>, channels> delay;
@@ -147,4 +139,5 @@ private:
     const int64_t seed;
     std::vector<bool> invert;
     double SR = 44100.0;
+    std::atomic<bool> needUpdate = false;
 };
