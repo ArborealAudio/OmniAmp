@@ -489,23 +489,6 @@ public:
         {
         case DECAY:
         case SIZE:
-            DBG("Changing params");
-            reverbReady = false;
-            switch ((ReverbType)type->getIndex())
-            {
-            case ReverbType::Room:
-                newRev->setReverbParams(ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.3f, 3.f, p}, false);
-                break;
-            case ReverbType::Hall:
-                newRev->setReverbParams(ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p}, false);
-                break;
-            case ReverbType::Off:
-                break;
-            }
-            // fade incoming, set fade time & flag
-            fade.setFadeTime(SR * ratio, 0.5f);
-            reverbReady = true;
-            break;
         case TYPE:
         {
             DBG("Changing params");
