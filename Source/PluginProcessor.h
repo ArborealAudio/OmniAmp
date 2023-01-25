@@ -149,17 +149,15 @@ private:
     Processors::Guitar<vec> guitar;
     Processors::Bass<vec> bass;
     Processors::Channel<vec> channel;
-    Processors::Enhancer<vec, Processors::EnhancerType::HF> hfEnhancer{apvts};
-    Processors::Enhancer<vec, Processors::EnhancerType::LF> lfEnhancer{apvts};
     Processors::FDNCab<vec> cab;
 #else
     Processors::Guitar<double> guitar;
     Processors::Bass<double> bass;
     Processors::Channel<double> channel;
-    Processors::Enhancer<double, Processors::EnhancerType::HF> hfEnhancer{apvts};
-    Processors::Enhancer<double, Processors::EnhancerType::LF> lfEnhancer{apvts};
     Processors::FDNCab<double> cab;
 #endif
+    Processors::Enhancer<double, Processors::EnhancerType::HF> hfEnhancer;
+    Processors::Enhancer<double, Processors::EnhancerType::LF> lfEnhancer;
 
     Processors::ReverbManager reverb;
 
@@ -259,11 +257,6 @@ private:
 #else
         auto &&processBlock = block;
 #endif
-        if ((bool)*lfEnhance)
-            lfEnhancer.processBlock(processBlock, (double)*lfEnhance, *apvts.getRawParameterValue("lfEnhanceInvert"));
-
-        if ((bool)*hfEnhance)
-            hfEnhancer.processBlock(processBlock, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"));
 
         if ((bool)*apvts.getRawParameterValue("cabType"))
             cab.processBlock(processBlock);
@@ -284,6 +277,12 @@ private:
             doubler.process(block, dubAmt);
 
         reverb.process(buffer, *apvts.getRawParameterValue("reverbAmt"));
+
+        if ((bool)*lfEnhance)
+            lfEnhancer.processBlock(processBlock, (double)*lfEnhance, *apvts.getRawParameterValue("lfEnhanceInvert"));
+
+        if ((bool)*hfEnhance)
+            hfEnhancer.processBlock(processBlock, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"));
 
         // final cut filters
         cutFilters.process(block);

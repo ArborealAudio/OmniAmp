@@ -90,21 +90,12 @@ struct Enhancer
         auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(freq, spec.sampleRate, 1);
         auto hp_c = dsp::FilterDesign<double>::designIIRHighpassHighOrderButterworthMethod(7500.0, spec.sampleRate, 1);
 
-        lp1.clear();
-        lp2.clear();
-        hp1.clear();
-        hp2.clear();
-
-        for (auto &c : lp_c)
+        for (size_t i = 0; i < 2; ++i)
         {
-            lp1.emplace_back(dsp::IIR::Filter<T>(c));
-            lp2.emplace_back(dsp::IIR::Filter<T>(c));
-        }
-
-        for (auto &c : hp_c)
-        {
-            hp1.emplace_back(dsp::IIR::Filter<T>(c));
-            hp2.emplace_back(dsp::IIR::Filter<T>(c));
+            lp1[i].reset(new dsp::IIR::Filter<T>(lp_c[0])); //guaranteed to be one set of coeffs since it's 1st order
+            lp2[i].reset(new dsp::IIR::Filter<T>(lp_c[0]));
+            hp1[i].reset(new dsp::IIR::Filter<T>(hp_c[0]));
+            hp2[i].reset(new dsp::IIR::Filter<T>(hp_c[0]));
         }
 
         wetBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
@@ -128,12 +119,10 @@ struct Enhancer
         }
 
         auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(freq, SR, 1);
-        lp1.clear();
-        lp2.clear();
-        for (auto &c : lp_c)
+        for (size_t i = 0; i < 2; ++i)
         {
-            lp1.emplace_back(dsp::IIR::Filter<T>(c));
-            lp2.emplace_back(dsp::IIR::Filter<T>(c));
+            lp1[i].reset(new dsp::IIR::Filter<T>(lp_c[0]));
+            lp2[i].reset(new dsp::IIR::Filter<T>(lp_c[0]));
         }
 
         needUpdate = false;
@@ -146,14 +135,13 @@ struct Enhancer
 
     void reset()
     {
-        if (!lp1.empty())
-            lp1[0].reset();
-        if (!lp2.empty())
-            lp2[0].reset();
-        if (!hp1.empty())
-            hp1[0].reset();
-        if (!hp2.empty())
-            hp2[0].reset();
+        for (size_t i = 0; i < 2; ++i)
+        {
+            lp1[i]->reset();
+            lp2[i]->reset();
+            hp1[i]->reset();
+            hp2[i]->reset();
+        }
     }
 
     template <typename Block>
@@ -162,25 +150,30 @@ struct Enhancer
         if (needUpdate)
             updateFilters();
 
-        wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), block.getNumSamples());
-        if (block.getNumChannels() > 1)
-            wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), block.getNumSamples());
+        const auto numSamples = block.getNumSamples();
 
-        auto processBlock = Block(wetBuffer).getSubBlock(0, block.getNumSamples());
+        wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), numSamples);
+        if (block.getNumChannels() > 1)
+            wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), numSamples);
+
+        auto processBlock = Block(wetBuffer).getSubBlock(0, numSamples);
 
         if (type == EnhancerType::LF)
             processLF(processBlock, enhance);
         else
             processHF(processBlock, enhance);
 
-        auto dest = block.getChannelPointer(0);
-        auto src = processBlock.getChannelPointer(0);
-        for (auto i = 0; i < block.getNumSamples(); ++i)
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
-            if (invert)
-                dest[i] -= src[i];
-            else
-                dest[i] += src[i];
+            auto dest = block.getChannelPointer(ch);
+            auto src = processBlock.getChannelPointer(ch);
+            for (auto i = 0; i < numSamples; ++i)
+            {
+                if (invert)
+                    dest[i] -= src[i];
+                else
+                    dest[i] += src[i];
+            }
         }
     }
 
@@ -191,11 +184,15 @@ private:
         auto gain = jmap(enhance, 1.0, 4.0);
         double autoGain = 1.0;
 
-        auto *in = block.getChannelPointer(0);
+        const auto numSamples = block.getNumSamples();
 
-        for (int i = 0; i < block.getNumSamples(); ++i)
-            in[i] = hp1[0].processSample(in[i]);
-        strix::SmoothGain<T>::applySmoothGain(in, block.getNumSamples(), gain, lastGain);
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto *in = block.getChannelPointer(ch);
+            for (int i = 0; i < numSamples; ++i)
+                in[i] = hp1[ch]->processSample(in[i]);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, (bool)ch);
+        }
 
         EnhancerSaturation::process(block, 1.0, 1.0);
         block.multiplyBy(2.0);
@@ -203,33 +200,43 @@ private:
         if ((bool)*hfAutoGain)
             autoGain *= 1.0 / (2.0 * gain);
 
-        for (int i = 0; i < block.getNumSamples(); ++i)
-            in[i] = hp2[0].processSample(in[i]);
-        strix::SmoothGain<T>::applySmoothGain(in, block.getNumSamples(), enhance * autoGain, lastAutoGain);
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto *in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < numSamples; ++i)
+                in[i] = hp2[ch]->processSample(in[i]);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, (bool)ch);
+        }
     }
 
     template <typename Block>
     void processLF(Block &block, double enhance)
     {
-        auto inL = block.getChannelPointer(0);
-
-        for (int i = 0; i < block.getNumSamples(); ++i)
-            inL[i] = lp1[0].processSample(inL[i]);
+        const auto numSamples = block.getNumSamples();
 
         auto gain = jmap(enhance, 1.0, 2.0);
         double autoGain = 1.0;
 
-        strix::SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), gain, lastGain);
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto in = block.getChannelPointer(ch);
+            for (int i = 0; i < numSamples; ++i)
+                in[i] = lp1[ch]->processSample(in[i]);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, (bool)ch);
+        }
 
         EnhancerSaturation::process(block, 1.0, 2.0);
 
-        if (*lfAutoGain)
+        if ((bool)*lfAutoGain)
             autoGain *= 1.0 / (6.0 * gain);
 
-        for (int i = 0; i < block.getNumSamples(); ++i)
-            inL[i] = lp2[0].processSample(inL[i]);
-
-        strix::SmoothGain<T>::applySmoothGain(inL, block.getNumSamples(), enhance * autoGain, lastAutoGain);
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        {
+            auto *in = block.getChannelPointer(ch);
+            for (int i = 0; i < numSamples; ++i)
+                in[i] = lp2[ch]->processSample(in[i]);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, (bool)ch);
+        }
     }
 
     double SR = 44100.0;
@@ -242,7 +249,7 @@ private:
 
     double lastGain = 0.0, lastAutoGain = 1.0;
 
-    std::vector<dsp::IIR::Filter<T>> lp1, lp2, hp1, hp2;
+    std::array<std::unique_ptr<dsp::IIR::Filter<T>>, 2> lp1, lp2, hp1, hp2;
 #if USE_SIMD
     strix::Buffer<T> wetBuffer;
 #else
