@@ -50,12 +50,6 @@ struct AmpControls : Component, private Timer
         inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
         inGain.setLabel("Preamp");
         inGain.setTooltip("Preamp gain stage. In Channel mode, is bypassed at 0.\n\nAlt/Option-click to enable Auto Gain.");
-        inGain.autoGain.store(*a.getRawParameterValue("preampAutoGain"));
-        inGain.onAltClick = [&](bool state)
-        {
-            a.getParameterAsValue("preampAutoGain") = state;
-            repaint();
-        };
         inGain.setValueToStringFunction(zeroToTen);
 
         String eqTooltip = "EQ section of the amp. In Channel mode, the EQ knobs will cut below 50% and add above 50%.\n\nIn Guitar & Bass mode, these controls will work like a traditional amp tone stack.\n\nIn Channel mode, Alt/Option-click will enable frequency-weighted Auto Gain.";
@@ -63,57 +57,21 @@ struct AmpControls : Component, private Timer
         bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
         bass.setLabel("Bass");
         bass.setTooltip(eqTooltip);
-        bass.autoGain = *a.getRawParameterValue("eqAutoGain");
-        bass.onAltClick = [&](bool state)
-        {
-            if (*a.getRawParameterValue("mode") < 2)
-                return;
-            mid.autoGain.store(state);
-            treble.autoGain.store(state);
-            a.getParameterAsValue("eqAutoGain") = state;
-            repaint();
-        };
         bass.setValueToStringFunction(eqFunc);
 
         midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
         mid.setLabel("Mid");
         mid.setTooltip(eqTooltip);
-        mid.autoGain = *a.getRawParameterValue("eqAutoGain");
-        mid.onAltClick = [&](bool state)
-        {
-            if (*a.getRawParameterValue("mode") < 2)
-                return;
-            bass.autoGain.store(state);
-            treble.autoGain.store(state);
-            a.getParameterAsValue("eqAutoGain") = state;
-            repaint();
-        };
         mid.setValueToStringFunction(eqFunc);
 
         trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
         treble.setLabel("Treble");
         treble.setTooltip(eqTooltip);
-        treble.autoGain = *a.getRawParameterValue("eqAutoGain");
-        treble.onAltClick = [&](bool state)
-        {
-            if (*a.getRawParameterValue("mode") < 2)
-                return;
-            mid.autoGain.store(state);
-            bass.autoGain.store(state);
-            a.getParameterAsValue("eqAutoGain") = state;
-            repaint();
-        };
         treble.setValueToStringFunction(eqFunc);
 
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
         outGain.setTooltip("Power amp stage. In Channel mode, fully bypassed at 0.\n\nAlt/Option-click to enable Auto Gain.");
-        outGain.autoGain.store(*a.getRawParameterValue("powerampAutoGain"));
-        outGain.onAltClick = [&](bool state)
-        {
-            a.getParameterAsValue("powerampAutoGain") = state;
-            repaint();
-        };
         outGain.setValueToStringFunction(zeroToTen);
 
         addAndMakeVisible(mode);
@@ -128,6 +86,11 @@ struct AmpControls : Component, private Timer
         setSubModePtr();
 
         setColorScheme();
+
+        addAndMakeVisible(autoGain);
+        autoGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "ampAutoGain", autoGain);
+        autoGain.setButtonText("Auto");
+        autoGain.setTooltip("Enable auto gain compensation for the entire amp section.");
 
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
@@ -205,10 +168,6 @@ struct AmpControls : Component, private Timer
         bass.setValueToStringFunction(function);
         mid.setValueToStringFunction(function);
         treble.setValueToStringFunction(function);
-
-        bass.autoGain.store(currentMode > 1 && *vts.getRawParameterValue("eqAutoGain"));
-        mid.autoGain.store(currentMode > 1 && *vts.getRawParameterValue("eqAutoGain"));
-        treble.autoGain.store(currentMode > 1 && *vts.getRawParameterValue("eqAutoGain"));
 
         setColorScheme();
 
@@ -305,39 +264,11 @@ struct AmpControls : Component, private Timer
 
     void paint(Graphics &g) override
     {
-        // g.setColour(backgroundColor);
         ColourGradient grad(backgroundColor, getLocalBounds().getCentreX(), getLocalBounds().getCentreY(), Colour(BACKGROUND_COLOR), getWidth(), getHeight(), true);
         g.setGradientFill(grad);
         g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f);
         g.setColour(secondaryColor);
         g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f, 2.f);
-
-        // g.fillRoundedRectangle(dist.getRight() - 1, 20, 2, dist.getHeight() - 20, 20.f);
-
-        auto paintAuto = [&](Rectangle<int> bounds)
-        {
-            g.setColour(secondaryColor);
-            g.drawText("Auto", bounds, Justification::centred, false);
-
-            Path p;
-            p.startNewSubPath(bounds.getX(), bounds.getY());
-            p.lineTo(bounds.getX(), bounds.getBottom());
-            p.lineTo(bounds.getX() + bounds.getWidth(), bounds.getBottom());
-            p.lineTo(bounds.getX() + bounds.getWidth(), bounds.getY());
-
-            g.strokePath(p, PathStrokeType(1.f));
-        };
-
-        if (inGain.autoGain.load())
-            paintAuto(Rectangle<int>(inGain.getX(), inGain.getBottom() + 3, inGain.getWidth(), 10));
-
-        auto toneControls = bass.getBounds().getUnion(mid.getBounds()).getUnion(treble.getBounds());
-
-        if ((bass.autoGain.load() || mid.autoGain.load() || treble.autoGain.load()) && lastMode > 1)
-            paintAuto(Rectangle<int>(toneControls.getX(), toneControls.getBottom() + 3, toneControls.getWidth(), 10));
-
-        if (outGain.autoGain.load())
-            paintAuto(Rectangle<int>(outGain.getX(), outGain.getBottom() + 3, outGain.getWidth(), 10));
     }
 
     void resized() override
@@ -354,14 +285,17 @@ struct AmpControls : Component, private Timer
         }
 
         // bounds at this point is bottom 30% 
-        auto botItemBounds = bounds.reduced(chunk, 0); // reduce by knob-width on either side
-        float botChunk = botItemBounds.getWidth() / 4;
+        auto botItemBounds = bounds.withTrimmedRight(chunk); // reduce by knob-width on either side
+        float botChunk = botItemBounds.getWidth() / 5;
+        auto autoBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
         auto boostBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
         auto modeBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
         auto subModeBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
         auto powerBounds = botItemBounds.removeFromLeft(botChunk).reduced(5);
         powerBounds.setWidth(powerBounds.getHeight());
 
+        autoGain.setBounds(autoBounds);
+        autoGain.lnf.cornerRadius = autoGain.getHeight() * 0.25f;
         hiGain.setBounds(boostBounds);
         hiGain.lnf.cornerRadius = hiGain.getHeight() * 0.25f;
         mode.setBounds(modeBounds);
@@ -373,7 +307,6 @@ private:
     AudioProcessorValueTreeState &vts;
 
     Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_TICKS | Knob::DRAW_SHADOW;
-
     Knob dist{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, bass{knobFlags}, mid{knobFlags}, treble{knobFlags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> distAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
 
@@ -381,9 +314,9 @@ private:
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach, gtrModeAttach, bassModeAttach, chanModeAttach;
     ChoiceMenu *subMode = nullptr;
 
-    LightButton hiGain;
+    LightButton hiGain, autoGain;
     PowerButton power;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach, powerAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach, autoGainAttach, powerAttach;
 
     Colour backgroundColor = Colours::black;
     Colour secondaryColor = Colours::white;

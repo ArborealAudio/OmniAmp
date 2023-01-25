@@ -419,15 +419,13 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<cParam>(ParameterID("bassMode", 1), "Bass Amp Type", StringArray{"Cobalt", "Emerald", "Quartz"}, 0));
     params.emplace_back(std::make_unique<cParam>(ParameterID("channelMode", 1), "Channel Strip", StringArray{"Modern", "Vintage"}, 0));
     params.emplace_back(std::make_unique<bParam>(ParameterID("ampOn", 1), "Amp On/Off", true));
+    params.emplace_back(std::make_unique<bParam>(ParameterID("ampAutoGain", 1), "Amp Auto Gain", false));
     params.emplace_back(std::make_unique<fParam>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<bParam>(ParameterID("preampAutoGain", 1), "Preamp Auto Gain", false));
     params.emplace_back(std::make_unique<fParam>(ParameterID("powerampGain", 1), "Power Amp Gain", 0.f, 1.f, 0.f));
-    params.emplace_back(std::make_unique<bParam>(ParameterID("powerampAutoGain", 1), "Power Amp Auto Gain", false));
     params.emplace_back(std::make_unique<bParam>(ParameterID("hiGain", 1), "High Gain", false));
     params.emplace_back(std::make_unique<fParam>(ParameterID("bass", 1), "Bass", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("mid", 1), "Mid", 0.f, 1.f, 0.5f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("treble", 1), "Treble", 0.f, 1.f, 0.5f));
-    params.emplace_back(std::make_unique<bParam>(ParameterID("eqAutoGain", 1), "EQ Auto Gain", false));
     params.emplace_back(std::make_unique<fParam>(ParameterID("hfEnhance", 1), "HF Enhancer", 0.f, 1.f, 0.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("hfEnhanceAuto", 1), "HF Enhancer Auto Gain", false));
     params.emplace_back(std::make_unique<bParam>(ParameterID("hfEnhanceInvert", 1), "HF Enhancer Invert", false));

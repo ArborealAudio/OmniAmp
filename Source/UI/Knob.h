@@ -85,7 +85,6 @@ struct Knob : Slider
     Knob(flags_t f) : lnf(f), flags(f)
     {
         setLookAndFeel(&lnf);
-        lnf.autoGain = &autoGain;
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
         setTextBoxStyle(Slider::NoTextBox, true, 0, 0);
 
@@ -132,26 +131,7 @@ struct Knob : Slider
         lnf.label = std::make_unique<String>(label);
     }
 
-    void mouseDown(const MouseEvent &event) override
-    {
-        auto alt = event.mods.isAltDown();
-        auto leftClick = event.mods.isLeftButtonDown();
-
-        if (alt && leftClick)
-        {
-            if (onAltClick)
-            {
-                autoGain.store(!autoGain.load());
-                onAltClick(autoGain.load());
-            }
-        }
-        else
-            Slider::mouseDown(event);
-    }
-
     String getLabel() { return label; }
-
-    std::function<void(bool)> onAltClick;
 
     void setValueToStringFunction(std::function<String(float)> func)
     {
@@ -172,8 +152,6 @@ struct Knob : Slider
         lnf.yOffset = yOffset;
     }
 
-    std::atomic<bool> autoGain = false;
-
 private:
     struct KnobLookAndFeel : LookAndFeel_V4
     {
@@ -185,8 +163,6 @@ private:
         std::unique_ptr<String> label = nullptr;
 
         std::function<String(float)> valueToString = nullptr;
-
-        std::atomic<bool> *autoGain = nullptr;
 
         KnobLookAndFeel(flags_t f) : flags(f)
         {

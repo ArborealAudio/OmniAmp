@@ -29,11 +29,6 @@ struct EnhancerComponent : Component
         lfEnhance.setDefaultValue(0.f);
         lfEnhance.setValueToStringFunction(percent);
         lfEnhance.setColor(Colours::black, Colours::antiquewhite);
-        lfEnhance.autoGain.store(*apvts.getRawParameterValue("lfEnhanceAuto"));
-        lfEnhance.onAltClick = [&](bool state)
-        {
-            apvts.getParameterAsValue("lfEnhanceAuto") = state;
-        };
 
         addAndMakeVisible(lfInvert);
         lfInvAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "lfEnhanceInvert", lfInvert);
@@ -46,11 +41,6 @@ struct EnhancerComponent : Component
         hfEnhance.setDefaultValue(0.f);
         hfEnhance.setValueToStringFunction(percent);
         hfEnhance.setColor(Colours::black, Colours::antiquewhite);
-        hfEnhance.autoGain.store(*apvts.getRawParameterValue("hfEnhanceAuto"));
-        hfEnhance.onAltClick = [&](bool state)
-        {
-            apvts.getParameterAsValue("hfEnhanceAuto") = state;
-        };
 
         addAndMakeVisible(hfInvert);
         hfInvAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hfEnhanceInvert", hfInvert);
@@ -66,7 +56,7 @@ struct EnhancerComponent : Component
             String str((int)val);
             str.append(" Hz", 3); return str; });
 
-         hfCutAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfCut", hfCut);
+        hfCutAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfCut", hfCut);
         hfCut.setLabel("HF Cut");
         hfCut.setDefaultValue(1.f);
         hfCut.setValueToStringFunction([](float val)
