@@ -37,7 +37,7 @@ public:
         dcBlock.setCutoffFreq(10.0);
         dcBlock.setType(strix::FilterType::highpass);
 
-        dry = (T **)malloc(sizeof(T*) * spec.numChannels);
+        dry = (T **)malloc(sizeof(T *) * spec.numChannels);
         dry[0] = (T *)malloc(sizeof(T) * spec.maximumBlockSize);
         dry[1] = (T *)malloc(sizeof(T) * spec.maximumBlockSize);
         for (size_t i = 0; i < spec.maximumBlockSize; i++)
@@ -138,7 +138,7 @@ public:
     void processBlock(strix::AudioBlock<T> &block)
     {
         auto *in = block.getChannelPointer(0);
-        memcpy(dry[0], in, sizeof(in));
+        memcpy(dry[0], in, sizeof(T) * block.getNumSamples());
         strix::AudioBlock<T> dryBlock(dry, block.getNumChannels(), block.getNumSamples());
         if (dist.isSmoothing())
         {
@@ -153,6 +153,7 @@ public:
                 if (fade.complete)
                     init = false;
             }
+            dcBlock.processBlock(block);
             return;
         }
 
@@ -168,6 +169,7 @@ public:
             if (fade.complete)
                 init = false;
         }
+        dcBlock.processBlock(block);
     }
 
     void processBlockInit(strix::AudioBlock<T> &block)
@@ -190,8 +192,8 @@ private:
 
         DP.incident(P3.reflected());
         P3.incident(DP.reflected());
-        dcBlock.processSample(0, x);
-        dcBlock.processSample(1, x);
+        // dcBlock.processSample(0, x);
+        // dcBlock.processSample(1, x);
     }
 
     double SR = 44100.0;
