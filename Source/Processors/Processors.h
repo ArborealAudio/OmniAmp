@@ -449,7 +449,7 @@ namespace Processors
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
             else
-                mxr.init = true;
+                mxr.setInit(true);
 
             processBlock.multiplyBy(gain_raw);
 
@@ -676,7 +676,7 @@ namespace Processors
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
             else
-                mxr.init = true;
+                mxr.setInit(true);
 
             triode[0].process(processBlock);
 
@@ -890,7 +890,7 @@ namespace Processors
             if (*dist > 0.f)
                 mxr.processBlock(processBlock);
             else
-                mxr.init = true;
+                mxr.setInit(true);
 
             if (*inGain > 0.f)
             {

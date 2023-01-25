@@ -12,25 +12,40 @@ public:
 
     MXRDistWDF() = default;
 
+    ~MXRDistWDF()
+    {
+        free(dry[0]);
+        free(dry[1]);
+        free(dry);
+    }
+
     void prepare(const dsp::ProcessSpec &spec)
     {
-        auto sampleRate = spec.sampleRate;
-        C1.prepare((T)sampleRate);
-        C2.prepare((T)sampleRate);
-        C3.prepare((T)sampleRate);
-        C4.prepare((T)sampleRate);
-        C5.prepare((T)sampleRate);
+        SR = spec.sampleRate;
+        C1.prepare((T)SR);
+        C2.prepare((T)SR);
+        C3.prepare((T)SR);
+        C4.prepare((T)SR);
+        C5.prepare((T)SR);
 
         Vb.setVoltage((T)4.5f);
 
-        dist.reset(sampleRate, 0.005);
+        dist.reset(SR, 0.01);
         updateParams();
 
         dcBlock.prepare(spec);
         dcBlock.setCutoffFreq(10.0);
         dcBlock.setType(strix::FilterType::highpass);
 
-        init = true;
+        dry = (T **)malloc(sizeof(T*) * spec.numChannels);
+        dry[0] = (T *)malloc(sizeof(T) * spec.maximumBlockSize);
+        dry[1] = (T *)malloc(sizeof(T) * spec.maximumBlockSize);
+        for (size_t i = 0; i < spec.maximumBlockSize; i++)
+        {
+            processInit(0.5);
+        }
+
+        setInit(true);
     }
 
     /*set the target value for the distortion param*/
@@ -43,6 +58,12 @@ public:
     void updateParams()
     {
         ResDist_R3.setResistanceValue(dist.getNextValue() * rDistVal + R3Val);
+    }
+
+    void setInit(bool isInit)
+    {
+        init = isInit;
+        fade.setFadeTime(SR, 0.5f);
     }
 
     inline T processSample(T x)
@@ -59,16 +80,15 @@ public:
     /*for reg doubles currently just one channel, copies L->R*/
     void processBlock(dsp::AudioBlock<T> &block)
     {
-        if (init)
-        {
-            processBlockInit(block);
-            init = false;
-            return;
-        }
         auto *inL = block.getChannelPointer(0);
+        FloatVectorOperations::copy(dry[0], inL, block.getNumSamples());
         auto *inR = inL;
         if (block.getNumChannels() > 1)
+        {
             inR = block.getChannelPointer(1);
+            FloatVectorOperations::copy(dry[1], inR, block.getNumSamples());
+        }
+        dsp::AudioBlock<T> dryBlock(dry, block.getNumChannels(), block.getNumSamples());
 
         if (dist.isSmoothing())
         {
@@ -77,6 +97,14 @@ public:
                 updateParams();
                 inL[i] = processSample(inL[i]);
             }
+            FloatVectorOperations::copy(inR, inL, block.getNumSamples());
+            if (init)
+            {
+                fade.processWithState(dryBlock, block, jmin(block.getNumSamples(), dryBlock.getNumSamples()));
+                if (fade.complete)
+                    init = false;
+            }
+            dcBlock.processBlock(block);
             return;
         }
 
@@ -86,6 +114,14 @@ public:
         {
             inL[i] = processSample(inL[i]);
         }
+        FloatVectorOperations::copy(inR, inL, block.getNumSamples());
+        if (init)
+        {
+            fade.processWithState(dryBlock, block, jmin(block.getNumSamples(), dryBlock.getNumSamples()));
+            if (fade.complete)
+                init = false;
+        }
+        dcBlock.processBlock(block);
     }
 
     void processBlockInit(dsp::AudioBlock<T> &block)
@@ -101,19 +137,21 @@ public:
 #else
     void processBlock(strix::AudioBlock<T> &block)
     {
-        if (init)
-        {
-            processBlockInit(block);
-            init = false;
-            return;
-        }
         auto *in = block.getChannelPointer(0);
+        memcpy(dry[0], in, sizeof(in));
+        strix::AudioBlock<T> dryBlock(dry, block.getNumChannels(), block.getNumSamples());
         if (dist.isSmoothing())
         {
             for (size_t i = 0; i < block.getNumSamples(); ++i)
             {
                 updateParams();
                 in[i] = processSample(in[i]);
+            }
+            if (init)
+            {
+                fade.processWithState(dryBlock, block, jmin(block.getNumSamples(), dryBlock.getNumSamples()));
+                if (fade.complete)
+                    init = false;
             }
             return;
         }
@@ -123,6 +161,12 @@ public:
         for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
             in[i] = processSample(in[i]);
+        }
+        if (init)
+        {
+            fade.processWithState(dryBlock, block, jmin(block.getNumSamples(), dryBlock.getNumSamples()));
+            if (fade.complete)
+                init = false;
         }
     }
 
@@ -146,7 +190,14 @@ private:
 
         DP.incident(P3.reflected());
         P3.incident(DP.reflected());
+        dcBlock.processSample(0, x);
+        dcBlock.processSample(1, x);
     }
+
+    double SR = 44100.0;
+
+    T **dry;
+    strix::Crossfade fade;
 
     // Port A
     WDFT::ResistorT<T> R4{1.0e6f};
