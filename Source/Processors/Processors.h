@@ -129,11 +129,9 @@ namespace Processors
         {
             inGain = dynamic_cast<strix::FloatParameter *>(apvts.getParameter("preampGain"));
             lastInGain = *inGain;
-            inGainAuto = dynamic_cast<strix::BoolParameter *>(apvts.getParameter("preampAutoGain"));
+            ampAutoGain = dynamic_cast<strix::BoolParameter *>(apvts.getParameter("ampAutoGain"));
             outGain = dynamic_cast<strix::FloatParameter *>(apvts.getParameter("powerampGain"));
             lastOutGain = *outGain;
-            outGainAuto = dynamic_cast<strix::BoolParameter *>(apvts.getParameter("powerampAutoGain"));
-            eqAutoGain = dynamic_cast<strix::BoolParameter *>(apvts.getParameter("eqAutoGain"));
             p_comp = dynamic_cast<strix::FloatParameter *>(apvts.getParameter("comp"));
             linked = dynamic_cast<strix::BoolParameter *>(apvts.getParameter("compLink"));
             hiGain = dynamic_cast<strix::BoolParameter *>(apvts.getParameter("hiGain"));
@@ -236,7 +234,7 @@ namespace Processors
         Preamp preamp;
 
         strix::FloatParameter *inGain, *outGain, *p_comp, *dist;
-        strix::BoolParameter *inGainAuto, *outGainAuto, *hiGain, *linked, *eqAutoGain;
+        strix::BoolParameter *ampAutoGain, *hiGain, *linked;
         double lastInGain, lastOutGain;
 
         strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
@@ -436,6 +434,7 @@ namespace Processors
             pentode.inGain = *outGain;
 
             FloatType autoGain = 1.0;
+            bool ampAutoGain_ = *ampAutoGain;
 
             if (!*apvts.getRawParameterValue("compPos"))
                 comp.processBlock(block, *p_comp, *linked);
@@ -452,6 +451,8 @@ namespace Processors
                 mxr.setInit(true);
 
             processBlock.multiplyBy(gain_raw);
+            if (ampAutoGain_)
+                autoGain *= 1.0 / gain_raw;
 
             /* perform sync swap of preamp & poweramp if needed */
             if (ampChanged)
@@ -476,7 +477,7 @@ namespace Processors
             processBlock.multiplyBy(out_raw);
             pentode.processBlockClassB(processBlock);
 
-            if (*outGainAuto)
+            if (ampAutoGain_)
                 autoGain *= 1.0 / out_raw;
 
             processBlock.multiplyBy(autoGain);
@@ -663,6 +664,7 @@ namespace Processors
             pentode.inGain = *outGain;
 
             FloatType autoGain = 1.0;
+            bool ampAutoGain_ = *ampAutoGain;
 
             if (!*apvts.getRawParameterValue("compPos"))
                 comp.processBlock(block, *p_comp, *linked);
@@ -682,13 +684,13 @@ namespace Processors
 
             processBlock.multiplyBy(gain_raw);
 
-            if (*inGainAuto)
+            if (ampAutoGain_)
                 autoGain *= 1.0 / gain_raw;
 
             if (*hiGain)
             {
                 processBlock.multiplyBy(2.f);
-                if (*inGainAuto)
+                if (ampAutoGain_)
                     autoGain *= 0.5;
             }
 
@@ -704,7 +706,7 @@ namespace Processors
 
             processBlock.multiplyBy(out_raw);
 
-            if (*outGainAuto)
+            if (ampAutoGain_)
                 autoGain *= 1.0 / out_raw;
 
             if (!*hiGain)
@@ -877,6 +879,7 @@ namespace Processors
             FloatType out_raw = jmap(outGain->get(), 1.f, 4.f);
 
             FloatType autoGain = 1.0;
+            bool ampAutoGain_ = *ampAutoGain;
 
             if (!*apvts.getRawParameterValue("compPos"))
                 comp.processBlock(block, *p_comp, *linked);
@@ -901,12 +904,12 @@ namespace Processors
                     triode[1].process(processBlock);
             }
 
-            if (*inGainAuto)
+            if (ampAutoGain_)
                 autoGain *= 1.0 / std::sqrt(std::sqrt(gain_raw * gain_raw * gain_raw));
 
             processFilters(processBlock);
 
-            if (*eqAutoGain)
+            if (ampAutoGain_)
                 autoGain *= autoGain_m;
 
             if (*outGain > 0.f)
@@ -916,7 +919,7 @@ namespace Processors
                 pentode.processBlockClassB(processBlock);
             }
 
-            if (*outGainAuto)
+            if (ampAutoGain_)
                 autoGain *= 1.0 / out_raw;
 
 #if USE_SIMD
