@@ -5,11 +5,8 @@
 
 struct EnhancerComponent : Component
 {
-    EnhancerComponent(strix::AudioSource &s, AudioProcessorValueTreeState &apvts) : wave(s)
+    EnhancerComponent(strix::AudioSource &s, AudioProcessorValueTreeState &apvts)
     {
-        // addAndMakeVisible(wave);
-        wave.setInterceptsMouseClicks(false, false);
-
         auto percent = [](float val)
         {
             auto str = String(static_cast<int>(val * 100));
@@ -24,27 +21,37 @@ struct EnhancerComponent : Component
         }
 
         lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "lfEnhance", lfEnhance);
-        lfEnhance.setTooltip("A saturating, low-end boost after the amp and before the cab and reverb. The frequency is calibrated depending on the amp's mode.\n\nAlt/Option-click to enable Auto Gain.");
+        lfEnhance.setTooltip("A saturating, low-end boost after the amp and before the cab and reverb. The frequency is calibrated depending on the amp's mode.");
         lfEnhance.setLabel("LF Enhancer");
         lfEnhance.setDefaultValue(0.f);
         lfEnhance.setValueToStringFunction(percent);
         lfEnhance.setColor(Colours::black, Colours::antiquewhite);
 
+        addAndMakeVisible(lfAutoGain);
+        lfAutoGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "lfEnhanceAuto", lfAutoGain);
+        lfAutoGain.setButtonText("Auto");
+        lfAutoGain.setTooltip("Enable automatic gain compensation for the enhancer filter.");
+
         addAndMakeVisible(lfInvert);
         lfInvAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "lfEnhanceInvert", lfInvert);
-        lfInvert.setButtonText("inv");
+        lfInvert.setButtonText("Inv");
         lfInvert.setTooltip("Invert the low frequency enhancer. At low levels, this works more like a resonant high-pass, while at higher levels it adds more of a bell-shaped boost.");
 
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfEnhance", hfEnhance);
-        hfEnhance.setTooltip("A saturating, hi-end boost after the amp and before the cab and reverb.\n\nAlt/Option-click to enable Auto Gain.");
+        hfEnhance.setTooltip("A saturating, hi-end boost after the amp and before the cab and reverb.");
         hfEnhance.setLabel("HF Enhancer");
         hfEnhance.setDefaultValue(0.f);
         hfEnhance.setValueToStringFunction(percent);
         hfEnhance.setColor(Colours::black, Colours::antiquewhite);
 
+        addAndMakeVisible(hfAutoGain);
+        hfAutoGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hfEnhanceAuto", hfAutoGain);
+        hfAutoGain.setButtonText("Auto");
+        hfAutoGain.setTooltip("Enable automatic gain compensation for the enhancer filter.");
+
         addAndMakeVisible(hfInvert);
         hfInvAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(apvts, "hfEnhanceInvert", hfInvert);
-        hfInvert.setButtonText("inv");
+        hfInvert.setButtonText("Inv");
         hfInvert.setTooltip("Invert the high frequency enhancer. At low levels, this works more like a resonant high-pass, while at higher levels it adds a differently-voiced boost to the high-end.");
 
         lfCutAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "lfCut", lfCut);
@@ -64,6 +71,10 @@ struct EnhancerComponent : Component
                 return String("Off");
             String str((int)val);
             str.append(" Hz", 3); return str; });
+
+        addAndMakeVisible(title);
+        title.setText("Post", NotificationType::dontSendNotification);
+        title.setJustificationType(Justification::centred);
     }
 
     void paint(Graphics &g) override
@@ -73,11 +84,11 @@ struct EnhancerComponent : Component
         g.setColour(Colours::grey);
         g.drawRoundedRectangle(bounds, 5.f, 2.f);
 
-        g.setFont(getHeight() * 0.1f);
+        g.setFont(getHeight() * 0.085f);
         g.setColour(Colours::white);
-        auto LFLabel = bounds.withTrimmedRight(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).toNearestInt();
+        auto LFLabel = bounds.withTrimmedRight(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).translated(0, 5).toNearestInt();
         g.drawFittedText("Low Freq", LFLabel, Justification::centredTop, 1);
-        auto HFLabel = bounds.withTrimmedLeft(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).toNearestInt();
+        auto HFLabel = bounds.withTrimmedLeft(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).translated(0, 5).toNearestInt();
         g.drawFittedText("Hi Freq", HFLabel, Justification::centredTop, 1);
     }
 
@@ -88,18 +99,27 @@ struct EnhancerComponent : Component
         auto left = bounds.removeFromLeft(div);
         auto right = bounds.removeFromRight(div);
         const auto width = bounds.getWidth();
+        const auto height = bounds.getHeight();
 
-        auto invHeight = left.getHeight() * 0.25f;
-        auto invWidth = left.getWidth() * 0.25f;
+        title.setBounds(bounds.removeFromTop(height * 0.15f));
+        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
 
-        // wave.setBounds(bounds.reduced(10, (float)bounds.getHeight() * 0.2f));
+        const auto buttonHeight = left.getHeight() * 0.25f;
+        const auto buttonWidth = left.getWidth() * 0.25f;
+        auto leftButtons = left.removeFromLeft(buttonWidth).reduced(0, height * 0.1f);
+        auto rightButtons = right.removeFromRight(buttonWidth).reduced(0, height * 0.1f);
+
         lfCut.setBounds(bounds.removeFromLeft(width * 0.5f));
         hfCut.setBounds(bounds.removeFromLeft(width * 0.5f));
-        lfInvert.setBounds(left.removeFromLeft(invWidth).withSizeKeepingCentre(invWidth, invHeight));
+        lfInvert.setBounds(leftButtons.removeFromTop(height * 0.5f).withSizeKeepingCentre(buttonWidth, buttonHeight));
+        lfAutoGain.setBounds(leftButtons.withSizeKeepingCentre(buttonWidth, buttonHeight));
         lfInvert.lnf.cornerRadius = lfInvert.getHeight() * 0.25f;
+        lfAutoGain.lnf.cornerRadius = lfAutoGain.getHeight() * 0.25f;
         lfEnhance.setBounds(left);
-        hfInvert.setBounds(right.removeFromRight(invWidth).withSizeKeepingCentre(invWidth, invHeight));
+        hfInvert.setBounds(rightButtons.removeFromTop(height * 0.5f).withSizeKeepingCentre(buttonWidth, buttonHeight));
+        hfAutoGain.setBounds(rightButtons.withSizeKeepingCentre(buttonWidth, buttonHeight));
         hfInvert.lnf.cornerRadius = hfInvert.getHeight() * 0.25f;
+        hfAutoGain.lnf.cornerRadius = hfAutoGain.getHeight() * 0.25f;
         hfEnhance.setBounds(right);
     }
 
@@ -117,11 +137,11 @@ private:
             &hfEnhance};
     }
 
-    LightButton hfInvert, lfInvert;
+    LightButton hfAutoGain, lfAutoGain, hfInvert, lfInvert;
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach, lfCutAttach, hfCutAttach;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hfInvAttach, lfInvAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hfAutoGainAttach, lfAutoGainAttach, hfInvAttach, lfInvAttach;
 
-    strix::SineWaveComponent wave;
+    Label title;
 
     Colour background = Colour(DEEP_BLUE);
 };
