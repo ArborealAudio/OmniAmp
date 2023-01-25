@@ -91,6 +91,10 @@ struct PreComponent : Component,
         grMeter.meterColor = Colours::oldlace;
         addAndMakeVisible(grMeter);
 
+        addAndMakeVisible(title);
+        title.setText("Pre", NotificationType::dontSendNotification);
+        title.setJustificationType(Justification::centred);
+
         startTimerHz(30);
     }
 
@@ -106,7 +110,7 @@ struct PreComponent : Component,
 
     void paint(Graphics &g) override
     {
-        auto bounds = getLocalBounds().reduced(1).toFloat();
+        auto bounds = getLocalBounds().reduced(2).toFloat();
         g.setColour(Colours::antiquewhite);
         g.drawRoundedRectangle(bounds, 5.f, 3.f);
 
@@ -123,6 +127,9 @@ struct PreComponent : Component,
         const auto compSectH = compSection.getHeight();
         auto w = bounds.getWidth();
         int chunk = w / 5;
+        
+        title.setBounds(bounds.withTrimmedBottom(bounds.getHeight() * 0.8f).withTrimmedRight(chunk * 4));
+        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
 
         midSide.setBounds(bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight() * 0.33f));
         midSide.lnf.cornerRadius = midSide.getHeight() * 0.25f;
@@ -167,6 +174,8 @@ private:
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> msAttach, compLinkAttach, compPosAttach;
 
     strix::VolumeMeterComponent grMeter;
+
+    Label title;
 
     enum
     {

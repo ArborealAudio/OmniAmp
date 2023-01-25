@@ -49,10 +49,10 @@ struct AmpControls : Component, private Timer
 
         inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
         inGain.setLabel("Preamp");
-        inGain.setTooltip("Preamp gain stage. In Channel mode, is bypassed at 0.\n\nAlt/Option-click to enable Auto Gain.");
+        inGain.setTooltip("Preamp gain stage. In Channel mode, is bypassed at 0.");
         inGain.setValueToStringFunction(zeroToTen);
 
-        String eqTooltip = "EQ section of the amp. In Channel mode, the EQ knobs will cut below 50% and add above 50%.\n\nIn Guitar & Bass mode, these controls will work like a traditional amp tone stack.\n\nIn Channel mode, Alt/Option-click will enable frequency-weighted Auto Gain.";
+        String eqTooltip = "EQ section of the amp. In Channel mode, the EQ knobs will cut below 50% and add above 50%.\n\nIn Guitar & Bass mode, these controls will work like a traditional amp tone stack.";
 
         bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
         bass.setLabel("Bass");
@@ -71,7 +71,7 @@ struct AmpControls : Component, private Timer
 
         outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
-        outGain.setTooltip("Power amp stage. In Channel mode, fully bypassed at 0.\n\nAlt/Option-click to enable Auto Gain.");
+        outGain.setTooltip("Power amp stage. In Channel mode, fully bypassed at 0.");
         outGain.setValueToStringFunction(zeroToTen);
 
         addAndMakeVisible(mode);
@@ -95,7 +95,7 @@ struct AmpControls : Component, private Timer
         addAndMakeVisible(hiGain);
         hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
         hiGain.setButtonText("Boost");
-        hiGain.setTooltip("Boost for the preamp stage. In addition to adding volume, it also adds new tubes to the circuit.");
+        hiGain.setTooltip("Boost for the preamp stage. Adds volume and new tubes to the circuit.");
 
         addAndMakeVisible(power);
         powerAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "ampOn", power);
