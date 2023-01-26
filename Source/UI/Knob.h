@@ -12,7 +12,7 @@ struct SimpleSlider : Slider
         setSliderSnapsToMousePosition(false);
         setBufferedToImage(true);
     }
-    ~SimpleSlider()
+    ~SimpleSlider() override
     {
         setLookAndFeel(nullptr);
     }
@@ -36,15 +36,15 @@ struct SimpleSlider : Slider
         LNF(SimpleSlider &s) : owner(s)
         {}
 
-        void drawLinearSlider(Graphics &g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos,	const Slider::SliderStyle style, Slider &slider) override
+        void drawLinearSlider(Graphics &g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, const Slider::SliderStyle style, Slider &slider) override
         {
             auto bounds = slider.getLocalBounds().reduced(2).toFloat();
+            g.setColour(owner.baseColor);
+            g.fillRect(2.f, bounds.getY(), sliderPos + 4.f, bounds.getHeight());
             g.setColour(owner.outlineColor);
             g.drawRoundedRectangle(bounds, owner.cornerRadius, 2.f);
-            Path fill;
-            fill.addRoundedRectangle(4, 4, sliderPos, bounds.getHeight() - 4, owner.cornerRadius, owner.cornerRadius, true, false, true, false);
-            g.setColour(owner.baseColor);
-            g.fillPath(fill);
+            g.setColour(Colour(BACKGROUND_COLOR));
+            g.drawRoundedRectangle(bounds.expanded(3.f), owner.cornerRadius, 4.f);
 
             g.setColour(owner.outlineColor);
             String valStr;
