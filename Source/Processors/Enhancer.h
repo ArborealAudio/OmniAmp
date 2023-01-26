@@ -250,11 +250,7 @@ private:
     double lastGain = 0.0, lastAutoGain = 1.0;
 
     std::array<std::unique_ptr<dsp::IIR::Filter<T>>, 2> lp1, lp2, hp1, hp2;
-#if USE_SIMD
-    strix::Buffer<T> wetBuffer;
-#else
     AudioBuffer<T> wetBuffer;
-#endif
 };
 
 //sticking this here bc i don't want to make a new file
