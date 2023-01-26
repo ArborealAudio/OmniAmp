@@ -56,8 +56,7 @@ public:
             return AudioProcessorEditor::hitTest(x, y);
     }
 
-    void resetWindowSize() noexcept;
-    void checkUpdate() noexcept;
+    void resetWindowSize();
 
 private:
     GammaAudioProcessor &audioProcessor;

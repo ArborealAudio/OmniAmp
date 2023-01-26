@@ -20,7 +20,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       enhancers(p.audioSource, p.apvts),
       menu(p.apvts),
       presetMenu(p.apvts),
-      dl(false)
+      dl(&p.checkedUpdate)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
@@ -63,7 +63,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     { resetWindowSize(); };
     menu.checkUpdateCallback = [&]
     {
-        dl.setVisible(dl.checkForUpdate());
+        dl.checkForUpdate();
         if (!dl.isVisible())
             NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
     };
@@ -145,6 +145,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(dl);
     dl.centreWithSize(300, 200);
+    dl.onUpdateStatusChange = [&](bool updateChecked)
+    { p.checkedUpdate = updateChecked; };
 
     addChildComponent(activation);
     activation.onActivationCheck = [&](bool result)
@@ -188,7 +190,7 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 #endif
 }
 
-void GammaAudioProcessorEditor::resetWindowSize() noexcept
+void GammaAudioProcessorEditor::resetWindowSize()
 {
     setSize(800, 800);
     writeConfigFile("size", 800);

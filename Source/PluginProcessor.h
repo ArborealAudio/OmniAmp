@@ -122,6 +122,8 @@ public:
         return juce::AudioProcessor::getWrapperTypeDescription(wrapperType);
     }
 
+    bool checkedUpdate = false;
+
 private:
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
