@@ -4,7 +4,7 @@
 #pragma once
 #include <future>
 
-#if BETA_BUILD | DEV_BUILD
+#if BETA_BUILD || DEV_BUILD
 
 #define KEY "gamma-beta-1108"
 
@@ -43,7 +43,7 @@ struct ActivationComponent : Component
 {
     ActivationComponent()
     {
-        future = std::async(std::launch::deferred, [&]
+        future = std::async(std::launch::async, [&]
                             { checkSite(); });
 
         addAndMakeVisible(editor);
@@ -170,7 +170,7 @@ private:
             auto response = stream->readEntireStreamAsString();
 
             if (onSiteCheck)
-                onSiteCheck(response == "true");
+                onSiteCheck(strcmp(response.toRawUTF8(), "true") == 0);
         }
         else if (onSiteCheck)
             onSiteCheck(false);
