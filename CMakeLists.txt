@@ -15,8 +15,6 @@ endif()
 
 project(Gamma VERSION 0.6)
 
-
-
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 

@@ -279,10 +279,10 @@ private:
         reverb.process(buffer, *apvts.getRawParameterValue("reverbAmt"));
 
         if ((bool)*lfEnhance)
-            lfEnhancer.processBlock(processBlock, (double)*lfEnhance, *apvts.getRawParameterValue("lfEnhanceInvert"));
+            lfEnhancer.processBlock(block, (double)*lfEnhance, *apvts.getRawParameterValue("lfEnhanceInvert"));
 
         if ((bool)*hfEnhance)
-            hfEnhancer.processBlock(processBlock, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"));
+            hfEnhancer.processBlock(block, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"));
 
         // final cut filters
         cutFilters.process(block);
