@@ -285,7 +285,7 @@ struct AmpControls : Component, private Timer
         }
 
         // bounds at this point is bottom 30% 
-        auto botItemBounds = bounds.withTrimmedRight(chunk); // reduce by knob-width on either side
+        auto botItemBounds = bounds.reduced(chunk * 0.5, 0); // reduce by knob-width on either side
         float botChunk = botItemBounds.getWidth() / 5;
         auto autoBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
         auto boostBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
