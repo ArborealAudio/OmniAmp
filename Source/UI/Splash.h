@@ -15,7 +15,7 @@ struct Splash : Component
         logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
     }
 
-    void paint(Graphics& g) override
+    void paint(Graphics &g) override
     {
         auto b = getLocalBounds().reduced(1).toFloat();
         auto w = b.getWidth();
@@ -29,10 +29,28 @@ struct Splash : Component
 
         auto logoBounds = b.removeFromTop(h * 0.66f).reduced(w * 0.2f);
 
-        if (logoBounds.contains(getMouseXYRelative().toFloat()))
+        g.setColour(Colours::white);
+
+        logo->drawWithin(g, logoBounds, RectanglePlacement::yTop, 1.f);
+
+        g.setFont(16.f);
+        Time time(Time::getCurrentTime());
+        g.drawFittedText("v" + String(ProjectInfo::versionString) +
+                             "\n" + currentWrapper +
+                             "\n(c) Arboreal Audio " + String(time.getYear()),
+                         b.toNearestInt(),
+                         Justification::centred, 3, 1.f);
+    }
+
+    void mouseDown(const MouseEvent &event) override
+    {
+        auto b = getLocalBounds().reduced(1).toFloat();
+        auto logoBounds = b.removeFromTop(b.getHeight() * 0.66f).reduced(b.getWidth() * 0.2f);
+
+        if (logoBounds.contains(event.position))
         {
-            setMouseCursor(MouseCursor::PointingHandCursor);
-            if (isMouseButtonDown() && !linkClicked) {
+            if (isMouseButtonDown() && !linkClicked)
+            {
                 URL("https://arborealaudio.com").launchInDefaultBrowser();
                 linkClicked = true;
                 repaint();
@@ -40,22 +58,10 @@ struct Splash : Component
             }
         }
         else
-            setMouseCursor(MouseCursor::NormalCursor);
-
-        g.setColour(Colours::white);
-
-        logo->drawWithin(g, logoBounds, RectanglePlacement::yTop, 1.f);
-
-        g.setFont(16.f);
-        Time time(Time::getCurrentTime());
-        g.drawFittedText("v" + String(ProjectInfo::versionString) + 
-            "\n" + currentWrapper +
-            "\n(c) Arboreal Audio " + String(time.getYear()),
-            b.toNearestInt(),
-            Justification::centred, 3, 1.f);
+            Component::mouseDown(event);
     }
 
-    void setImage(const Image& newImage)
+    void setImage(const Image &newImage)
     {
         img = newImage;
 
@@ -64,7 +70,7 @@ struct Splash : Component
         repaint();
     }
 
-    void setPluginWrapperType(const String& type)
+    void setPluginWrapperType(const String &type)
     {
         currentWrapper = type;
     }
@@ -72,7 +78,6 @@ struct Splash : Component
     std::function<void()> onLogoClick;
 
 private:
-        
     bool linkClicked = false;
 
     Image img;
