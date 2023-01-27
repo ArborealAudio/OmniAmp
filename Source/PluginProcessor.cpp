@@ -26,8 +26,10 @@ GammaAudioProcessor::GammaAudioProcessor()
       hfEnhancer(apvts),
       lfEnhancer(apvts),
       reverb(apvts),
-      emphLow((strix::FloatParameter *)apvts.getParameter("lfEmphasis"), (strix::FloatParameter *)apvts.getParameter("lfEmphasisFreq")),
-      emphHigh((strix::FloatParameter *)apvts.getParameter("hfEmphasis"), (strix::FloatParameter *)apvts.getParameter("hfEmphasisFreq")),
+      emphLow((strix::FloatParameter *)apvts.getParameter("lfEmphasis"),
+              (strix::FloatParameter *)apvts.getParameter("lfEmphasisFreq")),
+      emphHigh((strix::FloatParameter *)apvts.getParameter("hfEmphasis"),
+               (strix::FloatParameter *)apvts.getParameter("hfEmphasisFreq")),
       cutFilters(apvts)
 #endif
 {
