@@ -43,8 +43,9 @@ struct ActivationComponent : Component
 {
     ActivationComponent()
     {
-        future = std::async(std::launch::async, [&]
-                            { checkSite(); });
+        // future = std::async(std::launch::async, [&]
+        //                     { checkSite(); });
+        MessageManager::callAsync([&]{checkSite();});
 
         addAndMakeVisible(editor);
         editor.onReturnKey = [&]
@@ -58,6 +59,10 @@ struct ActivationComponent : Component
         {
             checkInput();
         };
+    }
+
+    ~ActivationComponent() override
+    {
     }
 
     /* called when UI submits a beta key & when site check is successful */
@@ -141,7 +146,6 @@ struct ActivationComponent : Component
     var m_betaLive;
 
 private:
-    std::future<void> future;
 
     HashChecker check;
 

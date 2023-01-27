@@ -49,8 +49,7 @@ struct DownloadManager : Component
 
         if (updateChecked && !*updateChecked)
         {
-            future = std::async(std::launch::async, [&]
-                                { checkForUpdate(); });
+            MessageManager::callAsync([&]{ checkForUpdate(); });
         }
         else
         {
@@ -208,7 +207,6 @@ struct DownloadManager : Component
     std::function<void(bool)> onUpdateStatusChange;
 
 private:
-    std::future<void> future;
 
     void onUpdateCheck(bool checkResult)
     {

@@ -23,37 +23,28 @@ public:
     //==============================================================================
     void paint(juce::Graphics &) override;
     void resized() override;
-    bool hitTest(int x, int y) override
+    void mouseDown(const MouseEvent &event) override
     {
-        auto leftClick = ModifierKeys::currentModifiers.isLeftButtonDown();
+        auto pos = getMouseXYRelative().toFloat();
 
-        if (logoBounds.contains(x, y) && leftClick)
+        if (logoBounds.contains(pos))
         {
             if (splash.onLogoClick)
                 splash.onLogoClick();
-
-            return true;
+            repaint();
         }
         else if (splash.isVisible())
         {
-            if (splash.getBounds().contains(x, y))
-                return splash.hitTest(x, y);
-            else if (leftClick)
+            if (splash.getBounds().contains(pos.toInt()))
+                splash.mouseDown(event);
+            else
             {
                 splash.setVisible(false);
-                return true;
+                repaint();
             }
-            else
-                return false;
         }
-        // else if (init.isVisible()) {
-        //     if (init.getBounds().contains(x, y))
-        //         return init.hitTest(x, y);
-        //     else
-        //         return false;
-        // }
         else
-            return AudioProcessorEditor::hitTest(x, y);
+            AudioProcessorEditor::mouseDown(event);
     }
 
     void resetWindowSize();

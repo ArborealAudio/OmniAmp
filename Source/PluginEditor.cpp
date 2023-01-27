@@ -57,6 +57,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     pluginTitle.setFont(Font(getCustomFont()).withHeight(25.f).withExtraKerningFactor(0.5f));
     pluginTitle.setColour(Label::textColourId, titleColor);
     pluginTitle.setJustificationType(Justification::centred);
+    pluginTitle.setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(menu);
     menu.windowResizeCallback = [&]
@@ -181,6 +182,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
             splash.setVisible(true);
         }
     };
+
+    addMouseListener(this, true);
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -188,6 +191,7 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.detach();
 #endif
+    removeMouseListener(this);
 }
 
 void GammaAudioProcessorEditor::resetWindowSize()
