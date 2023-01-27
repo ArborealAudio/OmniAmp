@@ -159,7 +159,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     {
         activation.m_betaLive = result;
         {
-            const MessageManagerLock lock;
             activation.setVisible(!result);
             activation.editor.setVisible(result);
             activation.submit.setVisible(result);
