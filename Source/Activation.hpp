@@ -2,7 +2,7 @@
 // A quick little MD5 hash checker for the beta version. Only checks the hash of a predetermined string which shall be given to beta testers. Should be replaced with the final version when ready.
 
 #pragma once
-#include <future>
+#include <thread>
 
 #if BETA_BUILD || DEV_BUILD
 
@@ -18,14 +18,14 @@ struct HashChecker
     bool checkString(const String &input)
     {
         auto inHash = MD5(input.toUTF8()).toHexString();
-        auto refHash = MD5(reference.toUTF8()).toHexString();
+        auto refHash = MD5(reference).toHexString();
         return inHash == refHash;
     }
 
     // compare a hash input to expected hash
     bool compareHash(const String &input)
     {
-        auto refHash = MD5(reference.toUTF8()).toHexString();
+        auto refHash = MD5(reference).toHexString();
         return refHash == input;
     }
 
@@ -35,15 +35,15 @@ struct HashChecker
     }
 
 private:
-    String reference;
+    const CharPointer_UTF8 reference;
 };
 #endif
 
-struct ActivationComponent : Component
+struct ActivationComponent : Component, Timer
 {
     ActivationComponent()
     {
-        MessageManager::callAsync([&]{checkSite();});
+        startTimer(30);
 
         addAndMakeVisible(editor);
         editor.onReturnKey = [&]
@@ -59,8 +59,10 @@ struct ActivationComponent : Component
         };
     }
 
-    ~ActivationComponent() override
+    void timerCallback() override
     {
+        checkSite();
+        stopTimer();
     }
 
     /* called when UI submits a beta key & when site check is successful */
@@ -166,15 +168,17 @@ private:
     void checkSite()
     {
         auto url = URL("https://arborealaudio.com/.netlify/functions/beta-check");
+        bool checkResult = false;
 
         if (auto stream = url.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress).withExtraHeaders("name: Gamma\nkey: ArauGammBeta").withConnectionTimeoutMs(10000)))
         {
             auto response = stream->readEntireStreamAsString();
 
-            if (onSiteCheck)
-                onSiteCheck(strcmp(response.toRawUTF8(), "true") == 0);
+            checkResult = strcmp(response.toRawUTF8(), "true") == 0;
         }
-        else if (onSiteCheck)
-            onSiteCheck(false);
+        else
+            checkResult = false;
+        
+        if (onSiteCheck) onSiteCheck(checkResult);
     }
 };
