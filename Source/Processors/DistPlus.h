@@ -14,9 +14,8 @@ public:
 
     ~MXRDistWDF()
     {
-        free(dry[0]);
-        free(dry[1]);
-        free(dry);
+        if (dry)
+            free(dry);
     }
 
     void prepare(const dsp::ProcessSpec &spec)

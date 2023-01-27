@@ -43,8 +43,6 @@ struct ActivationComponent : Component
 {
     ActivationComponent()
     {
-        // future = std::async(std::launch::async, [&]
-        //                     { checkSite(); });
         MessageManager::callAsync([&]{checkSite();});
 
         addAndMakeVisible(editor);

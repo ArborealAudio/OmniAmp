@@ -210,8 +210,7 @@ private:
 
     void onUpdateCheck(bool checkResult)
     {
-        const MessageManagerLock lock(Thread::getCurrentThread()); // will be called from not-Message Thread, so lock!
-        setVisible(checkResult);
+         setVisible(checkResult);
         *updateChecked = true;
     }
 
