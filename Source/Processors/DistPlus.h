@@ -12,12 +12,6 @@ public:
 
     MXRDistWDF() = default;
 
-    ~MXRDistWDF()
-    {
-        if (dry)
-            free(dry);
-    }
-
     void prepare(const dsp::ProcessSpec &spec)
     {
         SR = spec.sampleRate;
@@ -36,9 +30,7 @@ public:
         dcBlock.setCutoffFreq(10.0);
         dcBlock.setType(strix::FilterType::highpass);
 
-        dry = (T **)malloc(sizeof(T *) * spec.numChannels);
-        dry[0] = (T *)malloc(sizeof(T) * spec.maximumBlockSize);
-        dry[1] = (T *)malloc(sizeof(T) * spec.maximumBlockSize);
+        dry.setSize(spec.numChannels, spec.maximumBlockSize);
         for (size_t i = 0; i < spec.maximumBlockSize; i++)
         {
             processInit(0.5);
@@ -80,14 +72,14 @@ public:
     void processBlock(dsp::AudioBlock<T> &block)
     {
         auto *inL = block.getChannelPointer(0);
-        FloatVectorOperations::copy(dry[0], inL, block.getNumSamples());
+        FloatVectorOperations::copy(dry.getWritePointer(0), inL, block.getNumSamples());
         auto *inR = inL;
         if (block.getNumChannels() > 1)
         {
             inR = block.getChannelPointer(1);
-            FloatVectorOperations::copy(dry[1], inR, block.getNumSamples());
+            FloatVectorOperations::copy(dry.getWritePointer(1), inR, block.getNumSamples());
         }
-        dsp::AudioBlock<T> dryBlock(dry, block.getNumChannels(), block.getNumSamples());
+        dsp::AudioBlock<T> dryBlock(dry.getArrayOfWritePointers(), block.getNumChannels(), block.getNumSamples());
 
         if (dist.isSmoothing())
         {
@@ -137,8 +129,8 @@ public:
     void processBlock(strix::AudioBlock<T> &block)
     {
         auto *in = block.getChannelPointer(0);
-        memcpy(dry[0], in, sizeof(T) * block.getNumSamples());
-        strix::AudioBlock<T> dryBlock(dry, block.getNumChannels(), block.getNumSamples());
+        memcpy(dry.getWritePointer(0), in, sizeof(T) * block.getNumSamples());
+        strix::AudioBlock<T> dryBlock(dry.getArrayOfWritePointers(), block.getNumChannels(), block.getNumSamples());
         if (dist.isSmoothing())
         {
             for (size_t i = 0; i < block.getNumSamples(); ++i)
@@ -197,7 +189,11 @@ private:
 
     double SR = 44100.0;
 
-    T **dry;
+    #if USE_SIMD
+    strix::Buffer<T> dry;
+#else
+    AudioBuffer<T> dry;
+#endif
     strix::Crossfade fade;
 
     // Port A
