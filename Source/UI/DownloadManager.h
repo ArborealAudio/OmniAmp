@@ -9,7 +9,6 @@
 */
 
 #pragma once
-#include <future>
 
 const String versionURL
 #if PRODUCTION_BUILD
@@ -40,22 +39,15 @@ const String downloadPath
 #endif
 };
 
-struct DownloadManager : Component
+struct DownloadManager : Component, Timer
 {
     DownloadManager(bool *updateChecked_) : updateChecked(updateChecked_)
     {
         addAndMakeVisible(yes);
         addAndMakeVisible(no);
 
-        if (updateChecked && !*updateChecked)
-        {
-            MessageManager::callAsync([&]{ checkForUpdate(); });
-        }
-        else
-        {
-            setVisible(false);
-        }
-
+        startTimer(30);
+ 
         no.onClick = [&]
         {
             if (!isDownloading)
@@ -84,11 +76,23 @@ struct DownloadManager : Component
     {
         yes.setLookAndFeel(nullptr);
         no.setLookAndFeel(nullptr);
-        updateChecked = nullptr;
+        stopTimer();
+    }
+
+    void timerCallback() override
+    {
+        if (updateChecked && !*updateChecked)
+        {
+            checkForUpdate();
+            stopTimer();
+        }
+        else
+            setVisible(false);
     }
 
     void checkForUpdate()
     {
+        bool checkResult = false;
         if (auto stream = URL(versionURL).createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)))
         {
             auto data = JSON::parse(stream->readEntireStreamAsString());
@@ -119,13 +123,13 @@ struct DownloadManager : Component
             onUpdateCheck(String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters("."));
 #else
             DBG("Update result: " << int(String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".")));
-            onUpdateCheck(true);
+            checkResult = true;
 #endif
         }
         else
-        {
-            onUpdateCheck(false);
-        }
+            checkResult = false;
+        
+        onUpdateCheck(checkResult);
     }
 
     void downloadUpdate()
@@ -210,7 +214,8 @@ private:
 
     void onUpdateCheck(bool checkResult)
     {
-         setVisible(checkResult);
+        if (isVisible() != checkResult)
+            setVisible(checkResult);
         *updateChecked = true;
     }
 

@@ -264,12 +264,12 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         if ((bool)newValue)
         {
             /*if we switched Link on, output = input + output*/
-            apvts.getParameterAsValue("outputGain") = apvts.getRawParameterValue("outputGain")->load() + apvts.getRawParameterValue("inputGain")->load();
+            apvts.getParameterAsValue("outputGain").setValue(apvts.getRawParameterValue("outputGain")->load() + apvts.getRawParameterValue("inputGain")->load());
         }
         else
         {
             /*if we switched Link off, output = output - input*/
-            apvts.getParameterAsValue("outputGain") = apvts.getRawParameterValue("outputGain")->load() - apvts.getRawParameterValue("inputGain")->load();
+            apvts.getParameterAsValue("outputGain").setValue(apvts.getRawParameterValue("outputGain")->load() - apvts.getRawParameterValue("inputGain")->load());
         }
     }
     else if (parameterID == "hq" || parameterID == "renderHQ")

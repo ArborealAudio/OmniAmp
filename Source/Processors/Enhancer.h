@@ -137,10 +137,14 @@ struct Enhancer
     {
         for (size_t i = 0; i < 2; ++i)
         {
-            lp1[i]->reset();
-            lp2[i]->reset();
-            hp1[i]->reset();
-            hp2[i]->reset();
+            if (lp1[i])
+                lp1[i]->reset();
+            if (lp2[i])
+                lp2[i]->reset();
+            if (hp1[i])
+                hp1[i]->reset();
+            if (hp2[i])
+                hp2[i]->reset();
         }
     }
 

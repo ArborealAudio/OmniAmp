@@ -2,7 +2,7 @@
 
 #pragma once
 
-struct CabsComponent : Component, AudioProcessorValueTreeState::Listener
+struct CabsComponent : Component, AudioProcessorValueTreeState::Listener, Timer
 {
 private:
     struct MicComponent : Component
@@ -49,8 +49,8 @@ private:
                 auto xFrac = (posX - micBounds.getX()) / adjBounds.getWidth();
                 auto yFrac = (posY - (getHeight() - micBounds.getHeight())) / adjBounds.getHeight();
 
-                apvts.getParameterAsValue("cabMicPosX") = xFrac;
-                apvts.getParameterAsValue("cabMicPosZ") = yFrac;
+                apvts.getParameterAsValue("cabMicPosX").setValue(xFrac);
+                apvts.getParameterAsValue("cabMicPosZ").setValue(yFrac);
 
                 repaint();
             }
@@ -61,8 +61,8 @@ private:
             if (event.eventComponent == this)
             {
                 auto adjBounds = micBounds.reduced(micWidth * 0.5f);
-                apvts.getParameterAsValue("cabMicPosX") = 0.5f;
-                apvts.getParameterAsValue("cabMicPosZ") = 1.f;
+                apvts.getParameterAsValue("cabMicPosX").setValue(0.5f);
+                apvts.getParameterAsValue("cabMicPosZ").setValue(1.f);
                 posX = micBounds.getWidth() * micPos->get();
                 posY = micBounds.getHeight() * micDepth->get();
                 clampPoints();
@@ -109,6 +109,7 @@ private:
     Label title;
 
     strix::ChoiceParameter *cabType;
+    std::atomic<bool> needUpdate = false;
 
     AudioProcessorValueTreeState &apvts;
 public:
@@ -149,11 +150,14 @@ public:
         setState();
 
         setBufferedToImage(true);
+
+        startTimer(10);
     }
 
-    ~CabsComponent()
+    ~CabsComponent() override
     {
         apvts.removeParameterListener("cabType", this);
+        stopTimer();
         cabType = nullptr;
     }
 
@@ -161,9 +165,17 @@ public:
     {
         if (paramID == "cabType")
         {
-            const MessageManagerLock lock;
+            needUpdate = true;
+        }
+    }
+
+    void timerCallback() override
+    {
+        if (needUpdate)
+        {
             setState();
-            repaint(cabBounds.toNearestInt());
+            repaint();
+            needUpdate = false;
         }
     }
 
@@ -174,7 +186,6 @@ public:
         g.drawRoundedRectangle(bounds, 5.f, 3.f);
 
         g.setColour(Colours::darkgrey);
-        // g.fillRoundedRectangle(img_bounds.toFloat().expanded(img_bounds.getWidth() * 0.2f), 5.f);
 
         if (cab_img)
             cab_img->drawWithin(g, cabBounds, RectanglePlacement::centred, 1.f);
@@ -209,7 +220,7 @@ public:
         }
 
         if (newState != -1)
-            apvts.getParameterAsValue("cabType") = newState;
+            apvts.getParameterAsValue("cabType").setValue(newState);
     }
 
     void resized() override
