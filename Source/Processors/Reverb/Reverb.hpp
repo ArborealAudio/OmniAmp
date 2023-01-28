@@ -340,7 +340,7 @@ private:
 
 };
 
-class ReverbManager : AudioProcessorValueTreeState::Listener, Timer
+class ReverbManager
 {
     AudioProcessorValueTreeState &apvts;
     std::unique_ptr<Room<8, double>> currentRev, newRev;
@@ -375,10 +375,6 @@ public:
         decay = (strix::FloatParameter *)apvts.getParameter("reverbDecay");
         size = (strix::FloatParameter *)apvts.getParameter("reverbSize");
         predelay = (strix::FloatParameter *)apvts.getParameter("reverbPredelay");
-        // apvts.addParameterListener("reverbType", this);
-        // apvts.addParameterListener("reverbDecay", this);
-        // apvts.addParameterListener("reverbSize", this);
-        // apvts.addParameterListener("reverbPredelay", this);
 
         ReverbParams params;
         float d = *decay;
@@ -398,16 +394,6 @@ public:
         currentRev = std::make_unique<Room<8, double>>(params);
         newRev = std::make_unique<Room<8, double>>(params);
 
-        startTimerHz(10);
-    }
-
-    ~ReverbManager() override
-    {
-        // apvts.removeParameterListener("reverbType", this);
-        // apvts.removeParameterListener("reverbDecay", this);
-        // apvts.removeParameterListener("reverbSize", this);
-        // apvts.removeParameterListener("reverbPredelay", this);
-        stopTimer();
     }
 
     void setDownsampleRatio(int dsRatio)
@@ -435,43 +421,6 @@ public:
     {
         currentRev->reset();
         newRev->reset();
-    }
-
-    void parameterChanged(const String &paramID, float ) override
-    {
-        std::unique_lock<std::mutex> lock(mutex);
-        reverb_flags flag;
-        if (paramID == "reverbType")
-            flag = TYPE;
-        else if (paramID == "reverbDecay")
-        {
-            flag = DECAY;
-        }
-        else if (paramID == "reverbSize")
-        {
-            flag = SIZE;
-        }
-        else if (paramID == "reverbPredelay")
-            flag = PREDELAY;
-        else
-            return;
-
-        msgs.emplace(flag);
-    }
-
-    void timerCallback() override
-    {
-        // if (msgs.size() >= 10)
-        //     return;
-        // std::unique_lock<std::mutex> lock(mutex);
-        // if (lastDecay != *decay)
-        //     msgs.emplace(DECAY);
-        // if (lastSize != *size)
-        //     msgs.emplace(SIZE);
-        // if (lastType != type->getIndex())
-        //     msgs.emplace(TYPE);
-        // if (lastPredelay != *predelay)
-        //     msgs.emplace(PREDELAY);
     }
 
     void manageUpdate(reverb_flags flag)
