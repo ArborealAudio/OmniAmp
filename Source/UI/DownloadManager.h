@@ -46,8 +46,6 @@ struct DownloadManager : Component, Timer
         addAndMakeVisible(yes);
         addAndMakeVisible(no);
 
-        startTimer(30);
- 
         no.onClick = [&]
         {
             if (!isDownloading)
@@ -70,6 +68,8 @@ struct DownloadManager : Component, Timer
         };
         yes.onClick = [&]
         { downloadFinished = false; downloadUpdate(); };
+
+        startTimer(30);
     }
 
     ~DownloadManager() override
@@ -120,7 +120,7 @@ struct DownloadManager : Component, Timer
             DBG("Latest: " << latestVersion.toString());
 
 #if PRODUCTION_BUILD
-            onUpdateCheck(String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters("."));
+            checkResult = String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".");
 #else
             DBG("Update result: " << int(String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".")));
             checkResult = true;
@@ -128,7 +128,7 @@ struct DownloadManager : Component, Timer
         }
         else
             checkResult = false;
-        
+
         onUpdateCheck(checkResult);
     }
 
