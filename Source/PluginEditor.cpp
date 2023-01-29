@@ -142,6 +142,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     setResizable(true, true);
     getConstrainer()->setMinimumSize(550, 550);
+    getConstrainer()->setMaximumSize(1600, 1600);
     getConstrainer()->setFixedAspectRatio(1.0);
 
     addChildComponent(dl);

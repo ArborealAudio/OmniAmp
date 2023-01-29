@@ -43,8 +43,6 @@ struct ActivationComponent : Component, Timer
 {
     ActivationComponent()
     {
-        startTimer(30);
-
         addAndMakeVisible(editor);
         editor.onReturnKey = [&]
         {
@@ -57,6 +55,7 @@ struct ActivationComponent : Component, Timer
         {
             checkInput();
         };
+        startTimer(30);
     }
 
     void timerCallback() override
@@ -178,7 +177,7 @@ private:
         }
         else
             checkResult = false;
-        
+
         if (onSiteCheck) onSiteCheck(checkResult);
     }
 };
