@@ -11,7 +11,7 @@ class MenuComponent : public Component
         void paint(Graphics &g) override
         {
             if (isMouseOver())
-                g.setColour(Colours::lightgrey);
+                g.setColour(Colours::grey);
 
             g.fillRect(getLocalBounds());
 
@@ -71,7 +71,6 @@ public:
         openGL.setButtonText("OpenGL On/Off");
         openGL.toggle = true;
         openGL.setClickingTogglesState(true);
-        openGL.setToggleState(readConfigFile("openGL"), NotificationType::sendNotification);
 #endif
 
         HQ.setButtonText("HQ");
@@ -107,7 +106,7 @@ public:
 #if !JUCE_MAC
             openGLOn = (bool)readConfigFile("openGL");
             openGL.setToggleState(openGLOn, NotificationType::dontSendNotification);
-            m.addCustomItem(1, openGL, getWidth(), 35, false);
+            m.addCustomItem(1, openGL, getWidth(), 35, true, nullptr, "OpenGL");
 #endif
             m.addCustomItem(2, HQ, getWidth(), 35, false, nullptr, "HQ");
             m.addCustomItem(3, renderHQ, getWidth(), 35, false, nullptr, "Render HQ");
@@ -123,7 +122,7 @@ public:
                                 {
                                 case 1:
                                     if (openGLCallback)
-                                        openGLCallback(openGLOn);
+                                        openGLCallback(!openGLOn);
                                     break;
                                 case 2:
                                     HQ.setToggleState(!HQ.getToggleState(), NotificationType::sendNotificationAsync);
