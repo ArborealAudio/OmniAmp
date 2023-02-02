@@ -158,11 +158,11 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     bass.prepare(osSpec);
     channel.prepare(osSpec);
 
-    guitar.setToneControl(0, std::pow(*apvts.getRawParameterValue("bass"), 3.f));
+    guitar.setToneControl(0, calcBassParam(*apvts.getRawParameterValue("bass")));
     guitar.setToneControl(1, *apvts.getRawParameterValue("mid"));
     guitar.setToneControl(2, *apvts.getRawParameterValue("treble"));
 
-    bass.setToneControl(0, std::pow(*apvts.getRawParameterValue("bass"), 3.f));
+    bass.setToneControl(0, calcBassParam(*apvts.getRawParameterValue("bass")));
     bass.setToneControl(1, *apvts.getRawParameterValue("mid"));
     bass.setToneControl(2, *apvts.getRawParameterValue("treble"));
 
@@ -232,9 +232,9 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     }
     else if (parameterID == "bass")
     {
-        auto logval = newValue * newValue * newValue;
-        guitar.setToneControl(0, logval);
-        bass.setToneControl(0, logval);
+        auto adjVal = calcBassParam(newValue);
+        guitar.setToneControl(0, adjVal);
+        bass.setToneControl(0, adjVal);
         channel.setFilters(0, newValue);
     }
     else if (parameterID == "mid")
@@ -252,8 +252,8 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     else if (parameterID == "dist")
     {
         // auto logval = std::tanh(3.0 * newValue);
-        auto map = [](float x)
-        { return (std::pow(0.1f, x) - 1.f) / -0.9f; };
+        // auto map = [](float x)
+        // { return (std::pow(0.1f, x) - 1.f) / -0.9f; };
         auto logval = std::sqrt(newValue);
         guitar.setDistParam(logval);
         bass.setDistParam(logval);
