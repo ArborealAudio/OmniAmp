@@ -286,7 +286,7 @@ struct ToneStack : PreampProcessor
                 for (size_t i = 0; i < block.getNumSamples(); ++i)
                 {
                     updateCoeffs();
-                    in[i] = coeffs.processSample(in[i], ch);
+                    in[i] = type ? bCoeffs.processSample(in[i], ch) : nCoeffs.processSample(in[i], ch);
                 }
             }
             return;
@@ -296,7 +296,7 @@ struct ToneStack : PreampProcessor
         {
             auto in = block.getChannelPointer(ch);
 
-            coeffs.processSamples(in, ch, block.getNumSamples());
+            type ? bCoeffs.processSamples(in, ch, block.getNumSamples()) : nCoeffs.processSamples(in, ch, block.getNumSamples());
         }
     }
 #else
