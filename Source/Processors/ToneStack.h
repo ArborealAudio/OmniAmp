@@ -12,9 +12,9 @@
 template <typename T>
 struct NodalCoeffs
 {
-    NodalCoeffs(T c1, T c2, T c3, T r1, T r2, T r3, T r4) : C1(c1), C2(c2), C3(c3), R1(r1), R2(r2), R3(r3), R4(r4)
-    {
-    }
+    // NodalCoeffs(T c1, T c2, T c3, T r1, T r2, T r3, T r4) : C1(c1), C2(c2), C3(c3), R1(r1), R2(r2), R3(r3), R4(r4)
+    // {
+    // }
 
     NodalCoeffs() = default;
 
@@ -105,12 +105,19 @@ struct NodalCoeffs
 private:
     T c = 88200.0, b1 = 0, b2 = 0, b3 = 0, a0 = 0, a1 = 0, a2 = 0, a3 = 0, B0 = 0, B1 = 0, B2 = 0, B3 = 0, A0 = 1.0, A1 = 0, A2 = 0, A3 = 0;
     T z1[2]{0.f}, z2[2]{0.f}, z3[2]{0.f}, x1[2]{0.f}, x2[2]{0.f}, x3[2]{0.f};
-    const T C1 = 0.25e-9f, C2 = 22e-9f, C3 = 22e-9f, R1 = 300e3f, R2 = 0.5e6f, R3 = 30e3f, R4 = 56e3f;
+    T C1 = 0.25e-9f, C2 = 22e-9f, C3 = 22e-9f, R1 = 300e3f, R2 = 0.5e6f, R3 = 30e3f, R4 = 56e3f;
 };
 
 template <typename T>
 struct Biquads
 {
+    Biquads() = default;
+
+    Biquads & operator=(const Biquads &newC)
+    {
+        return *(Biquads *)memcpy(this, &newC, sizeof(newC));
+    }
+
     /**
      * @param pLP cutoff for passive LP
      * @param pHP cutoff for passive HP
@@ -118,14 +125,18 @@ struct Biquads
      * @param M cutoff for mid freq control
      * @param H cutoff for hi freq control
     */
-    Biquads(double pLP, double pHP, double L, double M, double H) : pLPFreq(pLP), pHPFreq(pHP), LFreq(L), MFreq(M), HFreq(H)
-    {}
-
-    Biquads() = default;
-
-    Biquads & operator=(const Biquads &newC)
+    void setParams(double pLow, double pHi, double LF, double MF, double HF) noexcept
     {
-        return *(Biquads *)memcpy(this, &newC, sizeof(newC));
+        pLPFreq = pLow;
+        pLP.setCutoffFreq(pLPFreq);
+        pHPFreq = pHi;
+        pHP.setCutoffFreq(pHPFreq);
+        LFreq = LF;
+        L.setCutoffFreq(LFreq);
+        MFreq = MF;
+        M.setCutoffFreq(MFreq);
+        HFreq = HF;
+        H.setCutoffFreq(HFreq);
     }
 
     void prepare(const dsp::ProcessSpec &spec)
@@ -146,9 +157,9 @@ struct Biquads
 
     void setToneControls(double bass, double mid, double treble) noexcept
     {
-        lowGain = jmap(bass, -2.0, 2.0);
-        midGain = jmap(mid, -2.0, 2.0);
-        hiGain = jmap(treble, -2.0, 2.0);
+        lowGain = jmap(bass, -1.0, 1.0);
+        midGain = jmap(mid, -1.0, 1.0);
+        hiGain = jmap(treble, -1.0, 1.0);
     }
 
     void reset() noexcept
@@ -161,12 +172,7 @@ struct Biquads
     {
         for (size_t i = 0; i < numSamples; ++i)
         {
-            auto lp = pLP.processSample(ch, in[i]);
-            auto hp = pHP.processSample(ch, in[i]);
-            in[i] = lp + hp;
-            in[i] += lowGain * L.processSample(ch, in[i]);
-            in[i] += midGain * M.processSample(ch, in[i]);
-            in[i] += hiGain * H.processSample(ch, in[i]);
+            in[i] = processSample(in[i], ch);
         }
     }
 
@@ -174,7 +180,7 @@ struct Biquads
     {
         auto lp = pLP.processSample(ch, in);
         auto hp = pHP.processSample(ch, in);
-        in = lp + hp;
+        in = (lp * 0.5) + hp;
         in += lowGain * L.processSample(ch, in);
         in += midGain * M.processSample(ch, in);
         in += hiGain * H.processSample(ch, in);
@@ -183,7 +189,7 @@ struct Biquads
 
 private:
     strix::SVTFilter<T> pLP, pHP, L, M, H;
-    double lowGain, midGain, hiGain;
+    double lowGain = 0.0, midGain = 0.0, hiGain = 0.0;
     double pLPFreq, pHPFreq, LFreq, MFreq, HFreq;
 
     std::vector<strix::SVTFilter<T>*> getFilters()
@@ -211,26 +217,18 @@ struct ToneStack : PreampProcessor
     ToneStack(Type t) : type(t) 
     {}
 
-    /**
-     * set up a new set of coefficients
-    */
-    template <typename C>
-    void setCoeffs(const C &newC)
+    void setNodalCoeffs(T c1, T c2, T c3, T r1, T r2, T r3, T r4)
     {
-        if constexpr (std::is_same_v<C, NodalCoeffs<T>>)
-        {
-            type = Nodal;
-            nCoeffs = newC;
-            nCoeffs.prepare(lastSpec);
-            updateCoeffs();
-        }
-        else
-        {
-            type = Biquad;
-            bCoeffs = newC;
-            bCoeffs.prepare(lastSpec);
-            updateCoeffs();
-        }
+        type = Nodal;
+        nCoeffs.setCoeffs(c1, c2, c3, r1, r2, r3, r4);
+        updateCoeffs();
+    }
+
+    void setBiquadFreqs(double pLow, double pHi, double LF, double MF, double HF)
+    {
+        type = Biquad;
+        bCoeffs.setParams(pLow, pHi, LF, MF, HF);
+        updateCoeffs();
     }
 
     void prepare(const dsp::ProcessSpec &spec, float bass_ = 0.5f, float mid_ = 0.5f, float treb_ = 0.5f)
@@ -241,11 +239,11 @@ struct ToneStack : PreampProcessor
         bCoeffs.prepare(spec);
 
         bass.reset(spec.sampleRate, 0.005);
-        bass.setCurrentAndTargetValue(bass_);
+        // bass.setCurrentAndTargetValue(bass_);
         mid.reset(spec.sampleRate, 0.005);
-        mid.setCurrentAndTargetValue(mid_);
+        // mid.setCurrentAndTargetValue(mid_);
         treble.reset(spec.sampleRate, 0.005);
-        treble.setCurrentAndTargetValue(treb_);
+        // treble.setCurrentAndTargetValue(treb_);
 
         updateCoeffs();
     }
@@ -274,7 +272,7 @@ struct ToneStack : PreampProcessor
     void updateCoeffs()
     {
         nCoeffs.setToneControls(bass.getNextValue(), mid.getNextValue(), treble.getNextValue());
-        bCoeffs.setToneControls(bass.getNextValue(), mid.getNextValue(), treble.getNextValue());
+        bCoeffs.setToneControls(std::sqrt(std::sqrt(bass.getNextValue())), mid.getNextValue(), treble.getNextValue());
     }
 
 #if USE_SIMD
@@ -312,7 +310,7 @@ struct ToneStack : PreampProcessor
                 for (size_t i = 0; i < block.getNumSamples(); ++i)
                 {
                     updateCoeffs();
-                    in[i] = type ? nCoeffs.processSample(in[i], ch) : bCoeffs.processSample(in[i], ch);
+                    in[i] = type ? bCoeffs.processSample(in[i], ch) : nCoeffs.processSample(in[i], ch);
                 }
             }
             return;
@@ -322,7 +320,7 @@ struct ToneStack : PreampProcessor
         {
             auto in = block.getChannelPointer(ch);
 
-            type ? nCoeffs.processSamples(in, ch, block.getNumSamples()) : bCoeffs.processSamples(in, ch, block.getNumSamples());
+            type ? bCoeffs.processSamples(in, ch, block.getNumSamples()) : nCoeffs.processSamples(in, ch, block.getNumSamples());
         }
     }
 #endif

@@ -178,7 +178,7 @@ namespace Processors
         {
             if (toneStack == nullptr)
                 return;
-
+            
             switch (control)
             {
             case 0:
@@ -210,10 +210,7 @@ namespace Processors
                 t.prepare(spec);
 
             if (toneStack != nullptr)
-                toneStack->prepare(spec,
-                *apvts.getRawParameterValue("bass"),
-                *apvts.getRawParameterValue("mid"),
-                *apvts.getRawParameterValue("treble"));
+                toneStack->prepare(spec);
 
             pentode.prepare(spec);
 
@@ -254,11 +251,11 @@ namespace Processors
         {
             guitarMode = dynamic_cast<strix::ChoiceParameter *>(apvts.getParameter("guitarMode"));
             currentType = static_cast<GuitarMode>(guitarMode->getIndex());
-            #if USE_SIMD
+#if USE_SIMD
             toneStack = std::make_unique<ToneStack<vec>>(ToneStack<vec>::Type::Nodal);
-            #else
+#else
             toneStack = std::make_unique<ToneStack<double>>(ToneStack<double>::Type::Nodal);
-            #endif
+#endif
 
             gtrPre.hiGain = hiGain;
             gtrPre.type = currentType;
@@ -294,21 +291,19 @@ namespace Processors
 
         void setToneStack()
         {
-            toneStack->type = ToneStack<T>::Type::Nodal;
-
             switch (currentType)
             {
             case GammaRay:
-                toneStack->setCoeffs(NodalCoeffs<T>((T)0.25e-9, (T)25e-9, (T)22e-9, (T)300e3, (T)1e6, (T)20e3, (T)65e3));
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)25e-9, (T)22e-9, (T)300e3, (T)1e6, (T)20e3, (T)65e3);
                 break;
             case Sunbeam:
-                toneStack->setCoeffs(NodalCoeffs<T>((T)0.25e-9, (T)15e-9, (T)250e-9, (T)300e3, (T)400e3, (T)1e3, (T)20e3));
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)15e-9, (T)250e-9, (T)300e3, (T)400e3, (T)1e3, (T)20e3);
                 break;
             case Moonbeam:
-                toneStack->setCoeffs(NodalCoeffs<T>((T)0.25e-9, (T)20e-9, (T)50e-9, (T)300e3, (T)500e3, (T)5e3, (T)12e3));
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)20e-9, (T)50e-9, (T)300e3, (T)500e3, (T)5e3, (T)12e3);
                 break;
             case XRay:
-                toneStack->setCoeffs(NodalCoeffs<T>((T)0.25e-9, (T)22e-9, (T)20e-9, (T)270e3, (T)1e6, (T)50e3, (T)65e3));
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)22e-9, (T)20e-9, (T)270e3, (T)1e6, (T)50e3, (T)65e3);
                 break;
             }
         }
@@ -517,11 +512,11 @@ namespace Processors
         {
             bassMode = dynamic_cast<strix::ChoiceParameter *>(apvts.getParameter("bassMode"));
             currentType = static_cast<BassMode>(bassMode->getIndex());
-            #if USE_SIMD
+#if USE_SIMD
             toneStack = std::make_unique<ToneStack<vec>>(ToneStack<vec>::Type::Nodal);
-            #else
+#else
             toneStack = std::make_unique<ToneStack<double>>(ToneStack<double>::Type::Nodal);
-            #endif
+#endif
 
             preFilter.hiGain = hiGain;
             preFilter.type = currentType;
@@ -560,19 +555,16 @@ namespace Processors
             switch (currentType)
             {
             case Cobalt:
-                toneStack->type = ToneStack<T>::Type::Nodal;
-                toneStack->setCoeffs(NodalCoeffs<T>((T)1e-10, (T)3e-7, (T)15e-9, (T)500e3, (T)0.5e6, (T)100e3, (T)1e6));
+                toneStack->setNodalCoeffs((T)1e-10, (T)3e-7, (T)15e-9, (T)500e3, (T)0.5e6, (T)100e3, (T)1e6);
                 break;
             case Emerald:
-                toneStack->type = ToneStack<T>::Type::Biquad;
-                toneStack->setCoeffs(Biquads<T>((T)40.0, (T)900.0, (T)200.0, (T)1000.0, (T)3000.0));
+                toneStack->setBiquadFreqs((T)300.0, (T)900.0, (T)200.0, (T)1000.0, (T)2300.0);
                 break;
             case Quartz:
-                toneStack->type = ToneStack<T>::Type::Nodal;
-                toneStack->setCoeffs(NodalCoeffs<T>((T)0.6e-9, (T)8e-9, (T)12e-9, (T)250e3, (T)0.5e6, (T)100e3, (T)200e3));
+                toneStack->setNodalCoeffs((T)0.6e-9, (T)8e-9, (T)12e-9, (T)250e3, (T)0.5e6, (T)100e3, (T)200e3);
                 break;
             }
-            #if 0
+#if 0
             eqCoeffs = typename ToneStackNodal<T>::Coeffs(JUCE_LIVE_CONSTANT((T)0.5e-9),
             JUCE_LIVE_CONSTANT((T)30e-9),
             JUCE_LIVE_CONSTANT((T)1e-9),
@@ -580,7 +572,7 @@ namespace Processors
             JUCE_LIVE_CONSTANT((T)0.5e6),
             JUCE_LIVE_CONSTANT((T)100e3),
             JUCE_LIVE_CONSTANT((T)1e6));
-            #endif
+#endif
         }
 
         void setBias()
@@ -614,14 +606,14 @@ namespace Processors
                 triode[3].bias.first = 10.0;
                 break;
             }
-            #if 0
+#if 0
             triode[1].bias.first = JUCE_LIVE_CONSTANT(1.0);
             triode[1].bias.second = JUCE_LIVE_CONSTANT(2.0);
             triode[2].bias.first = JUCE_LIVE_CONSTANT(1.0);
             triode[2].bias.second = JUCE_LIVE_CONSTANT(2.0);
             triode[3].bias.first = JUCE_LIVE_CONSTANT(1.0);
             triode[3].bias.second = JUCE_LIVE_CONSTANT(2.0);
-            #endif
+#endif
         }
 
         void setPreamp()
@@ -731,9 +723,9 @@ namespace Processors
                 setPoweramp();
                 ampChanged = false;
             }
-            #if 0
+#if 0
             setToneStack();
-            #endif
+#endif
             triode[2].shouldBypass = !*hiGain;
             triode[3].shouldBypass = !*hiGain;
             preamp.process(processBlock);

@@ -307,6 +307,10 @@ private:
         CHECK_BLOCK(block)
     }
 
+    inline float calcBassParam(float val)
+    {
+        return val * val * val;
+    }
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GammaAudioProcessor)
 };
