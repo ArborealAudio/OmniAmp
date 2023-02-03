@@ -274,10 +274,10 @@ public:
             break;
         case large:
             hp.setCutoffFreq(80.0);
-            hp.setResonance(2.0 * resoLo_);
-            lp1.setCutoffFreq(6033.0 * mic_);
+            hp.setResonance(1.0 * resoLo_);
+            lp1.setCutoffFreq(7033.0 * mic_);
             lp1.setResonance(1.21 * resoHi_);
-            lp2.setCutoffFreq(3193.0 * mic_);
+            lp2.setCutoffFreq(4193.0 * mic_);
             lp2.setResonance(1.5 * resoHi_);
             lowshelf.setCutoffFreq(307.0);
             break;
@@ -301,7 +301,8 @@ public:
 
         if (type > 0)
         {
-            auto lsgain = type > 1 ? 0.7 : 0.5;
+            // auto lsgain = type > 1 ? 0.7 : 0.5;
+            auto lsgain = 0.5;
             for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
             {
                 auto in = block.getChannelPointer(ch);
