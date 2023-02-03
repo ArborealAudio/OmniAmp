@@ -231,7 +231,7 @@ struct ToneStack : PreampProcessor
         updateCoeffs();
     }
 
-    void prepare(const dsp::ProcessSpec &spec, float bass_ = 0.5f, float mid_ = 0.5f, float treb_ = 0.5f)
+    void prepare(const dsp::ProcessSpec &spec)
     {
         lastSpec = spec;
 
@@ -239,11 +239,8 @@ struct ToneStack : PreampProcessor
         bCoeffs.prepare(spec);
 
         bass.reset(spec.sampleRate, 0.005);
-        // bass.setCurrentAndTargetValue(bass_);
         mid.reset(spec.sampleRate, 0.005);
-        // mid.setCurrentAndTargetValue(mid_);
         treble.reset(spec.sampleRate, 0.005);
-        // treble.setCurrentAndTargetValue(treb_);
 
         updateCoeffs();
     }
