@@ -222,7 +222,7 @@ namespace Processors
         OptoComp<double> comp;
 #if USE_SIMD
         MXRDistWDF<vec> mxr;
-        std::unique_ptr<ToneStack> toneStack;
+        std::unique_ptr<ToneStack<vec>> toneStack;
         std::vector<AVTriode<vec>> triode;
         Pentode<vec> pentode;
 #else
@@ -555,19 +555,19 @@ namespace Processors
             switch (currentType)
             {
             case Cobalt:
-                toneStack->setNodalCoeffs((T)1e-10, (T)3e-7, (T)15e-9, (T)500e3, (T)0.5e6, (T)100e3, (T)1e6);
+                toneStack->setNodalCoeffs((T)1e-10, (T)2.5e-8, (T)15e-9, (T)750e3, (T)0.5e6, (T)100e3, (T)75e3);
                 break;
             case Emerald:
-                toneStack->setBiquadFreqs((T)300.0, (T)900.0, (T)200.0, (T)1000.0, (T)2300.0);
+                toneStack->setBiquadFreqs(300.0, 900.0, 200.0, 1000.0, 2300.0);
                 break;
             case Quartz:
-                toneStack->setNodalCoeffs((T)0.6e-9, (T)8e-9, (T)12e-9, (T)250e3, (T)0.5e6, (T)100e3, (T)200e3);
+                toneStack->setNodalCoeffs((T)0.6e-9, (T)8e-9, (T)12e-9, (T)250e3, (T)1e6, (T)100e3, (T)20e3);
                 break;
             }
 #if 0
-            eqCoeffs = typename ToneStackNodal<T>::Coeffs(JUCE_LIVE_CONSTANT((T)0.5e-9),
-            JUCE_LIVE_CONSTANT((T)30e-9),
-            JUCE_LIVE_CONSTANT((T)1e-9),
+            toneStack->setNodalCoeffs(JUCE_LIVE_CONSTANT((T)1e-10),
+            JUCE_LIVE_CONSTANT((T)3e-7),
+            JUCE_LIVE_CONSTANT((T)15e-9),
             JUCE_LIVE_CONSTANT((T)500e3),
             JUCE_LIVE_CONSTANT((T)0.5e6),
             JUCE_LIVE_CONSTANT((T)100e3),
@@ -723,7 +723,7 @@ namespace Processors
                 setPoweramp();
                 ampChanged = false;
             }
-#if 0
+#if 1
             setToneStack();
 #endif
             triode[2].shouldBypass = !*hiGain;
