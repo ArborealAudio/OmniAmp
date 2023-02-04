@@ -555,23 +555,23 @@ namespace Processors
             switch (currentType)
             {
             case Cobalt:
-                toneStack->setNodalCoeffs((T)1e-10, (T)2.5e-8, (T)15e-9, (T)750e3, (T)0.5e6, (T)100e3, (T)75e3);
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)25e-9, (T)15e-9, (T)250e3, (T)500e3, (T)50e3, (T)75e3);
                 break;
             case Emerald:
                 toneStack->setBiquadFreqs(300.0, 900.0, 200.0, 1000.0, 2300.0);
                 break;
             case Quartz:
-                toneStack->setNodalCoeffs((T)0.6e-9, (T)8e-9, (T)12e-9, (T)250e3, (T)1e6, (T)100e3, (T)20e3);
+                toneStack->setNodalCoeffs((T)2.5e-10, (T)8e-9, (T)12e-9, (T)250e3, (T)750e3, (T)100e3, (T)500e3);
                 break;
             }
 #if 0
-            toneStack->setNodalCoeffs(JUCE_LIVE_CONSTANT((T)1e-10),
-            JUCE_LIVE_CONSTANT((T)3e-7),
-            JUCE_LIVE_CONSTANT((T)15e-9),
-            JUCE_LIVE_CONSTANT((T)500e3),
-            JUCE_LIVE_CONSTANT((T)0.5e6),
+            toneStack->setNodalCoeffs(JUCE_LIVE_CONSTANT((T)2.5e-10),
+            JUCE_LIVE_CONSTANT((T)8e-9),
+            JUCE_LIVE_CONSTANT((T)12e-9),
+            JUCE_LIVE_CONSTANT((T)250e3),
+            JUCE_LIVE_CONSTANT((T)750e3),
             JUCE_LIVE_CONSTANT((T)100e3),
-            JUCE_LIVE_CONSTANT((T)1e6));
+            JUCE_LIVE_CONSTANT((T)500e3));
 #endif
         }
 
@@ -602,17 +602,17 @@ namespace Processors
                 for (auto &t : triode)
                     t.type = ChannelMode::Modern;
                 triode[1].bias.first = 5.0;
-                triode[2].bias.first = 2.0;
-                triode[3].bias.first = 10.0;
+                triode[2].bias.first = 25.0;
+                triode[3].bias.first = 25.0;
                 break;
             }
 #if 0
-            triode[1].bias.first = JUCE_LIVE_CONSTANT(1.0);
-            triode[1].bias.second = JUCE_LIVE_CONSTANT(2.0);
-            triode[2].bias.first = JUCE_LIVE_CONSTANT(1.0);
-            triode[2].bias.second = JUCE_LIVE_CONSTANT(2.0);
-            triode[3].bias.first = JUCE_LIVE_CONSTANT(1.0);
-            triode[3].bias.second = JUCE_LIVE_CONSTANT(2.0);
+            triode[1].bias.first = 5.0;
+            triode[1].bias.second = 10.0;
+            triode[2].bias.first = 5.0;
+            triode[2].bias.second = 10.0;
+            triode[3].bias.first = 10.0;
+            triode[3].bias.second = 15.0;
 #endif
         }
 
@@ -638,10 +638,10 @@ namespace Processors
                 break;
             case Quartz:
                 preamp.procs.push_back(&triode[1]);
+                preamp.procs.push_back(toneStack.get());
                 preamp.procs.push_back(&preFilter);
                 preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(&triode[3]);
-                preamp.procs.push_back(toneStack.get());
                 break;
             }
         }
@@ -661,8 +661,8 @@ namespace Processors
             {
             case Cobalt:
                 pentode.type = PentodeType::Nu;
-                pentode.bias.first = *hiGain ? 0.7 : 0.6;
-                pentode.bias.second = *hiGain ? 0.7 : 0.6;
+                pentode.bias.first = 0.7;
+                pentode.bias.second = 0.7;
                 break;
             case Emerald:
                 pentode.type = PentodeType::Nu;
@@ -671,8 +671,8 @@ namespace Processors
                 break;
             case Quartz:
                 pentode.type = PentodeType::Classic;
-                pentode.bias.first = 2.5;
-                pentode.bias.second = 2.0;
+                pentode.bias.first = 1.6;
+                pentode.bias.second = 1.0;
                 break;
             }
         }
@@ -710,12 +710,12 @@ namespace Processors
             if (ampAutoGain_)
                 autoGain *= 1.0 / gain_raw;
 
-            // if (*hiGain)
-            // {
-            //     processBlock.multiplyBy(2.f);
-            //     if (ampAutoGain_)
-            //         autoGain *= 0.5;
-            // }
+            if (*hiGain)
+            {
+                processBlock.multiplyBy(2.f);
+                if (ampAutoGain_)
+                    autoGain *= 0.5;
+            }
 
             if (ampChanged)
             {
@@ -723,8 +723,8 @@ namespace Processors
                 setPoweramp();
                 ampChanged = false;
             }
-#if 1
-            setToneStack();
+#if 0
+            setBias();
 #endif
             triode[2].shouldBypass = !*hiGain;
             triode[3].shouldBypass = !*hiGain;
