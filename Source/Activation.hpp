@@ -55,7 +55,7 @@ struct ActivationComponent : Component, Timer
         {
             checkInput();
         };
-        startTimer(30);
+        startTimer(1000);
     }
 
     void timerCallback() override
