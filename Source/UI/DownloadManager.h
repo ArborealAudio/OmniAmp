@@ -69,7 +69,7 @@ struct DownloadManager : Component, Timer
         yes.onClick = [&]
         { downloadFinished = false; downloadUpdate(); };
 
-        startTimer(30);
+        startTimer(1000);
     }
 
     ~DownloadManager() override
