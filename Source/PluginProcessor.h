@@ -197,7 +197,7 @@ private:
             outGain_raw *= 1.0 / inGain_raw;
 
         dsp::AudioBlock<double> block(buffer);
-        const int numChannels = mono ? 1 : block.getNumChannels();
+        const size_t numChannels = mono ? 1 : block.getNumChannels();
 
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
@@ -219,9 +219,9 @@ private:
 
         /* Input Stereo Emphasis */
         float stereoEmph = *apvts.getRawParameterValue("stereoEmphasis");
-        if ((bool)stereoEmph && !mono)
+        if (!mono)
         {
-            stereoEmph = jmap(stereoEmph, 0.1f, 10.f); /* create a range from -10 to 10 */
+            stereoEmph = mapToLog10(stereoEmph, 0.1f, 10.f); /* create linear gain range btw ~0.1 - 10 */
             emphasisIn.process(block, stereoEmph, ms);
         }
 
@@ -254,21 +254,21 @@ private:
         emphLow.processOut(block);
         emphHigh.processOut(block);
 
-#if USE_SIMD
-        auto &&processBlock = simd.interleaveBlock(block);
-#else
-        auto &&processBlock = block;
-#endif
-
         if ((bool)*apvts.getRawParameterValue("cabType"))
-            cab.processBlock(processBlock);
-
+        {
 #if USE_SIMD
-        simd.deinterleaveBlock(processBlock);
+            auto &&processBlock = simd.interleaveBlock(block);
+#else
+            auto &&processBlock = block;
 #endif
+            cab.processBlock(processBlock);
+#if USE_SIMD
+            simd.deinterleaveBlock(processBlock);
+#endif
+        }
 
         /* Output Stereo Emphasis */
-        if ((bool)stereoEmph && !mono)
+        if (!mono)
             emphasisOut.process(block, 1.f / stereoEmph, ms);
 
         if (ms && !mono)
@@ -296,7 +296,7 @@ private:
         if (width != 1.f && !mono)
             strix::Balance::processBalance(block, width, false, lastWidth);
 
-        mixDelay.setDelay(latency);
+        // mixDelay.setDelay(latency);
         float mixAmt = *apvts.getRawParameterValue("mix");
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
