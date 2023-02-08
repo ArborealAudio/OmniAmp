@@ -178,7 +178,7 @@ namespace Processors
         {
             if (toneStack == nullptr)
                 return;
-            
+
             switch (control)
             {
             case 0:
@@ -314,7 +314,7 @@ namespace Processors
             {
             case GammaRay:
                 for (auto &t : triode)
-                    t.type = ChannelMode::Vintage;
+                    t.type = TriodeType::VintageTube;
                 triode[0].bias.first = 1.0;
                 triode[0].bias.second = 1.0;
                 triode[1].bias.first = 1.4;
@@ -326,14 +326,14 @@ namespace Processors
                 break;
             case Sunbeam:
                 for (auto &t : triode)
-                    t.type = ChannelMode::Modern;
+                    t.type = TriodeType::ModernTube;
                 triode[0].bias.first = 1.5;
                 triode[1].bias.first = 0.55;
                 triode[2].bias.first = 5.0;
                 break;
             case Moonbeam:
                 for (auto &t : triode)
-                    t.type = ChannelMode::Modern;
+                    t.type = TriodeType::ModernTube;
                 triode[0].bias.first = 1.0;
                 triode[1].bias.first = 2.18;
                 triode[2].bias.first = 4.0;
@@ -341,7 +341,7 @@ namespace Processors
                 break;
             case XRay:
                 for (auto &t : triode)
-                    t.type = ChannelMode::Vintage;
+                    t.type = TriodeType::VintageTube;
                 triode[0].bias.first = 1.0;
                 triode[0].bias.second = 2.0;
                 triode[1].bias.first = 2.0;
@@ -583,7 +583,7 @@ namespace Processors
             {
             case Cobalt:
                 for (auto &t : triode)
-                    t.type = ChannelMode::Vintage;
+                    t.type = TriodeType::VintageTube;
                 triode[1].bias.first = 5.0;
                 triode[1].bias.second = 10.0;
                 triode[2].bias.first = 5.0;
@@ -593,14 +593,14 @@ namespace Processors
                 break;
             case Emerald:
                 for (auto &t : triode)
-                    t.type = ChannelMode::Modern;
+                    t.type = TriodeType::ModernTube;
                 triode[1].bias.first = 12.0;
                 triode[2].bias.first = 3.0;
                 triode[3].bias.first = 6.0;
                 break;
             case Quartz:
                 for (auto &t : triode)
-                    t.type = ChannelMode::Modern;
+                    t.type = TriodeType::ModernTube;
                 triode[1].bias.first = 5.0;
                 triode[2].bias.first = 25.0;
                 triode[3].bias.first = 25.0;
@@ -766,6 +766,8 @@ namespace Processors
             channelMode = dynamic_cast<strix::ChoiceParameter *>(apvts.getParameter("channelMode"));
             currentType = static_cast<ChannelMode>(channelMode->getIndex());
             triode.resize(2);
+            for (auto &t : triode)
+                t.type = TriodeType::ChannelTube;
             apvts.addParameterListener("channelMode", this);
         }
 
@@ -791,7 +793,7 @@ namespace Processors
             defaultPrepare(spec);
 
             setPreamp(*inGain);
-            setPoweramp(*outGain);
+            setPoweramp(/* *outGain */);
 
             low.prepare(spec);
             setFilters(0);
@@ -813,40 +815,51 @@ namespace Processors
         {
             auto gain_raw = jmap(base, 1.f, 4.f);
             auto pre_lim = jmap(base, 0.5f, 1.f);
-            triode[0].type = currentType;
-            triode[1].type = currentType;
             if (currentType == Vintage)
-                setBias(0, pre_lim * 0.5f, 0.25f * gain_raw); // p: .25 - .5 n: .25 - 1
+            {
+                triode[0].type = TriodeType::ChannelTube;
+                triode[1].type = TriodeType::ChannelTube;
+                setBias(0, pre_lim, 0.5f * gain_raw); // p: 1 - 2 n: 0.5 - 2
+            }
             else
-                setBias(0, pre_lim * 2.f, pre_lim * 2.f); // p & n: 1 - 2
+            {
+                triode[0].type = TriodeType::ModernTube;
+                triode[1].type = TriodeType::ModernTube;
+                setBias(0, pre_lim * 1.5f, pre_lim * 1.5f); // p & n: 1 - 2
+            }
             if (*hiGain)
             {
                 if (currentType == Vintage)
-                    setBias(1, pre_lim, gain_raw); // p: 0.5 - 1 n: 1 . - 4
+                    setBias(1, pre_lim, gain_raw); // p: 0.5 - 1 n: 1 - 4
                 else
                     setBias(1, gain_raw, gain_raw); // p & n: 1 - 4
             }
-            // setBias(0, JUCE_LIVE_CONSTANT(pre_lim),
-            // JUCE_LIVE_CONSTANT(0.5f * gain_raw));
-            // setBias(1, JUCE_LIVE_CONSTANT(pre_lim),
-            // JUCE_LIVE_CONSTANT(gain_raw));
+#if 0
+            setBias(0, JUCE_LIVE_CONSTANT(pre_lim),
+            JUCE_LIVE_CONSTANT(0.5f * gain_raw));
+            setBias(1, JUCE_LIVE_CONSTANT(pre_lim),
+            JUCE_LIVE_CONSTANT(gain_raw));
+#endif
         }
 
-        inline void setPoweramp(float base)
+        inline void setPoweramp(/* float base */)
         {
-            float bias = jmap(base, 1.f, 4.f);
             if (currentType == Modern)
             {
-                pentode.type = PentodeType::Nu;
-                pentode.bias.first = bias;
-                pentode.bias.second = bias;
+                pentode.setType(PentodeType::Nu);
+                pentode.bias.first = 1.2;
+                pentode.bias.second = 1.2;
             }
             else
             {
-                pentode.type = PentodeType::Classic;
-                pentode.bias.first = bias * 2.0;
-                pentode.bias.second = bias * 2.0;
+                pentode.setType(PentodeType::Classic);
+                pentode.bias.first = 10.0;
+                pentode.bias.second = 10.0;
             }
+#if 0
+            pentode.bias.first = JUCE_LIVE_CONSTANT(bias);
+            pentode.bias.second = JUCE_LIVE_CONSTANT(bias);
+#endif
         }
 
         void update(const dsp::ProcessSpec &spec, const float lowGain = 0.5f, const float midGain = 0.5f, const float trebleGain = 0.5f)
@@ -903,6 +916,8 @@ namespace Processors
             FloatType gain_raw = jmap(inGain->get(), 1.f, 4.f);
             FloatType out_raw = jmap(outGain->get(), 1.f, 4.f);
 
+            pentode.inGain = *outGain;
+
             FloatType autoGain = 1.0;
             bool ampAutoGain_ = *ampAutoGain;
 
@@ -939,7 +954,7 @@ namespace Processors
 
             if (*outGain > 0.f)
             {
-                setPoweramp(*outGain);
+                setPoweramp(/* *outGain */);
                 strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
                 pentode.processBlockClassB(processBlock);
             }
