@@ -155,7 +155,7 @@ struct Knob : Slider
 private:
     struct KnobLookAndFeel : LookAndFeel_V4
     {
-        Colour baseColor = Colours::antiquewhite, accentColor = Colours::grey, textColor = Colours::black;
+        Colour baseColor = Colours::antiquewhite, accentColor = Colours::grey, textColor = Colours::antiquewhite;
         flags_t flags;
 
         int xOffset = 0, yOffset = 0;
@@ -275,7 +275,7 @@ private:
             drawCustomSlider();
 
             /* label */
-            g.setColour(accentColor);
+            g.setColour(textColor);
             String text = "";
             if (slider.isMouseOverOrDragging() && valueToString)
                 text = valueToString(slider.getValue());

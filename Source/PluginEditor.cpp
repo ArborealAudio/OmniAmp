@@ -216,10 +216,10 @@ void GammaAudioProcessorEditor::resized()
     auto h = getHeight();
     auto topSection = bounds.removeFromTop(h * 0.15f);
     auto mainHeight = bounds.getHeight();
-    auto enhancerSection = bounds.removeFromBottom(mainHeight * 0.25f).reduced(1);
-    auto cabVerbSection = bounds.removeFromBottom(mainHeight * 0.3f).reduced(1);
-    auto ampSection = bounds.removeFromBottom(bounds.getHeight() * 0.6f).reduced(1);
-    auto preSection = bounds.reduced(1);
+    auto enhancerSection = bounds.removeFromBottom(mainHeight * 0.25f);
+    auto cabVerbSection = bounds.removeFromBottom(mainHeight * 0.3f);
+    auto ampSection = bounds.removeFromBottom(bounds.getHeight() * 0.6f);
+    auto preSection = bounds;
 
     /* set bounds of top controls */
     auto topSectionQtr = topSection.getWidth() / 4;
@@ -255,8 +255,8 @@ void GammaAudioProcessorEditor::resized()
     /* rest of UI */
     ampControls.setBounds(ampSection);
     preComponent.setBounds(preSection);
-    cabComponent.setBounds(cabVerbSection.removeFromLeft(w * 0.66f).reduced(2));
-    reverbComp.setBounds(cabVerbSection.reduced(2));
+    cabComponent.setBounds(cabVerbSection.removeFromLeft(w * 0.66f));
+    reverbComp.setBounds(cabVerbSection);
     enhancers.setBounds(enhancerSection);
 
     dl.centreWithSize(300, 200);

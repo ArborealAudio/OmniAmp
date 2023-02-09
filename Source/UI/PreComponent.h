@@ -50,13 +50,13 @@ struct PreComponent : Component,
 
         lfFreqAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "lfEmphasisFreq", lfFreq);
         lfFreq.outlineColor = Colours::antiquewhite;
-        lfFreq.baseColor = Colour(BACKGROUND_COLOR).withMultipliedLightness(2.f).withMultipliedSaturation(1.25f);
+        lfFreq.baseColor = Colour(LIGHT_BLUE);
         lfFreq.minValue = 30.0;
         lfFreq.maxValue = 1800.0;
 
         hfFreqAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "hfEmphasisFreq", hfFreq);
         hfFreq.outlineColor = Colours::antiquewhite;
-        hfFreq.baseColor = Colour(BACKGROUND_COLOR).withMultipliedLightness(2.f).withMultipliedSaturation(1.25f);
+        hfFreq.baseColor = Colour(LIGHT_BLUE);
         hfFreq.minValue = 1800.0;
         hfFreq.maxValue = 18000.0;
 
@@ -110,7 +110,7 @@ struct PreComponent : Component,
 
     void paint(Graphics &g) override
     {
-        auto bounds = getLocalBounds().reduced(2).toFloat();
+        auto bounds = getLocalBounds().reduced(3).toFloat();
         g.setColour(Colours::antiquewhite);
         g.drawRoundedRectangle(bounds, 5.f, 3.f);
 
