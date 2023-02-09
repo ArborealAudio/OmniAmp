@@ -56,6 +56,7 @@ struct EnhancerComponent : Component
 
         lfCutAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "lfCut", lfCut);
         lfCut.setLabel("LF Cut");
+        lfCut.setColor(Colour(LIGHT_BLUE), Colours::antiquewhite);
         lfCut.setDefaultValue(0.f);
         lfCut.setValueToStringFunction([](float val)
                                        { if (val == 5.f)
@@ -65,6 +66,7 @@ struct EnhancerComponent : Component
 
         hfCutAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfCut", hfCut);
         hfCut.setLabel("HF Cut");
+        hfCut.setColor(Colour(LIGHT_BLUE), Colours::antiquewhite);
         hfCut.setDefaultValue(1.f);
         hfCut.setValueToStringFunction([](float val)
                                        { if (val == 22000.f)
@@ -79,10 +81,10 @@ struct EnhancerComponent : Component
 
     void paint(Graphics &g) override
     {
-        auto bounds = getLocalBounds().reduced(1).toFloat();
+        auto bounds = getLocalBounds().reduced(3).toFloat();
 
         g.setColour(Colours::grey);
-        g.drawRoundedRectangle(bounds, 5.f, 2.f);
+        g.drawRoundedRectangle(bounds, 5.f, 3.f);
 
         g.setFont(getHeight() * 0.085f);
         g.setColour(Colours::white);

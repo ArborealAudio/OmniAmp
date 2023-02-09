@@ -233,14 +233,10 @@ struct AmpControls : Component, private Timer
             {
                 for (auto &k : getKnobs())
                 {
-                    if (k == &bass)
-                        k->setColor(Colour(142.f/360.f, 0.42f, 0.50f, 1.f), secondaryColor);
-                    else if (k == &mid)
-                        k->setColor(Colour(200.f/360.f, 0.42f, 0.50f, 1.f), secondaryColor);
-                    else if (k == &treble)
-                        k->setColor(Colour(345.f/360.f, 0.42f, 0.50f, 1.f), secondaryColor);
-                    else
-                        k->setColor(Colours::slategrey, secondaryColor);
+                    if (k == &bass || k == &mid || k == &treble)
+                        k->setColor(Colour(0.f, 0.f, 0.1f, 1.f), secondaryColor);
+                     else
+                        k->setColor(Colour(LIGHT_BLUE), secondaryColor);
 
                     k->repaint();
                 }
@@ -249,10 +245,10 @@ struct AmpControls : Component, private Timer
             {
                 for (auto &k : getKnobs())
                 {
-                    if (k == &inGain || k == &outGain)
-                        k->setColor(Colour(345.f/360.f, 0.42f, 0.50f, 1.f), secondaryColor);
+                    if (k == &inGain || k == &outGain || k == &dist)
+                        k->setColor(Colour(LIGHT_GREEN), secondaryColor);
                     else
-                        k->setColor(Colours::lightgrey, secondaryColor);
+                        k->setColor(Colour(225.f/360.f, 0.f, 0.5f, 1.f), secondaryColor);
                     k->repaint();
                 }
             }
@@ -266,9 +262,9 @@ struct AmpControls : Component, private Timer
     {
         ColourGradient grad(backgroundColor, getLocalBounds().getCentreX(), getLocalBounds().getCentreY(), Colour(BACKGROUND_COLOR), getWidth(), getHeight(), true);
         g.setGradientFill(grad);
-        g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f);
+        g.fillRoundedRectangle(getLocalBounds().reduced(3).toFloat(), 5.f);
         g.setColour(secondaryColor);
-        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(2.f), 5.f, 2.f);
+        g.drawRoundedRectangle(getLocalBounds().reduced(3).toFloat(), 5.f, 3.f);
     }
 
     void resized() override
@@ -281,7 +277,7 @@ struct AmpControls : Component, private Timer
         for (auto &k : getKnobs())
         {
             k->setBounds(mb.removeFromLeft(chunk).reduced(5));
-            k->setOffset(0, -5);
+            // k->setOffset(0, -5);
         }
 
         // bounds at this point is bottom 30% 

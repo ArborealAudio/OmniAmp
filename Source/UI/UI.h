@@ -3,9 +3,11 @@
 
 #pragma once
 
-// #define BACKGROUND_COLOR 0xffaa8875 // unused atm
 #define BACKGROUND_COLOR 0xff293236
 #define DEEP_BLUE 0xff194545
+#define LIGHT_BLUE 0xff4b626c
+#define LIGHT_GREEN 0xff4b6c59
+#define DULL_RED 0xff6c4b4b
 
 static const Typeface::Ptr getCustomFont()
 {

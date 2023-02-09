@@ -21,6 +21,7 @@ public:
         addAndMakeVisible(reverbAmount);
         amtAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbAmt", reverbAmount);
         reverbAmount.setLabel("Amount");
+        reverbAmount.setColor(Colours::antiquewhite, Colours::antiquewhite.withMultipliedLightness(1.5f));
         reverbAmount.setTooltip("Mix for reverb. At 50%, wet and dry signals are both at full volume, and the dry signal begins to decrease after 50%");
         reverbAmount.setValueToStringFunction([](float val)
                                               { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
@@ -28,6 +29,7 @@ public:
         addAndMakeVisible(reverbDecay);
         decayAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbDecay", reverbDecay);
         reverbDecay.setLabel("Decay");
+        reverbDecay.setColor(Colours::antiquewhite, Colours::antiquewhite.withMultipliedLightness(1.5f));
         reverbDecay.setTooltip("Decay control for the reverb time");
         reverbDecay.setValueToStringFunction([](float val)
                                               { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
@@ -35,6 +37,7 @@ public:
         addAndMakeVisible(reverbSize);
         sizeAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbSize", reverbSize);
         reverbSize.setLabel("Size");
+        reverbSize.setColor(Colours::antiquewhite, Colours::antiquewhite.withMultipliedLightness(1.5f));
         reverbSize.setTooltip("Control for the size of the reverb algorithm");
         reverbSize.setValueToStringFunction([](float val)
                                               { auto str = String(val * 100.0, 0); str.append("%", 1); return str; });
@@ -42,6 +45,7 @@ public:
         addAndMakeVisible(predelay);
         predelayAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(v, "reverbPredelay", predelay);
         predelay.setLabel("Predelay");
+        predelay.setColor(Colours::antiquewhite, Colours::antiquewhite.withMultipliedLightness(1.5f));
         predelay.setTooltip("Predelay in ms of reverb");
         predelay.setValueToStringFunction([](float val)
                                           { auto str = String((int)val); str.append("ms", 2); return str; });
@@ -57,7 +61,7 @@ public:
     void paint(Graphics &g) override
     {
         g.setColour(Colour(REVERB_COLOR));
-        g.drawRoundedRectangle(getLocalBounds().reduced(2).toFloat(), 5.f, 3.f);
+        g.drawRoundedRectangle(getLocalBounds().reduced(3).toFloat(), 5.f, 3.f);
         reverb.lnf.backgroundColor = reverb.getSelectedId() > 1 ? Colour(REVERB_COLOR) : Colours::transparentBlack;
     }
 
