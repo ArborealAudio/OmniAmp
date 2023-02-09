@@ -22,9 +22,6 @@ private:
             g.setColour(Colours::black.withAlpha(0.25f));
             g.fillRoundedRectangle(bounds.toFloat(), 5.f);
 
-            g.setColour(Colours::red);
-            g.drawRect(micBounds);
-
             pos = micBounds.getRelativePoint(micPos->get(), micDepth->get());
 
             Rectangle<float> micPoint(pos.x - (micWidth * 0.5f), pos.y - (micWidth * 0.5f), micWidth, micWidth);
