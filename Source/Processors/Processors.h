@@ -906,8 +906,6 @@ namespace Processors
                     *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 6500.0, 0.5, gain);
                 break;
             }
-
-            setEQAutoGain();
         }
 
         template <typename FloatType>
@@ -964,9 +962,8 @@ namespace Processors
 
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
-#else
-            processBlock.multiplyBy(autoGain);
 #endif
+            block.multiplyBy(autoGain);
             if (*apvts.getRawParameterValue("compPos"))
                 comp.processBlock(block, *p_comp, *linked);
         }
@@ -1003,6 +1000,7 @@ namespace Processors
                     in[i] = hi.processSample(in[i]);
                 }
             }
+            setEQAutoGain();
         }
 
         // get magnitude at some specific frequencies and take the reciprocal
