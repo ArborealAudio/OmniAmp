@@ -24,7 +24,7 @@ public:
         }
     }
 
-    void stereoToMulti(const Sample **input, Sample **output, int numSamples) const
+    void stereoToMulti(const Sample *const *input, Sample *const *output, int numSamples) const
     {
         for (int j = 0; j < numSamples; ++j)
         {
@@ -38,7 +38,7 @@ public:
         }
     }
 
-    void multiToStereo(const Sample **input, Sample **output, int numSamples) const
+    void multiToStereo(const Sample *const *input, Sample *const *output, int numSamples) const
     {
         for (int j = 0; j < numSamples; ++j)
         {
