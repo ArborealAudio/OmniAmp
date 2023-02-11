@@ -68,7 +68,7 @@ target_include_directories(Gamma PRIVATE "modules/chowdsp_wdf/include")
 
 juce_add_modules(
     "modules/gin/modules/gin"
-    "modules/gin/modules/gin_gui"
+    "modules/gin/modules/gin_graphics"
     "modules/Arbor_modules")
 
 target_compile_definitions(Gamma
@@ -107,7 +107,7 @@ target_link_libraries(Gamma
         juce::juce_dsp
         juce::juce_cryptography
         gin
-        gin_gui
+        gin_graphics
         Arbor_modules
     PUBLIC
         juce::juce_recommended_config_flags
