@@ -10,16 +10,16 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-    #if NDEBUG
-        #define USE_SIMD 1
-    #else // make sure DBG builds are labeled non-production
-        #ifndef PRODUCTION_BUILD
-            #define PRODUCTION_BUILD 0
-        #endif
-    #endif
+#if NDEBUG
+#define USE_SIMD 1
+#else // make sure DBG builds are labeled non-production
+#ifndef PRODUCTION_BUILD
+#define PRODUCTION_BUILD 0
+#endif
+#endif
 #endif
 #ifndef PRODUCTION_BUILD // use this to control production build parameter
-    #define PRODUCTION_BUILD 1
+#define PRODUCTION_BUILD 1
 #endif
 
 #include <JuceHeader.h>
@@ -28,8 +28,8 @@
 #include "Presets/PresetManager.h"
 #include "UI/UI.h"
 #include "UI/SineWave.hpp"
-#if ! PRODUCTION_BUILD
-    #define DEV_BUILD 1
+#if !PRODUCTION_BUILD
+#define DEV_BUILD 1
 #endif
 #include "Activation.hpp"
 
@@ -172,6 +172,8 @@ private:
     Processors::CutFilters cutFilters;
 
     dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> mixDelay;
+    dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> dryDelay;
+    bool lastBypass = false;
 
     strix::SIMD<double, dsp::AudioBlock<double>, strix::AudioBlock<vec>> simd;
 
@@ -192,9 +194,10 @@ private:
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
         const size_t os_index_ = os_index;
+        const bool isBypassed = (bool)*apvts.getRawParameterValue("bypass");
 
-        if (*apvts.getRawParameterValue("gainLink"))
-            outGain_raw *= 1.0 / inGain_raw;
+        if ((bool)*apvts.getRawParameterValue("gainLink"))
+            outGain_raw *= 1.f / inGain_raw;
 
         dsp::AudioBlock<double> block(buffer);
         const size_t numChannels = mono ? 1 : block.getNumChannels();
@@ -205,6 +208,8 @@ private:
             for (size_t i = 0; i < block.getNumSamples(); ++i)
                 mixDelay.pushSample(ch, in[i]);
         }
+
+        bool shouldBypass = processBypassIn(block, isBypassed);
 
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
@@ -296,21 +301,76 @@ private:
         if (width != 1.f && !mono)
             strix::Balance::processBalance(block, width, false, lastWidth);
 
-        // mixDelay.setDelay(latency);
+        mixDelay.setDelay(latency);
+        dryDelay.setDelay((int)latency);
         float mixAmt = *apvts.getRawParameterValue("mix");
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
             auto *out = block.getChannelPointer(ch);
             for (size_t i = 0; i < block.getNumSamples(); ++i)
-            out[i] = ((1.f - mixAmt) * mixDelay.popSample(ch)) + mixAmt * out[i];
+                out[i] = ((1.f - mixAmt) * mixDelay.popSample(ch)) + mixAmt * out[i];
         }
-        CHECK_BLOCK(block)
+
+        /* manage bypass */
+        if (shouldBypass)
+            processBypassOut(block, isBypassed);
+        lastBypass = isBypassed;
     }
 
     inline float calcBassParam(float val)
     {
         return val * val * val;
     }
+
+    inline bool processBypassIn(const dsp::AudioBlock<double> &block, const bool byp)
+    {
+        if (!byp && !lastBypass)
+            return false;
+
+        const size_t numChannels = block.getNumChannels();
+        for (size_t ch = 0; ch < numChannels; ++ch)
+        {
+            const auto *in = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+                dryDelay.pushSample(ch, in[i]);
+        }
+        return true;
+    }
+
+    inline void processBypassOut(dsp::AudioBlock<double> &block, const bool byp)
+    {
+        const size_t numChannels = block.getNumChannels();
+
+        if (lastBypass && byp) // bypass
+        {
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+                for (size_t ch = 0; ch < numChannels; ++ch)
+                    block.getChannelPointer(ch)[i] = dryDelay.popSample(ch);
+        }
+        else if (byp && !lastBypass) // fade-in dry
+        {
+            float inc = 1.f / (float)block.getNumSamples();
+            float gain = 0.f;
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+            {
+                for (size_t ch = 0; ch < numChannels; ++ch)
+                    block.getChannelPointer(ch)[i] = (dryDelay.popSample(ch) * gain) + (block.getChannelPointer(ch)[i] * (1.f - gain));
+                gain += inc;
+            }
+        }
+        else if (!byp && lastBypass) // fade-out dry
+        {
+            float inc = 1.f / (float)block.getNumSamples();
+            float gain = 0.f;
+            for (size_t i = 0; i < block.getNumSamples(); ++i)
+            {
+                for (size_t ch = 0; ch < numChannels; ++ch)
+                    block.getChannelPointer(ch)[i] = (dryDelay.popSample(ch) * (1.f - gain)) + (block.getChannelPointer(ch)[i] * gain);
+                gain += inc;
+            }
+        }
+    }
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GammaAudioProcessor)
 };

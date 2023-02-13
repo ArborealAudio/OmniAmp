@@ -183,6 +183,8 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
     mixDelay.prepare(spec);
     mixDelay.setMaximumDelayInSamples(spec.maximumBlockSize + 256);
+    dryDelay.prepare(spec);
+    dryDelay.setMaximumDelayInSamples(spec.maximumBlockSize + 256);
 
     doubler.prepare(spec);
     doubler.setDelayTime(18);
@@ -304,9 +306,6 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    // if (totalNumInputChannels < totalNumOutputChannels)
-    //     buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
-
     doubleBuffer.makeCopyOf(buffer, true);
 
     processDoubleBuffer(doubleBuffer, totalNumInputChannels < 2);
@@ -331,9 +330,6 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
                 outR[i] = static_cast<float>(R[i]);
         }
     }
-
-    // if (getActiveEditor())
-    //     audioSource.copyBuffer(buffer);
 }
 
 void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::MidiBuffer &midiMessages)
@@ -349,9 +345,6 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::
 
     if (totalNumInputChannels < totalNumOutputChannels)
         buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
-
-    // if (getActiveEditor())
-    //     audioSource.copyBuffer(buffer);
 }
 
 //==============================================================================
@@ -450,6 +443,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbPredelay", 1), "Reverb Predelay", 0.f, 200.f, 0.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("hq", 1), "HQ On/Off", true));
     params.emplace_back(std::make_unique<bParam>(ParameterID("renderHQ", 1), "Render HQ", false));
+    params.emplace_back(std::make_unique<bParam>(ParameterID("bypass", 1), "Bypass", false));
 
     return {params.begin(), params.end()};
 }
