@@ -55,7 +55,7 @@ struct ActivationComponent : Component, Timer
         {
             checkInput();
         };
-        startTimer(1000);
+        // startTimer(1000);
     }
 
     void timerCallback() override
@@ -140,6 +140,23 @@ struct ActivationComponent : Component, Timer
         return result;
     }
 
+    void checkSite()
+    {
+        auto url = URL("https://arborealaudio.com/.netlify/functions/beta-check");
+        bool checkResult = false;
+
+        if (auto stream = url.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress).withExtraHeaders("name: Gamma\nkey: ArauGammBeta").withConnectionTimeoutMs(10000)))
+        {
+            auto response = stream->readEntireStreamAsString();
+
+            checkResult = strcmp(response.toRawUTF8(), "true") == 0;
+        }
+        else
+            checkResult = false;
+
+        if (onSiteCheck) onSiteCheck(checkResult);
+    }
+
     TextEditor editor;
     TextButton submit{"Submit"};
     var m_betaLive;
@@ -164,20 +181,4 @@ private:
         xml->writeTo(config);
     }
 
-    void checkSite()
-    {
-        auto url = URL("https://arborealaudio.com/.netlify/functions/beta-check");
-        bool checkResult = false;
-
-        if (auto stream = url.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress).withExtraHeaders("name: Gamma\nkey: ArauGammBeta").withConnectionTimeoutMs(10000)))
-        {
-            auto response = stream->readEntireStreamAsString();
-
-            checkResult = strcmp(response.toRawUTF8(), "true") == 0;
-        }
-        else
-            checkResult = false;
-
-        if (onSiteCheck) onSiteCheck(checkResult);
-    }
 };
