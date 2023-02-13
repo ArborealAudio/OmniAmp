@@ -151,10 +151,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(dl);
     dl.centreWithSize(300, 200);
+    lThread.addJob([&]
+                   { dl.checkForUpdate(); });
     dl.onUpdateStatusChange = [&](bool updateChecked)
     { p.checkedUpdate = updateChecked; };
 
     addChildComponent(activation);
+    lThread.addJob([&]
+    { activation.checkSite();});
     activation.onActivationCheck = [&](bool result)
     {
         activation.setVisible(!result);
