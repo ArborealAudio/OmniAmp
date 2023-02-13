@@ -134,6 +134,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     mix.setValueToStringFunction([](float val)
                                  { String s(val * 100, 0); return s + "%"; });
 
+    bypassAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "bypass", bypass);
+    bypass.setButtonText("Byp");
+    bypass.setTooltip("Full, latency-compensated bypass");
+
     addAndMakeVisible(preComponent);
     addAndMakeVisible(ampControls);
     addAndMakeVisible(cabComponent);
@@ -230,7 +234,7 @@ void GammaAudioProcessorEditor::resized()
 
     pluginTitle.setBounds(titleSection);
     presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.35f));
-    menu.setBounds(w - (w * 0.25f), presetMenu.getY(), w * 0.25f, h / 3.f); /*...sickening*/
+    menu.setBounds(w - (w / 8.f), presetMenu.getY(), w / 14.f, w / 38.f);
 
     auto knobFrac = topKnobs.getWidth() / 4;
     auto knobHalf = topKnobs.getHeight() / 2;
@@ -248,7 +252,7 @@ void GammaAudioProcessorEditor::resized()
             c->setBounds(topKnobs.removeFromLeft(knobFrac));
         else
             c->setBounds(knobsBottom.removeFromLeft(knobFrac));
-        if (auto *k = dynamic_cast<Knob *>(c))
+        if (auto *k = static_cast<Knob *>(c))
             k->setOffset(0, -c->getHeight() * 0.1f);
     }
 

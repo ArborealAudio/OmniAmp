@@ -60,6 +60,8 @@ private:
     Knob::flags_t knobFlags = 0;
     Knob gate{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, width{knobFlags}, mix{knobFlags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach, mixAttach;
+    LightButton bypass;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> bypassAttach;
 
     LinkButton link;
 
@@ -71,7 +73,8 @@ private:
             &link,
             &outGain,
             &width,
-            &mix};
+            &mix,
+            &bypass};
     }
 
     PreComponent preComponent;
