@@ -25,7 +25,7 @@ struct LiteThread : Thread
 
     ~LiteThread() override
     {
-        stopThread(100);
+        stopThread(1000);
     }
 
     void run() override
@@ -128,8 +128,8 @@ private:
             &link,
             &outGain,
             &width,
-            &mix,
-            &bypass};
+            &mix/* ,
+            &bypass */};
     }
 
     PreComponent preComponent;

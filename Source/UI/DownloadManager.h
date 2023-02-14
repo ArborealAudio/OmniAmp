@@ -39,7 +39,7 @@ const String downloadPath
 #endif
 };
 
-struct DownloadManager : Component, Timer
+struct DownloadManager : Component
 {
     DownloadManager(bool *updateChecked_) : updateChecked(updateChecked_)
     {
@@ -68,31 +68,26 @@ struct DownloadManager : Component, Timer
         };
         yes.onClick = [&]
         { downloadFinished = false; downloadUpdate(); };
-
-        startTimer(1000);
     }
 
     ~DownloadManager() override
     {
         yes.setLookAndFeel(nullptr);
         no.setLookAndFeel(nullptr);
-        stopTimer();
     }
 
-    void timerCallback() override
+    /** @param force whether to force the check even if checked < 24hrs ago */
+    void checkForUpdate(bool force = false)
     {
-        if (updateChecked && !*updateChecked)
+        if (!force)
         {
-            checkForUpdate();
-            stopTimer();
+            auto lastCheck = readConfigFileString("updateCheck").getLargeIntValue();
+            auto dayAgo = Time::getCurrentTime() - RelativeTime::hours(24);
+            onUpdateCheck(false);
+            if (lastCheck > dayAgo.toMilliseconds())
+                return;
         }
-        else
-            setVisible(false);
-    }
 
-    void checkForUpdate()
-    {
-        bool checkResult = false;
         if (auto stream = URL(versionURL).createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)))
         {
             auto data = JSON::parse(stream->readEntireStreamAsString());
@@ -120,16 +115,19 @@ struct DownloadManager : Component, Timer
             DBG("Latest: " << latestVersion.toString());
 
 #if PRODUCTION_BUILD
-            checkResult = String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".");
+            updateAvailable = String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".");
 #else
             DBG("Update result: " << int(String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".")));
-            checkResult = true;
+            updateAvailable = true;
 #endif
         }
         else
-            checkResult = false;
+            updateAvailable = false;
 
-        onUpdateCheck(checkResult);
+        writeConfigFileString("updateCheck", String(Time::currentTimeMillis()));
+
+        MessageManager::callAsync([&]
+                                  { onUpdateCheck(updateAvailable); });
     }
 
     void downloadUpdate()
@@ -209,6 +207,8 @@ struct DownloadManager : Component, Timer
     }
 
     std::function<void(bool)> onUpdateStatusChange;
+
+    bool updateAvailable = false;
 
 private:
 
