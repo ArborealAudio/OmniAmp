@@ -142,6 +142,12 @@ struct ActivationComponent : Component, Timer
 
     void checkSite()
     {
+        /* first check if 24hrs since last check */
+        auto lastCheck = readConfigFileString("betaCheck").getLargeIntValue();
+        auto dayAgo = Time::currentTimeMillis() - RelativeTime::hours(24).inMilliseconds();
+        if (lastCheck > dayAgo)
+            return;
+
         auto url = URL("https://arborealaudio.com/.netlify/functions/beta-check");
         bool checkResult = false;
 
@@ -150,11 +156,13 @@ struct ActivationComponent : Component, Timer
             auto response = stream->readEntireStreamAsString();
 
             checkResult = strcmp(response.toRawUTF8(), "true") == 0;
+            writeConfigFileString("betaCheck", String(Time::currentTimeMillis()));
         }
         else
             checkResult = false;
 
-        if (onSiteCheck) onSiteCheck(checkResult);
+        MessageManager::callAsync([&]
+                                  {if (onSiteCheck) onSiteCheck(checkResult); });
     }
 
     TextEditor editor;

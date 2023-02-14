@@ -64,8 +64,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     { resetWindowSize(); };
     menu.checkUpdateCallback = [&]
     {
-        dl.checkForUpdate();
-        if (!dl.isVisible())
+        dl.checkForUpdate(true);
+        if (!dl.updateAvailable)
             NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
     };
     menu.showTooltipCallback = [&](bool state)
@@ -88,7 +88,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     };
 #endif
 
-    for (auto c : getTopComponents())
+    for (auto *c : getTopComponents())
     {
         addAndMakeVisible(*c);
         if (auto k = dynamic_cast<Knob *>(c))
@@ -151,14 +151,12 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(dl);
     dl.centreWithSize(300, 200);
-    lThread.addJob([&]
-                   { dl.checkForUpdate(); });
     dl.onUpdateStatusChange = [&](bool updateChecked)
     { p.checkedUpdate = updateChecked; };
+    lThread.addJob([&]
+                   { dl.checkForUpdate(); });
 
     addChildComponent(activation);
-    lThread.addJob([&]
-    { activation.checkSite();});
     activation.onActivationCheck = [&](bool result)
     {
         activation.setVisible(!result);
@@ -178,6 +176,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         p.lockProcessing(!result);
     };
     activation.centreWithSize(300, 200);
+    lThread.addJob([&]
+                   { activation.checkSite(); });
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
