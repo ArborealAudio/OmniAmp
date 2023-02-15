@@ -440,7 +440,6 @@ public:
         case SIZE:
         case TYPE:
         {
-            DBG("Changing params");
             reverbReady = false;
             switch ((ReverbType)type->getIndex())
             {
@@ -482,13 +481,11 @@ public:
 
         if (*type && !reverbReady)
         {
-            DBG("processing currentRev");
             currentRev->process(buffer, amt);
         }
         else if (*type && reverbReady && !fade.complete)
         {
             processingAudio = true;
-            DBG("Processing crossfade");
             tmp1.makeCopyOf(buffer, true);
             tmp2.makeCopyOf(buffer, true);
             currentRev->process(tmp1, amt);
@@ -497,9 +494,7 @@ public:
             buffer.makeCopyOf(tmp2, true);
             if (fade.complete)
             {
-                DBG("fade complete");
                 currentRev.swap(newRev);
-                // newRev.reset(nullptr);
                 processingAudio = false; // don't allow param changes to dispatch until crossfade from last change is done
                 reverbReady = false;
             }
