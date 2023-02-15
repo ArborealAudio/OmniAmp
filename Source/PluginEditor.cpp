@@ -251,7 +251,17 @@ void GammaAudioProcessorEditor::resized()
         if (i < 4)
             c->setBounds(topKnobs.removeFromLeft(knobFrac));
         else
+        {
+            if (c == &bypass)
+            {
+                c->setBounds(knobsBottom.removeFromLeft(knobFrac).reduced(0, knobFrac * 0.2f));
+                auto *b = static_cast<LightButton *>(c);
+                b->lnf.cornerRadius = b->getHeight() * 0.25f;
+                continue;
+            }
             c->setBounds(knobsBottom.removeFromLeft(knobFrac));
+        }
+        
         if (auto *k = static_cast<Knob *>(c))
             k->setOffset(0, -c->getHeight() * 0.1f);
     }
