@@ -39,10 +39,10 @@ struct LiteThread : Thread
                 job();
                 jobCount += 1;
 #if BETA_BUILD || DEV_BUILD
-                if (jobCount > 2)
+                if (jobCount >= 2)
                     signalThreadShouldExit(); /** janky way of ensuring we ran both checks */
 #else
-                if (jobCount > 1)
+                if (jobCount >= 1)
                     signalThreadShouldExit();
 #endif
             }

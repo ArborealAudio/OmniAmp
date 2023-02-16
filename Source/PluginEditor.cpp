@@ -151,8 +151,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(dl);
     dl.centreWithSize(300, 200);
-    dl.onUpdateStatusChange = [&](bool updateChecked)
-    { p.checkedUpdate = updateChecked; };
     lThread.addJob([&]
                    { dl.checkForUpdate(); });
 
@@ -162,17 +160,9 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         activation.setVisible(!result);
         p.lockProcessing(!result);
     };
+    // just using this lambda to notify audioProcessor of beta check
     activation.onSiteCheck = [&](bool result)
     {
-        activation.m_betaLive = result;
-        {
-            activation.setVisible(!result);
-            activation.editor.setVisible(result);
-            activation.submit.setVisible(result);
-            activation.repaint();
-        }
-        if (result)
-            activation.readFile();
         p.lockProcessing(!result);
     };
     activation.centreWithSize(300, 200);

@@ -39,7 +39,7 @@ private:
 };
 #endif
 
-struct ActivationComponent : Component, Timer
+struct ActivationComponent : Component
 {
     ActivationComponent()
     {
@@ -55,13 +55,6 @@ struct ActivationComponent : Component, Timer
         {
             checkInput();
         };
-        // startTimer(1000);
-    }
-
-    void timerCallback() override
-    {
-        checkSite();
-        stopTimer();
     }
 
     /* called when UI submits a beta key & when site check is successful */
@@ -144,8 +137,8 @@ struct ActivationComponent : Component, Timer
     {
         /* first check if 24hrs since last check */
         auto lastCheck = readConfigFileString("betaCheck").getLargeIntValue();
-        auto dayAgo = Time::currentTimeMillis() - RelativeTime::hours(24).inMilliseconds();
-        if (lastCheck > dayAgo)
+        auto dayAgo = Time::getCurrentTime() - RelativeTime::hours(24);
+        if (lastCheck > dayAgo.toMilliseconds())
             return;
 
         auto url = URL("https://arborealaudio.com/.netlify/functions/beta-check");
@@ -156,13 +149,22 @@ struct ActivationComponent : Component, Timer
             auto response = stream->readEntireStreamAsString();
 
             checkResult = strcmp(response.toRawUTF8(), "true") == 0;
-            writeConfigFileString("betaCheck", String(Time::currentTimeMillis()));
+            // writeConfigFileString("betaCheck", String(Time::currentTimeMillis()));
         }
         else
             checkResult = false;
+        
+        m_betaLive = checkResult;
 
         MessageManager::callAsync([&]
-                                  {if (onSiteCheck) onSiteCheck(checkResult); });
+                                  {
+        /* these methods need to be run on msg thread */
+        setVisible(!m_betaLive);
+        editor.setVisible(m_betaLive);
+        submit.setVisible(m_betaLive);
+        repaint();
+        if (m_betaLive)
+            readFile(); });
     }
 
     TextEditor editor;
@@ -170,7 +172,6 @@ struct ActivationComponent : Component, Timer
     var m_betaLive;
 
 private:
-
     HashChecker check;
 
     void writeFile(const char *key)
@@ -188,5 +189,4 @@ private:
         xml->setAttribute("Key", key);
         xml->writeTo(config);
     }
-
 };
