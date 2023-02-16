@@ -50,10 +50,7 @@ struct DownloadManager : Component
         {
             if (!isDownloading)
             {
-                setVisible(false);
-                *updateChecked = true;
-                if (onUpdateStatusChange)
-                    onUpdateStatusChange(*updateChecked);
+                onUpdateCheck(false);
             }
             else
             {
@@ -83,7 +80,8 @@ struct DownloadManager : Component
         {
             auto lastCheck = readConfigFileString("updateCheck").getLargeIntValue();
             auto dayAgo = Time::getCurrentTime() - RelativeTime::hours(24);
-            onUpdateCheck(false);
+            MessageManager::callAsync([&]
+                                      { onUpdateCheck(false); });
             if (lastCheck > dayAgo.toMilliseconds())
                 return;
         }
@@ -124,7 +122,7 @@ struct DownloadManager : Component
         else
             updateAvailable = false;
 
-        writeConfigFileString("updateCheck", String(Time::currentTimeMillis()));
+        // writeConfigFileString("updateCheck", String(Time::currentTimeMillis()));
 
         MessageManager::callAsync([&]
                                   { onUpdateCheck(updateAvailable); });
@@ -200,13 +198,10 @@ struct DownloadManager : Component
 
         Rectangle<int> yesBounds{bounds.withTrimmedTop(halfHeight).withTrimmedRight(halfWidth).reduced(20, 30)};
         Rectangle<int> noBounds{bounds.withTrimmedTop(halfHeight).withTrimmedLeft(halfWidth).reduced(20, 30)};
-        Rectangle<int> retryBounds{bounds.withTrimmedTop(halfHeight).reduced(20, 30)};
 
         yes.setBounds(yesBounds);
         no.setBounds(noBounds);
     }
-
-    std::function<void(bool)> onUpdateStatusChange;
 
     bool updateAvailable = false;
 
@@ -252,8 +247,6 @@ private:
             downloadFinished = true;
 
         *updateChecked = true;
-        if (onUpdateStatusChange)
-            onUpdateStatusChange(*updateChecked);
         repaint();
     };
 
