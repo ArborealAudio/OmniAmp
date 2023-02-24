@@ -11,8 +11,8 @@
 
 static const Typeface::Ptr getCustomFont()
 {
-    static auto typeface = Typeface::createSystemTypefaceFor (BinaryData::LiberationSansRegular_ttf, BinaryData::LiberationSansRegular_ttfSize);
-    
+    static auto typeface = Typeface::createSystemTypefaceFor(BinaryData::LiberationSansRegular_ttf, BinaryData::LiberationSansRegular_ttfSize);
+
     return typeface;
 }
 
@@ -23,7 +23,7 @@ static const Typeface::Ptr getCustomFont()
  * @param proportion a skew value, < 1 will skew every component after initial component in the vector by this fraction of init component's width; > 1 will skew components after initial component to be larger than initial component by said factor
  * @param padding multiplier of each component's width to be applied as padding
  */
-static void layoutComponents(std::vector<Component*> comp, Rectangle<int> &bounds, bool vertical = false, float proportion = 1.f, float padding = 0.f)
+static void layoutComponents(std::vector<Component *> comp, Rectangle<int> &bounds, bool vertical = false, float proportion = 1.f, float padding = 0.f)
 {
     size_t numComp = comp.size();
     assert(numComp != 0);
@@ -31,7 +31,7 @@ static void layoutComponents(std::vector<Component*> comp, Rectangle<int> &bound
     assert((bounds.getWidth() / numComp) > 1);
 
     int chunk = vertical ? bounds.getHeight() / numComp : bounds.getWidth() / numComp;
-    
+
     if (!vertical)
     {
         {
@@ -58,12 +58,12 @@ static void layoutComponents(std::vector<Component*> comp, Rectangle<int> &bound
     }
 }
 
-static void writeConfigFile(const String& property, int value)
+static void writeConfigFile(const String &property, int value)
 {
-    File config {File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
+    File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
     if (!config.existsAsFile())
         config.create();
-    
+
     auto xml = parseXML(config);
     if (xml == nullptr)
     {
@@ -77,18 +77,51 @@ static void writeConfigFile(const String& property, int value)
     xml->writeTo(config);
 }
 
-/*returns integer value of read property, or -1 if it doesn't exist*/
-static int readConfigFile(const String& property)
+static void writeConfigFileString(const String &property, const String &value)
 {
-    File config {File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
+    File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
+    if (!config.existsAsFile())
+        config.create();
+
+    auto xml = parseXML(config);
+    if (xml == nullptr)
+    {
+        xml.reset(new XmlElement("Config"));
+    }
+
+    xml->setAttribute(property, value);
+    xml->writeTo(config);
+}
+
+/*returns integer value of read property, or -1 if it doesn't exist*/
+static int readConfigFile(const String &property)
+{
+    File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
     if (!config.existsAsFile())
         return -1;
-    
+
     auto xml = parseXML(config);
     if (xml != nullptr && xml->hasTagName("Config"))
+    {
         return xml->getIntAttribute(property, -1);
-    
+    }
+
     return -1;
+}
+
+static String readConfigFileString(const String &property)
+{
+    File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
+    if (!config.existsAsFile())
+        return "";
+
+    auto xml = parseXML(config);
+    if (xml != nullptr && xml->hasTagName("Config"))
+    {
+        return xml->getStringAttribute(property);
+    }
+
+    return "";
 }
 
 namespace Blur
@@ -96,25 +129,31 @@ namespace Blur
     // SPDX-License-Identifier: Zlib
     // Copyright (c)2020 by George Yohng
 
-    template<int blurShift, bool enhanceContrast = false>
-    inline void blurImage(Image& img) {
-        if (!img.isValid() || !img.getWidth() || !img.getHeight()) return;
+    template <int blurShift, bool enhanceContrast = false>
+    inline void blurImage(Image &img)
+    {
+        if (!img.isValid() || !img.getWidth() || !img.getHeight())
+            return;
         img = img.convertedToFormat(Image::ARGB);
         Image::BitmapData bm(img, 0, 0, img.getWidth(), img.getHeight(), Image::BitmapData::readWrite);
         int h = img.getHeight();
         int w = img.getWidth();
-        for (int y = 0; y < h; y++) {
-            for (int c = 0; c < 4; c++) {
-                uint8* p = bm.getLinePointer(y) + c;
+        for (int y = 0; y < h; y++)
+        {
+            for (int c = 0; c < 4; c++)
+            {
+                uint8 *p = bm.getLinePointer(y) + c;
                 int s = p[0] << 16;
-                for (int x = 0; x < w; x++, p += 4) {
+                for (int x = 0; x < w; x++, p += 4)
+                {
                     int px = int(p[0]) << 16;
                     s += (px - s) >> blurShift;
                     p[0] = s >> 16;
                 }
 
                 p -= 4;
-                for (int x = 0; x < w; x++, p -= 4) {
+                for (int x = 0; x < w; x++, p -= 4)
+                {
                     int px = int(p[0]) << 16;
                     s += (px - s) >> blurShift;
                     p[0] = s >> 16;
@@ -122,27 +161,33 @@ namespace Blur
             }
         }
 
-        for (int x = 0; x < w; x++) {
-            for (int c = 0; c < 4; c++) {
-                uint8* p = bm.getPixelPointer(x, 0) + c;
+        for (int x = 0; x < w; x++)
+        {
+            for (int c = 0; c < 4; c++)
+            {
+                uint8 *p = bm.getPixelPointer(x, 0) + c;
                 int incr = int(bm.getPixelPointer(x, 1) - bm.getPixelPointer(x, 0));
                 int s = p[0] << 16;
-                for (int y = 0; y < h; y++, p += incr) {
+                for (int y = 0; y < h; y++, p += incr)
+                {
                     int px = int(p[0]) << 16;
                     s += (px - s) >> blurShift;
                     p[0] = s >> 16;
                 }
 
                 p -= incr;
-                for (int y = 0; y < h; y++, p -= incr) {
+                for (int y = 0; y < h; y++, p -= incr)
+                {
                     int px = int(p[0]) << 16;
                     s += (px - s) >> blurShift;
-                    if (enhanceContrast) {
+                    if (enhanceContrast)
+                    {
                         px = s >> 8;
                         px = ((((98304 - px) >> 7) * px >> 16) * px >> 16); // sine clamp
                         p[0] = jlimit(0, 255, px);
                     }
-                    else {
+                    else
+                    {
                         p[0] = s >> 16;
                     }
                 }

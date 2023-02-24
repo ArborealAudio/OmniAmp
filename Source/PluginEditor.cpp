@@ -19,8 +19,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       reverbComp(p.apvts),
       enhancers(p.audioSource, p.apvts),
       menu(p.apvts),
-      presetMenu(p.apvts),
-      dl(&p.checkedUpdate)
+      presetMenu(p.apvts)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
@@ -64,8 +63,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     { resetWindowSize(); };
     menu.checkUpdateCallback = [&]
     {
-        dl.checkForUpdate();
-        if (!dl.isVisible())
+        dl.checkForUpdate(true);
+        if (!dl.updateAvailable)
             NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
     };
     menu.showTooltipCallback = [&](bool state)
@@ -88,7 +87,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     };
 #endif
 
-    for (auto c : getTopComponents())
+    for (auto *c : getTopComponents())
     {
         addAndMakeVisible(*c);
         if (auto k = dynamic_cast<Knob *>(c))
@@ -151,8 +150,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(dl);
     dl.centreWithSize(300, 200);
-    dl.onUpdateStatusChange = [&](bool updateChecked)
-    { p.checkedUpdate = updateChecked; };
 
     addChildComponent(activation);
     activation.onActivationCheck = [&](bool result)
@@ -160,20 +157,18 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         activation.setVisible(!result);
         p.lockProcessing(!result);
     };
-    activation.onSiteCheck = [&](bool result)
-    {
-        activation.m_betaLive = result;
-        {
-            activation.setVisible(!result);
-            activation.editor.setVisible(result);
-            activation.submit.setVisible(result);
-            activation.repaint();
-        }
-        if (result)
-            activation.readFile();
-        p.lockProcessing(!result);
-    };
     activation.centreWithSize(300, 200);
+
+    if (!p.checkedUpdate || !p.checkedActivation)
+    {
+        lThread = std::make_unique<LiteThread>();
+        if (!p.checkedUpdate)
+            lThread->addJob([&]
+                            { dl.checkForUpdate(); p.checkedUpdate = true; });
+        if (!p.checkedActivation)
+            lThread->addJob([&]
+                            { activation.checkSite(); p.checkedActivation = true; });
+    }
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);

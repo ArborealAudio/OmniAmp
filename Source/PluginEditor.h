@@ -11,6 +11,67 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
+
+/**
+ * Thread module for quick 'n dirty worker thread (& bc I live in hell)
+*/
+
+struct LiteThread : Thread
+{
+    LiteThread() : Thread("LiteThread")
+    {
+        DBG("Starting check thread...");
+        startThread(Thread::Priority::background);
+    }
+
+    ~LiteThread() override
+    {
+        DBG("Stopping check thread...");
+        stopThread(1000);
+    }
+
+    void run() override
+    {
+        while (!threadShouldExit())
+        {
+            if (!jobs.empty())
+            {
+                auto job = jobs.front();
+                jobs.pop();
+                job();
+                jobCount += 1;
+#if BETA_BUILD || DEV_BUILD
+                if (jobCount >= 2)
+                    signalThreadShouldExit(); /** janky way of ensuring we ran both checks */
+#else
+                if (jobCount >= 1)
+                    signalThreadShouldExit();
+#endif
+            }
+            else
+                wait(100);
+        }
+        DBG("Check thread exited loop");
+        if (onLoopExit)
+            onLoopExit();
+    }
+
+    /* locking method for adding jobs to the thread */
+    void addJob(std::function<void()> job)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        jobs.emplace(job);
+        notify();
+    }
+
+    std::function<void()> onLoopExit;
+
+private:
+    std::mutex mutex;
+    std::queue<std::function<void()>> jobs;
+    int jobCount = 0;
+};
+
 //==============================================================================
 /**
  */
@@ -73,8 +134,8 @@ private:
             &link,
             &outGain,
             &width,
-            &mix,
-            &bypass};
+            &mix/* ,
+            &bypass */};
     }
 
     PreComponent preComponent;
@@ -85,6 +146,8 @@ private:
     Label pluginTitle;
     MenuComponent menu;
     PresetComp presetMenu;
+
+    std::unique_ptr<LiteThread> lThread;
 
     DownloadManager dl;
     Splash splash;
