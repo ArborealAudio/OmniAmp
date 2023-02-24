@@ -122,7 +122,7 @@ public:
         return juce::AudioProcessor::getWrapperTypeDescription(wrapperType);
     }
 
-    bool checkedUpdate = false;
+    bool checkedUpdate = false, checkedActivation = false;
 
 private:
     AudioProcessorValueTreeState::ParameterLayout createParams();

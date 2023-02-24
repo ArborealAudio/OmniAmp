@@ -59,8 +59,6 @@ struct ActivationComponent : Component
 
     /* called when UI submits a beta key & when site check is successful */
     std::function<void(bool)> onActivationCheck;
-    /* called when siteCheck is complete */
-    std::function<void(bool)> onSiteCheck;
 
     void checkInput()
     {
@@ -149,7 +147,7 @@ struct ActivationComponent : Component
             auto response = stream->readEntireStreamAsString();
 
             checkResult = strcmp(response.toRawUTF8(), "true") == 0;
-            // writeConfigFileString("betaCheck", String(Time::currentTimeMillis()));
+            writeConfigFileString("betaCheck", String(Time::currentTimeMillis()));
         }
         else
             checkResult = false;

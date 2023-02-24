@@ -41,7 +41,7 @@ const String downloadPath
 
 struct DownloadManager : Component
 {
-    DownloadManager(bool *updateChecked_) : updateChecked(updateChecked_)
+    DownloadManager()
     {
         addAndMakeVisible(yes);
         addAndMakeVisible(no);
@@ -122,7 +122,7 @@ struct DownloadManager : Component
         else
             updateAvailable = false;
 
-        // writeConfigFileString("updateCheck", String(Time::currentTimeMillis()));
+        writeConfigFileString("updateCheck", String(Time::currentTimeMillis()));
 
         MessageManager::callAsync([&]
                                   { onUpdateCheck(updateAvailable); });
@@ -211,14 +211,11 @@ private:
     {
         if (isVisible() != checkResult)
             setVisible(checkResult);
-        *updateChecked = true;
     }
 
     gin::DownloadManager download;
 
     TextButton yes{"Yes"}, no{"No"};
-
-    bool *updateChecked = nullptr;
 
     std::atomic<bool> downloadStatus = false;
     std::atomic<bool> isDownloading = false;
@@ -246,7 +243,6 @@ private:
         else
             downloadFinished = true;
 
-        *updateChecked = true;
         repaint();
     };
 
