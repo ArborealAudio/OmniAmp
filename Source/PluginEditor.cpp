@@ -19,8 +19,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       reverbComp(p.apvts),
       enhancers(p.audioSource, p.apvts),
       menu(p.apvts),
-      presetMenu(p.apvts),
-      dl(&p.checkedUpdate)
+      presetMenu(p.apvts)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
@@ -151,8 +150,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(dl);
     dl.centreWithSize(300, 200);
-    lThread.addJob([&]
-                   { dl.checkForUpdate(); });
 
     addChildComponent(activation);
     activation.onActivationCheck = [&](bool result)
@@ -160,14 +157,18 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         activation.setVisible(!result);
         p.lockProcessing(!result);
     };
-    // just using this lambda to notify audioProcessor of beta check
-    activation.onSiteCheck = [&](bool result)
-    {
-        p.lockProcessing(!result);
-    };
     activation.centreWithSize(300, 200);
-    lThread.addJob([&]
-                   { activation.checkSite(); });
+
+    if (!p.checkedUpdate || !p.checkedActivation)
+    {
+        lThread = std::make_unique<LiteThread>();
+        if (!p.checkedUpdate)
+            lThread->addJob([&]
+                            { dl.checkForUpdate(); p.checkedUpdate = true; });
+        if (!p.checkedActivation)
+            lThread->addJob([&]
+                            { activation.checkSite(); p.checkedActivation = true; });
+    }
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);

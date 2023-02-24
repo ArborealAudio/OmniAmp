@@ -20,11 +20,13 @@ struct LiteThread : Thread
 {
     LiteThread() : Thread("LiteThread")
     {
+        DBG("Starting check thread...");
         startThread(Thread::Priority::background);
     }
 
     ~LiteThread() override
     {
+        DBG("Stopping check thread...");
         stopThread(1000);
     }
 
@@ -49,6 +51,9 @@ struct LiteThread : Thread
             else
                 wait(100);
         }
+        DBG("Check thread exited loop");
+        if (onLoopExit)
+            onLoopExit();
     }
 
     /* locking method for adding jobs to the thread */
@@ -59,12 +64,13 @@ struct LiteThread : Thread
         notify();
     }
 
+    std::function<void()> onLoopExit;
+
 private:
     std::mutex mutex;
     std::queue<std::function<void()>> jobs;
     int jobCount = 0;
 };
-
 
 //==============================================================================
 /**
@@ -141,7 +147,7 @@ private:
     MenuComponent menu;
     PresetComp presetMenu;
 
-    LiteThread lThread;
+    std::unique_ptr<LiteThread> lThread;
 
     DownloadManager dl;
     Splash splash;
