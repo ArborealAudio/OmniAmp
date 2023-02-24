@@ -39,9 +39,9 @@ const String downloadPath
 #endif
 };
 
-struct DownloadManager : Component, Timer
+struct DownloadManager : Component
 {
-    DownloadManager(bool *updateChecked_) : updateChecked(updateChecked_)
+    DownloadManager()
     {
         addAndMakeVisible(yes);
         addAndMakeVisible(no);
@@ -50,10 +50,7 @@ struct DownloadManager : Component, Timer
         {
             if (!isDownloading)
             {
-                setVisible(false);
-                *updateChecked = true;
-                if (onUpdateStatusChange)
-                    onUpdateStatusChange(*updateChecked);
+                onUpdateCheck(false);
             }
             else
             {
@@ -68,31 +65,27 @@ struct DownloadManager : Component, Timer
         };
         yes.onClick = [&]
         { downloadFinished = false; downloadUpdate(); };
-
-        startTimer(1000);
     }
 
     ~DownloadManager() override
     {
         yes.setLookAndFeel(nullptr);
         no.setLookAndFeel(nullptr);
-        stopTimer();
     }
 
-    void timerCallback() override
+    /** @param force whether to force the check even if checked < 24hrs ago */
+    void checkForUpdate(bool force = false)
     {
-        if (updateChecked && !*updateChecked)
+        if (!force)
         {
-            checkForUpdate();
-            stopTimer();
+            auto lastCheck = readConfigFileString("updateCheck").getLargeIntValue();
+            auto dayAgo = Time::getCurrentTime() - RelativeTime::hours(24);
+            MessageManager::callAsync([&]
+                                      { onUpdateCheck(false); });
+            if (lastCheck > dayAgo.toMilliseconds())
+                return;
         }
-        else
-            setVisible(false);
-    }
 
-    void checkForUpdate()
-    {
-        bool checkResult = false;
         if (auto stream = URL(versionURL).createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)))
         {
             auto data = JSON::parse(stream->readEntireStreamAsString());
@@ -120,16 +113,19 @@ struct DownloadManager : Component, Timer
             DBG("Latest: " << latestVersion.toString());
 
 #if PRODUCTION_BUILD
-            checkResult = String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".");
+            updateAvailable = String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".");
 #else
             DBG("Update result: " << int(String(ProjectInfo::versionString).removeCharacters(".") < latestVersion.toString().removeCharacters(".")));
-            checkResult = true;
+            updateAvailable = true;
 #endif
         }
         else
-            checkResult = false;
+            updateAvailable = false;
 
-        onUpdateCheck(checkResult);
+        writeConfigFileString("updateCheck", String(Time::currentTimeMillis()));
+
+        MessageManager::callAsync([&]
+                                  { onUpdateCheck(updateAvailable); });
     }
 
     void downloadUpdate()
@@ -202,13 +198,12 @@ struct DownloadManager : Component, Timer
 
         Rectangle<int> yesBounds{bounds.withTrimmedTop(halfHeight).withTrimmedRight(halfWidth).reduced(20, 30)};
         Rectangle<int> noBounds{bounds.withTrimmedTop(halfHeight).withTrimmedLeft(halfWidth).reduced(20, 30)};
-        Rectangle<int> retryBounds{bounds.withTrimmedTop(halfHeight).reduced(20, 30)};
 
         yes.setBounds(yesBounds);
         no.setBounds(noBounds);
     }
 
-    std::function<void(bool)> onUpdateStatusChange;
+    bool updateAvailable = false;
 
 private:
 
@@ -216,14 +211,11 @@ private:
     {
         if (isVisible() != checkResult)
             setVisible(checkResult);
-        *updateChecked = true;
     }
 
     gin::DownloadManager download;
 
     TextButton yes{"Yes"}, no{"No"};
-
-    bool *updateChecked = nullptr;
 
     std::atomic<bool> downloadStatus = false;
     std::atomic<bool> isDownloading = false;
@@ -251,9 +243,6 @@ private:
         else
             downloadFinished = true;
 
-        *updateChecked = true;
-        if (onUpdateStatusChange)
-            onUpdateStatusChange(*updateChecked);
         repaint();
     };
 
