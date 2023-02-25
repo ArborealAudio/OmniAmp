@@ -209,7 +209,7 @@ private:
                 mixDelay.pushSample(ch, in[i]);
         }
 
-        bool shouldBypass = processBypassIn(block, isBypassed);
+        bool shouldBypass = processBypassIn(block, isBypassed, numChannels);
 
         if (*gate > -95.0)
             gateProc.process(dsp::ProcessContextReplacing<double>(block));
@@ -286,10 +286,10 @@ private:
         reverb.process(buffer, *apvts.getRawParameterValue("reverbAmt"));
 
         if ((bool)*lfEnhance)
-            lfEnhancer.processBlock(block, (double)*lfEnhance, *apvts.getRawParameterValue("lfEnhanceInvert"));
+            lfEnhancer.processBlock(block, (double)*lfEnhance, *apvts.getRawParameterValue("lfEnhanceInvert"), mono);
 
         if ((bool)*hfEnhance)
-            hfEnhancer.processBlock(block, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"));
+            hfEnhancer.processBlock(block, (double)*hfEnhance, *apvts.getRawParameterValue("hfEnhanceInvert"), mono);
 
         // final cut filters
         cutFilters.process(block);
@@ -313,7 +313,7 @@ private:
 
         /* manage bypass */
         if (shouldBypass)
-            processBypassOut(block, isBypassed);
+            processBypassOut(block, isBypassed, numChannels);
         lastBypass = isBypassed;
     }
 
@@ -322,12 +322,11 @@ private:
         return val * val * val;
     }
 
-    inline bool processBypassIn(const dsp::AudioBlock<double> &block, const bool byp)
+    inline bool processBypassIn(const dsp::AudioBlock<double> &block, const bool byp, const size_t numChannels)
     {
         if (!byp && !lastBypass)
             return false;
 
-        const size_t numChannels = block.getNumChannels();
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
             const auto *in = block.getChannelPointer(ch);
@@ -337,10 +336,8 @@ private:
         return true;
     }
 
-    inline void processBypassOut(dsp::AudioBlock<double> &block, const bool byp)
+    inline void processBypassOut(dsp::AudioBlock<double> &block, const bool byp, const size_t numChannels)
     {
-        const size_t numChannels = block.getNumChannels();
-
         if (lastBypass && byp) // bypass
         {
             for (size_t i = 0; i < block.getNumSamples(); ++i)
