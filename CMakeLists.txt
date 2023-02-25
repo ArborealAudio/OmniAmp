@@ -18,15 +18,15 @@ project(Gamma VERSION 0.6)
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 
-juce_set_vst2_sdk_path("$ENV{HOME}/vst2_sdk")
-
 set(JUCE_FORMATS AU VST3)
 
 if(UNIX AND NOT APPLE)
     list(APPEND JUCE_FORMATS LV2)
 endif()
 
-if(TARGET juce_vst2_sdk)
+if(BUILD_VST2)
+    message("Adding VST2 target")
+    juce_set_vst2_sdk_path("$ENV{HOME}/vst2_sdk")
     list(APPEND JUCE_FORMATS VST)
 endif()
 
