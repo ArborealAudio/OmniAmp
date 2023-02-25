@@ -149,15 +149,16 @@ struct Enhancer
     }
 
     template <typename Block>
-    void processBlock(Block &block, const double enhance, const bool invert)
+    void processBlock(Block &block, const double enhance, const bool invert, const bool mono)
     {
         if (needUpdate)
             updateFilters();
 
         const auto numSamples = block.getNumSamples();
+        const auto numChannels = mono ? 1 : block.getNumChannels();
 
         wetBuffer.copyFrom(0, 0, block.getChannelPointer(0), numSamples);
-        if (block.getNumChannels() > 1)
+        if (!mono)
             wetBuffer.copyFrom(1, 0, block.getChannelPointer(1), numSamples);
 
         auto processBlock = Block(wetBuffer).getSubBlock(0, numSamples);
@@ -167,7 +168,7 @@ struct Enhancer
         else
             processHF(processBlock, enhance);
 
-        for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+        for (size_t ch = 0; ch < numChannels; ++ch)
         {
             auto dest = block.getChannelPointer(ch);
             auto src = processBlock.getChannelPointer(ch);
