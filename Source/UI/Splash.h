@@ -70,10 +70,7 @@ struct Splash : Component
         repaint();
     }
 
-    void setPluginWrapperType(const String &type)
-    {
-        currentWrapper = type;
-    }
+    String currentWrapper;
 
     std::function<void()> onLogoClick;
 
@@ -84,5 +81,4 @@ private:
 
     std::unique_ptr<Drawable> logo;
 
-    String currentWrapper;
 };
