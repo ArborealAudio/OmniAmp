@@ -134,8 +134,8 @@ private:
             &link,
             &outGain,
             &width,
-            &mix/* ,
-            &bypass */};
+            &mix,
+            &bypass};
     }
 
     PreComponent preComponent;
