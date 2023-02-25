@@ -172,7 +172,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
-    splash.setPluginWrapperType(p.getWrapperTypeString());
+    splash.currentWrapper = p.getWrapperTypeString();
     splash.onLogoClick = [&]
     {
         if (!splash.isVisible())
