@@ -124,11 +124,11 @@ struct PreComponent : Component,
         auto compSection = bounds.removeFromRight(bounds.getWidth() * 0.3f);
         const auto compSectW = compSection.getWidth();
         grMeter.setBounds(compSection.removeFromBottom(compSection.getHeight() * 0.33f).reduced(compSectW * 0.03f));
-        const auto compSectH = compSection.getHeight();
+        const auto compSectH = compSection.getHeight(); // compSect height after GR meter
         auto w = bounds.getWidth();
         int chunk = w / 5;
         
-        title.setBounds(bounds.withTrimmedBottom(bounds.getHeight() * 0.8f).withTrimmedRight(chunk * 4));
+        title.setBounds(bounds.withTrimmedBottom(bounds.getHeight() * 0.75f).withTrimmedRight(chunk * 4));
         title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
 
         midSide.setBounds(bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight() * 0.33f));
@@ -139,23 +139,28 @@ struct PreComponent : Component,
             if (c == &lfEmph)
             {
                 auto subBounds = bounds.removeFromLeft(chunk);
-                layoutComponents(getSelectComps(LFEmph | LFFreq), subBounds, true, 0.65f, 0.025f);
+                layoutComponents(getSelectComps(LFEmph | LFFreq), subBounds, true, 0.7f, 0.025f);
                 lfFreq.cornerRadius = lfFreq.getHeight() * 0.5f;
             }
             else if (c == &hfEmph)
             {
                 auto subBounds = bounds.removeFromLeft(chunk);
-                layoutComponents(getSelectComps(HFEmph | HFFreq), subBounds, true, 0.65f, 0.025f);
+                layoutComponents(getSelectComps(HFEmph | HFFreq), subBounds, true, 0.7f, 0.025f);
                 hfFreq.cornerRadius = hfFreq.getHeight() * 0.5f;
             }
             else
                 c->setBounds(bounds.removeFromLeft(chunk));
+            auto *knob = static_cast<Knob *>(c);
+            knob->setOffset(0, -3);
+            knob->setTextOffset(0, -2);
         }
 
-        auto compKnobBounds = compSection.removeFromLeft(compSectW * 0.5f);
+        auto compKnobBounds = compSection.removeFromLeft(compSectW * 0.5f).reduced(5, 0);
         comp.setBounds(compKnobBounds);
-        compPos.setBounds(compSection.removeFromTop(compSectH * 0.45f).reduced(compSectW * 0.12f, 2));
-        compLink.setBounds(compSection.removeFromTop(compSectH * 0.45f).reduced(compSectW * 0.12f, 2));
+        comp.setOffset(0, -5);
+        comp.setTextOffset(0, -2);
+        compPos.setBounds(compSection.removeFromTop(compSectH * 0.5f - 2).reduced(compSectW * 0.125f, 0));
+        compLink.setBounds(compSection.removeFromTop(compSectH * 0.5f - 2).reduced(compSectW * 0.125f, 0));
         compPos.lnf.cornerRadius = compPos.getHeight() * 0.25f;
         compLink.lnf.cornerRadius = compLink.getHeight() * 0.25f;
     }

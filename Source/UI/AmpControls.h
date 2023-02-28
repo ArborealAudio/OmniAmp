@@ -277,7 +277,8 @@ struct AmpControls : Component, private Timer
         for (auto &k : getKnobs())
         {
             k->setBounds(mb.removeFromLeft(chunk).reduced(5));
-            // k->setOffset(0, -5);
+            k->setOffset(0, -3);
+            k->setTextOffset(0, 2);
         }
 
         // bounds at this point is bottom 30% 

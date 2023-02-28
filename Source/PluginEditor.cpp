@@ -66,7 +66,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     title.append("\nbeta", 5);
 #endif
     pluginTitle.setText(title, NotificationType::dontSendNotification);
-    pluginTitle.setFont(Font(getCustomFont()).withHeight(25.f).withExtraKerningFactor(0.5f));
     pluginTitle.setColour(Label::textColourId, titleColor);
     pluginTitle.setJustificationType(Justification::centred);
     pluginTitle.setInterceptsMouseClicks(false, false);
@@ -230,7 +229,7 @@ void GammaAudioProcessorEditor::resized()
     auto mainHeight = bounds.getHeight();
     auto enhancerSection = bounds.removeFromBottom(mainHeight * 0.25f);
     auto cabVerbSection = bounds.removeFromBottom(mainHeight * 0.3f);
-    auto ampSection = bounds.removeFromBottom(bounds.getHeight() * 0.6f);
+    auto ampSection = bounds.removeFromBottom(bounds.getHeight() * 0.65f);
     auto preSection = bounds;
 
     /* set bounds of top controls */
@@ -240,6 +239,7 @@ void GammaAudioProcessorEditor::resized()
     auto presetSection = topSection.removeFromRight(w * 0.5f - topSectionQtr * 0.5).withTrimmedRight(topSectionQtr * 0.5);
     auto titleSection = topSection;
 
+    pluginTitle.setFont(Font(getCustomFont()).withHeight(h * 0.03f).withExtraKerningFactor(0.5f));
     pluginTitle.setBounds(titleSection);
     presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.35f));
     menu.setBounds(w - (w / 8.f), presetMenu.getY(), w / 14.f, w / 38.f);
@@ -271,7 +271,10 @@ void GammaAudioProcessorEditor::resized()
         }
         
         if (auto *k = static_cast<Knob *>(c))
+        {
+            k->setTextOffset(0, -3);
             k->setOffset(0, -c->getHeight() * 0.1f);
+        }
     }
 
     /* rest of UI */
