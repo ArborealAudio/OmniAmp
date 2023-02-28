@@ -23,9 +23,6 @@
 #endif
 
 #include <JuceHeader.h>
-
-static const char *const getProjName() { return ProjectInfo::projectName; }
-
 #include <chowdsp_wdf/chowdsp_wdf.h>
 #include "Processors/Processors.h"
 #include "Presets/PresetManager.h"
