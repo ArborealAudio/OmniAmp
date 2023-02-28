@@ -94,7 +94,7 @@ public:
         showTooltips.setButtonText("Show tooltips");
         showTooltips.setTooltip("Set whether or not tooltips will show on hover-over");
         showTooltips.setClickingTogglesState(true);
-        showTooltips.setToggleState(readConfigFile("tooltips"), NotificationType::dontSendNotification);
+        showTooltips.setToggleState(strix::readConfigFile("tooltips"), NotificationType::dontSendNotification);
         showTooltips.toggle = true;
 
         addAndMakeVisible(menuButton);
@@ -110,7 +110,7 @@ public:
 #endif
             m.addCustomItem(2, HQ, getWidth(), 35, false, nullptr, "HQ");
             m.addCustomItem(3, renderHQ, getWidth(), 35, false, nullptr, "Render HQ");
-            showTooltipsOn = (bool)readConfigFile("tooltips");
+            showTooltipsOn = (bool)strix::readConfigFile("tooltips");
             showTooltips.setToggleState(showTooltipsOn, NotificationType::sendNotificationSync);
             m.addCustomItem(4, showTooltips, getWidth(), 35, true, nullptr, "Show Tooltips");
             m.addCustomItem(5, windowSize, getWidth(), 35, true, nullptr, "Default window size");
