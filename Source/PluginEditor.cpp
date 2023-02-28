@@ -43,7 +43,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     }
 #endif
 
-    if (strix::readConfigFile("tooltips"))
+    if (strix::readConfigFile(CONFIG_PATH, "tooltips"))
     {
         tooltip = std::make_unique<TooltipWindow>(this, 1000);
     }
@@ -51,7 +51,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
     logo->setInterceptsMouseClicks(true, false);
 
-    auto lastWidth = strix::readConfigFile("size");
+    auto lastWidth = strix::readConfigFile(CONFIG_PATH, "size");
     if (lastWidth <= 0)
         lastWidth = 800;
     setSize(lastWidth, lastWidth);
@@ -86,7 +86,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
             tooltip = std::make_unique<TooltipWindow>(this, 1000);
         else
             tooltip = nullptr;
-        strix::writeConfigFile("tooltips", state);
+        strix::writeConfigFile(CONFIG_PATH, "tooltips", state);
     };
 #if JUCE_WINDOWS || JUCE_LINUX
     menu.openGLCallback = [&](bool state)
@@ -177,7 +177,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         lThread = std::make_unique<strix::LiteThread>(2);
         if (!p.checkedUpdate)
             lThread->addJob([&]
-                            { dl.checkForUpdate(); p.checkedUpdate = true; });
+                            { dl.checkForUpdate(false, strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue()); p.checkedUpdate = true; });
         if (!p.checkedActivation)
             lThread->addJob([&]
                             { activation.checkSite(); p.checkedActivation = true; });
@@ -209,7 +209,7 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 void GammaAudioProcessorEditor::resetWindowSize()
 {
     setSize(800, 800);
-    strix::writeConfigFile("size", 800);
+    strix::writeConfigFile(CONFIG_PATH, "size", 800);
 }
 
 //==============================================================================
@@ -286,5 +286,5 @@ void GammaAudioProcessorEditor::resized()
     activation.centreWithSize(300, 200);
 
     MessageManager::callAsync([&]
-                              { strix::writeConfigFile("size", getWidth()); });
+                              { strix::writeConfigFile(CONFIG_PATH, "size", getWidth()); });
 }

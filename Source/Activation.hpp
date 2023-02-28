@@ -115,7 +115,7 @@ struct ActivationComponent : Component
 
     bool readFile()
     {
-        File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
+        File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + CONFIG_PATH};
         if (!config.existsAsFile())
             return false;
 
@@ -134,7 +134,7 @@ struct ActivationComponent : Component
     void checkSite()
     {
         /* first check if 24hrs since last check */
-        auto lastCheck = strix::readConfigFileString("betaCheck").getLargeIntValue();
+        auto lastCheck = strix::readConfigFileString(CONFIG_PATH, "betaCheck").getLargeIntValue();
         auto dayAgo = Time::getCurrentTime() - RelativeTime::hours(24);
         if (lastCheck > dayAgo.toMilliseconds())
             return;
@@ -147,7 +147,7 @@ struct ActivationComponent : Component
             auto response = stream->readEntireStreamAsString();
 
             checkResult = strcmp(response.toRawUTF8(), "true") == 0;
-            strix::writeConfigFileString("betaCheck", String(Time::currentTimeMillis()));
+            strix::writeConfigFileString(CONFIG_PATH, "betaCheck", String(Time::currentTimeMillis()));
         }
         else
             checkResult = false;
@@ -174,7 +174,7 @@ private:
 
     void writeFile(const char *key)
     {
-        File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/Gamma/config.xml"};
+        File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + CONFIG_PATH};
         if (!config.existsAsFile())
             config.create();
 
