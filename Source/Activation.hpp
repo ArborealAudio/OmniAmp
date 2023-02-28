@@ -134,7 +134,7 @@ struct ActivationComponent : Component
     void checkSite()
     {
         /* first check if 24hrs since last check */
-        auto lastCheck = readConfigFileString("betaCheck").getLargeIntValue();
+        auto lastCheck = strix::readConfigFileString("betaCheck").getLargeIntValue();
         auto dayAgo = Time::getCurrentTime() - RelativeTime::hours(24);
         if (lastCheck > dayAgo.toMilliseconds())
             return;
@@ -147,7 +147,7 @@ struct ActivationComponent : Component
             auto response = stream->readEntireStreamAsString();
 
             checkResult = strcmp(response.toRawUTF8(), "true") == 0;
-            writeConfigFileString("betaCheck", String(Time::currentTimeMillis()));
+            strix::writeConfigFileString("betaCheck", String(Time::currentTimeMillis()));
         }
         else
             checkResult = false;

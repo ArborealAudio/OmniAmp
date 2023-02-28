@@ -32,7 +32,7 @@ endif()
 
 juce_add_plugin(Gamma
     COMPANY_NAME "Arboreal Audio"
-    COMPANY_COPYRIGHT "(c) 2022 Arboreal Audio, LLC"
+    COMPANY_COPYRIGHT "(c) 2023 Arboreal Audio, LLC"
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Arau
     PLUGIN_CODE Gamm

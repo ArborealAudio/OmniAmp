@@ -11,5 +11,4 @@ PRIVATE
     ReverbComponent.h
     Menu.h
     EnhancerComponent.h
-    DownloadManager.h
     Splash.h)
