@@ -152,6 +152,12 @@ struct Knob : Slider
         lnf.yOffset = yOffset;
     }
 
+    void setTextOffset(int xOffset, int yOffset)
+    {
+        lnf.textXOffset = xOffset;
+        lnf.textYOffset = yOffset;
+    }
+
 private:
     struct KnobLookAndFeel : LookAndFeel_V4
     {
@@ -159,6 +165,7 @@ private:
         flags_t flags;
 
         int xOffset = 0, yOffset = 0;
+        int textXOffset = 0, textYOffset = 0;
 
         std::unique_ptr<String> label = nullptr;
 
@@ -172,8 +179,6 @@ private:
         void drawRotarySlider(Graphics &g, int x, int y, int width, int height, float sliderPos,
                               const float rotaryStartAngle, const float rotaryEndAngle, Slider &slider) override
         {
-            g.setFont(14.f);
-
             auto drawCustomSlider = [&]
             {
                 auto radius = (float)jmin(width / 2, height / 2) - 4.f;
@@ -220,7 +225,7 @@ private:
                     g.drawImageAt(highlight, x + 3, y - 3);
                 }
 
-                if ((flags & DRAW_GRADIENT) == 0)
+                if ((flags & DRAW_GRADIENT) == 0) // if no gradient
                 {
                     g.setColour(slider.isMouseOverOrDragging() ? accentColor : baseColor);
                     g.drawEllipse(rx, ry, rw, rw, 3.f);
@@ -233,7 +238,7 @@ private:
 
                     g.fillPath(p);
                 }
-                else
+                else // should draw gradient
                 {
                     /* base knob */
                     g.setColour(baseColor);
@@ -281,7 +286,11 @@ private:
                 text = valueToString(slider.getValue());
             else if (label)
                 text = *label;
-            g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(slider.getHeight() / 6), Justification::centred, 2);
+
+            float textBoxHeight = slider.getHeight() / 6;
+            // float fontHeight = jmin(14.f, textBoxHeight);
+            g.setFont(jlimit(13.f, 15.f, textBoxHeight * 0.8f));
+            g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(textBoxHeight).translated(textXOffset, textYOffset), Justification::centred, 2);
         }
     };
     KnobLookAndFeel lnf;
