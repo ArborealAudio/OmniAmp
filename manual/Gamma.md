@@ -52,7 +52,7 @@ Lastly, in Guitar or Bass mode, the compressor imparts a high-midrange boost to 
 
 ### Pedal
 
-This *is* modelled after a classic distortion pedal (it's not the Tube Screamer, don't you have enough of those?) It's the MXR Distortion+ (I'll remove this when they sue me for putting that in here).
+This *is* modelled after a classic distortion pedal (it's not the Tube Screamer, don't you have enough of those?) It's the MXR Distortion+! 
 
 Conveniently, the real-life pedal just has one knob to control the distortion, and an output volume knob, so we rolled those together into one knob for a quick and easy distortion pedal before the amp. At 0 this is fully bypassed.
 
@@ -154,7 +154,7 @@ What it *really* is is a simplified, frequency-weighted waveform display of the 
 
 ## Menu
 
-In the upper right is a collapsible menu for maintaining some of Gamma's more advanced features:
+In the upper right is a popup menu for maintaining some of Gamma's more advanced features:
 
 - **OpenGL On/Off:** On Windows and Linux, this controls whether hardware-accelerated graphics rendering is done via OpenGL or software rendering. If you've got a decent graphics card in your computer, this may make the UI snappier. Otherwise, if you don't have a graphics card or OpenGL installed on your system, enabling this will either do nothing or cause issues.
 
@@ -164,7 +164,7 @@ In the upper right is a collapsible menu for maintaining some of Gamma's more ad
 
 - **Comp Stereo Link:** A stereo linking control for the compressor's sidechain.
 
-- If that's gibberish to you, basically what that means is that if this is on, the compressor will process both channels, whether that's left & right, or Mid & Side, in a dependent fashion, where gain reduction on one channel will also apply gain reduction to the other channel. With this off, the channels will compress independent of each other. If linked compression is sounding overbearing, try turning this off.
+    - If that's gibberish to you, basically what that means is that if this is on, the compressor will process both channels, whether that's left & right, or Mid & Side, in a dependent fashion, where gain reduction on one channel will also apply gain reduction to the other channel. With this off, the channels will compress independent of each other. If linked compression is sounding overbearing, try turning this off.
 
 - **Comp Pos:** This governs the position of the compressor in the signal chain. **Pre** will place it before the amp, and **Post** will place at after the amp, and before the enhancers, cab and reverb sections.
 
