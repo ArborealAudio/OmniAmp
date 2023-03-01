@@ -36,7 +36,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
-    if (readConfigFile("openGL"))
+    if (strix::readConfigFile(CONFIG_PATH, "openGL"))
     {
         opengl.detach();
         opengl.attachTo(*this);
@@ -95,7 +95,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         else
             opengl.detach();
         DBG("OpenGL: " << (int)opengl.isAttached() << ", w/ cache size: " << opengl.getImageCacheSize());
-        strix::writeConfigFile("openGL", state);
+        strix::writeConfigFile(CONFIG_PATH, "openGL", state);
     };
 #endif
 

@@ -104,7 +104,7 @@ public:
         {
             PopupMenu m;
 #if !JUCE_MAC
-            openGLOn = (bool)readConfigFile("openGL");
+            openGLOn = (bool)strix::readConfigFile(CONFIG_PATH, "openGL");
             openGL.setToggleState(openGLOn, NotificationType::dontSendNotification);
             m.addCustomItem(1, openGL, getWidth(), 35, true, nullptr, "OpenGL");
 #endif
