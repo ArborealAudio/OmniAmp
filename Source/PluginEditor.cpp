@@ -20,14 +20,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       enhancers(p.audioSource, p.apvts),
       menu(p.apvts),
       presetMenu(p.apvts),
-      dl(ProjectInfo::versionString,
-        SITE_URL
-        "/versions/"
-#if !PRODUCTION_BUILD
-        "test/"
-#endif
-        "Gamma-latest.json",
-        SITE_URL
+      dl(SITE_URL
         "/downloads/"
         DL_BIN,
         "~/Downloads/"
@@ -75,9 +68,23 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     { resetWindowSize(); };
     menu.checkUpdateCallback = [&]
     {
-        dl.checkForUpdate(true);
-        if (!dl.updateAvailable)
+        dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::versionString,
+        SITE_URL
+        "/versions/"
+#if !PRODUCTION_BUILD
+        "test/"
+#endif
+        "Gamma-latest.json",
+        true);
+        p.checkedUpdate = true;
+        if (!dlResult.updateAvailable)
             NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
+        else
+        {
+            dl.changes = dlResult.changes;
+            DBG("Changes: " << dl.changes);
+            dl.setVisible(true);
+        }
     };
     menu.showTooltipCallback = [&](bool state)
     {
@@ -161,6 +168,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     getConstrainer()->setFixedAspectRatio(1.0);
 
     addChildComponent(dl);
+    dl.changes = dlResult.changes;
     dl.centreWithSize(300, 200);
 
     addChildComponent(activation);
@@ -176,7 +184,19 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         lThread = std::make_unique<strix::LiteThread>(2);
         if (!p.checkedUpdate)
             lThread->addJob([&]
-                            { dl.checkForUpdate(false, strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue()); p.checkedUpdate = true; });
+                            { dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::versionString, SITE_URL
+        "/versions/"
+#if !PRODUCTION_BUILD
+        "test/"
+#endif
+        "Gamma-latest.json", false, strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
+                            p.checkedUpdate = true;
+                            dl.changes = dlResult.changes;
+                            DBG("Changes: " << dl.changes);
+                            // strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
+                            MessageManager::callAsync([&]
+                                                      { dl.setVisible(dlResult.updateAvailable); });
+                            });
         if (!p.checkedActivation)
             lThread->addJob([&]
                             { activation.checkSite(); p.checkedActivation = true; });
@@ -214,6 +234,7 @@ void GammaAudioProcessorEditor::resetWindowSize()
 //==============================================================================
 void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
+    DBG("DL visible: " << (int)dl.isVisible());
     g.fillAll(Colour(BACKGROUND_COLOR));
     auto trimmedTop = getLocalBounds().removeFromTop(getHeight() * 0.15f);
     logoBounds = trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).toFloat();
