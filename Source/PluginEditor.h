@@ -20,6 +20,10 @@
 #define DL_BIN "Gamma-linux.tar.gz"
 #endif
 
+
+static strix::UpdateResult dlResult;
+
+
 //==============================================================================
 /**
  */
