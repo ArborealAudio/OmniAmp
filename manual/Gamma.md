@@ -8,7 +8,7 @@ Arboreal Audio presents:
 
 ![UI_full.png](./UI_full.png)
 
-Gamma is a robust, boundary-pushing audio tool meant to be used on any type of sound source. With its full feature set, this can be the only plugin in your signal chain.
+Gamma is a robust audio tool meant to be used on any type of sound source. With its full feature set, this can be the only plugin in your signal chain.
 
 Gamma was designed to take the layout of a guitar amplifier and port it to a universal context, with some added features to keep you contained in one interface for the bulk of your mixing.
 
@@ -20,37 +20,45 @@ Central to Gamma are its three modes:
 
 ![Guitar.png](./Guitar.png)
 
-A classically-voiced guitar amp with a modest, clean-to-crunch default channel, and a more aggressive and bright Boost channel. The guitar mode in Gamma was designed with indie, jazz, or moderate rock tones in mind.
+Four different, custom amp models.
+
+- **GammaRay** is a classically-voiced guitar amp with a modest, clean-to-crunch default channel, and a more aggressive and bright Boost channel. Great for indie or moderate rock tones.
+
+- **Sunbeam** is a cleaner amp with thick low-end and very clear upper mids. Works great for clean tones or mellower overdriven tones.
+
+- **Moonbeam** is a darker amp with less headroom and heavier distortion, good for metal or heavier rock rhythm tones.
+
+- **XRay** an aggressive, midrange-focused amp that bridges the gap between **GammaRay** and **Moonbeam**. Has a fair amount of distortion and cuts through quite well.
 
 ### II. Bass
 
 ![Bass.png](./Bass.png)
 
-A robust bass amp that's rather clean by default, but gets pretty crunchy with Boost turned on. The tone stack is voiced to scoop a fair amount of mids and pushes the top end a bit to highlight the picking.
+Three custom bass amp models:
+
+- **Cobalt:** a modern-sounding, full-voiced bass amp that doesn't spare an ounce of low-end.
+
+- **Emerald** a more modest, modern amp with more headroom than **Cobalt**.
+
+- **Quartz** a vintage-sounding amp with a dampened low-end and punchier hi-mids.
 
 ### III. Channel
 
 ![Channel.png](./Channel.png)
 
-The catch-all mode that can be used on anything. Functioning like a channel strip, its tone controls are neutrally-voiced at 12 o'clock, and its saturation stages are bypassed at 0, so you're only doing the processing that you need.
+Here, you can use Gamma like a channel strip. The tone controls are neutrally-voiced at 12 o'clock, and its saturation stages are bypassed at 0, so you're only doing the processing that you need.
 
-Each mode has custom-made settings for most of the effects, calibrated to sound best for each mode.
+Additionally, the filters change their response depending on the amount of gain applied, so deep cuts are more surgical, and low boosts are broader.
+
+There are two modes:
+
+- **Modern:** here the Preamp stage produces symmetric distortion, and the filters are a bit more precise in their rolloff. The Power Amp stage has a sharper knee but is cleaner below the saturation point.
+
+- **Vintage:** the Preamp stage uses more tube-like asymmetric saturation, the filters are broader, and the Power Amp digs into the signal earlier but has a gentler overall knee.
 
 ## Amp Controls
 
-### Opto
-
-An opto-style compressor, and Gamma's namesake (the Greek character 𝜸 or "gamma" is commonly used as a coefficient to denote photons), inspired by but in no way modelled after one of the earlier Boss compressor pedals.
-
-All you *really* need to know is that the higher the knob goes = more compression. At 0 it's fully bypassed.
-
-In the vein of opto compressors, the attack and release times are highly dependent on the signal and the amount of gain reduction being applied. Essentially, with small amounts of gain reduction, the attack and release are slower, with the attack being as high as 50ms, and the release approaching 1 second. With greater amounts of gain reduction, the attack time increases and so does the release, up to 5ms and 50ms respectively.
-
-This results in a very colorful compression, and it's also frequency-dependent. The sidechain is calibrated based on the mode, but with the general pattern of gently filtering the low- and high-end. For the sake of simplicity, just know that the sidechains have been tailored to sound good for whichever mode you're using.
-
-Lastly, in Guitar or Bass mode, the compressor imparts a high-midrange boost to aid in the plucky, punchy effect the compression gives.
-
-### Pedal
+### Overdrive
 
 This *is* modelled after a classic distortion pedal (it's not the Tube Screamer, don't you have enough of those?) It's the MXR Distortion+! 
 
@@ -78,6 +86,48 @@ In Channel mode, this is bypassed at 0.
 
 By Alt/Option-clicking, you can enable automatic gain compensation for just the power amp stage.
 
+## Pre-Amp Controls
+
+![Pre.png](./Pre.png)
+
+### Stereo/MS
+
+By default, this passes in a stereo input as you would expect, processing left and right independently. If you enable M/S processing, your input signal is converted into Mid/Side and processed as such throughout the plugin. This is useful if you want compression or distortion to process Mid and Side independently, which can make for more transparent or natural-sounding compression or distortion (and sounds great on a full mix!).
+
+*Note*: This, along with Stereo Emphasis, won't have any effect if your channel configuration is 1 input / 1 output. You need stereo input and output for this feature to work!
+
+### Stereo Emphasis
+
+The Stereo Emphasis tool applies either a boost or a reduction of the stereo width, and then an equal and opposite boost or cut *after* the processing. With this, you can emphasize or de-emphasize the sides of a stereo image. With the M/S option, you can create interesting relationships between Mid and Side information, and affect the sense of space in your sound.
+
+### LF/HF Emphasis
+
+Like the Stereo Emphasis tool, except with frequency. These are high- or low-shelf filters that either boost or cut before the processing, and then apply an equal and opposite filter to negate the frequency response, so you end up *emphasizing* those frequencies. This is useful if you want to have your low-end distort less, clip off more highs for a more vintage sound, or to just drive everything into obscenity and mayhem.
+
+### Doubler
+
+This uses short delay lines to add width to a sound that may be narrow or even mono. Great for making a mono guitar sound double-tracked! It's also mono-compatible, meaning that you won't get phase issues if your track is played back in mono.
+
+### Opto Comp
+
+An opto-style compressor, and Gamma's namesake (the Greek character 𝜸 or "gamma" is commonly used as a coefficient to denote photons), inspired by but in no way modelled after one of the earlier Boss compressor pedals.
+
+All you *really* need to know is that the higher the knob goes = more compression. At 0 it's fully bypassed.
+
+In the vein of opto compressors, the attack and release times are highly dependent on the signal and the amount of gain reduction being applied. Essentially, with small amounts of gain reduction, the attack and release are slower, with the attack being as high as 50ms, and the release approaching 1 second. With greater amounts of gain reduction, the attack time increases and so does the release, up to 5ms and 50ms respectively.
+
+This results in a very colorful compression, and it's also frequency-dependent. The sidechain is calibrated based on the mode, but with the general pattern of gently filtering the low- and high-end. For the sake of simplicity, just know that the sidechains have been tailored to sound good for whichever mode you're using.
+
+Lastly, in Guitar or Bass mode, the compressor imparts a high-midrange boost to aid in the plucky, punchy effect the compression gives.
+
+#### Pre/Post
+
+Sets whether the compressor is before or after the amp. Yes, while this is technically the pre-amp section, it can be interesting to put the compressor after the amp!
+
+#### Link
+
+Enables or disables stereo linking for the compression. Linking is on by default and you will usually want to leave it on, but for wildly asymmetric stereo images, or if you want unlinked M/S compresison, here you go!
+
 ## Cabs and Reverb
 
 ![Bottom.png](./Bottom.png)
@@ -94,7 +144,13 @@ There are three cabs to choose from:
 
 - **6x12:** Intended to be used as a bass cabinet, this has a huge low-end and a top-end voicing that sounds great on bass guitar
 
-Don't be afraid to try these cabs out in a variety of different situations!
+#### Reso Filters
+
+This adjust the low and high frequency resonance of the cabinets. You can add or attenuate the response of the cab for further customization over the sound.
+
+#### Mic Position
+
+An emulated mic position in front of one of the cab's speakers. You can adjust the horizontal position and the distance away from the speaker, which affects tone in a variety of ways.
 
 ### Reverbs
 
@@ -104,21 +160,25 @@ There are two algorithmic reverbs:
 
 - **Hall:** A longer, richer reverb, perfect for creating a grander scope for your sound
 
+You also have **Predelay, Decay,** and **Size** controls for customizing the response more finely. Increasing the size changes the frequency response and early reflection level of the reverb, so you can use it in conjunction with the decay control
+
 Each of these algorithms are downsampled and therefore a bit lo-fi sounding!
 
-## Enhancers & the Audio Prism™
+## Post-amp Controls
 
-![Top.png](./Top.png)
+![Post.png](./Post.png)
 
 ### Low Frequency Enhancer
 
-On the top left is a Low Frequency Enhancer. It's a saturating low-end boost that works wonders in thickening your sound. The frequency of the boost depends on the mode being used:
+On the left is a Low Frequency Enhancer. It's a saturating low-end boost that works wonders in thickening your sound. The frequency of the boost depends on the mode being used:
 
 - **Guitar:** 300Hz
 
 - **Bass:** 175Hz
 
 - **Channel:** 200Hz
+
+The enhancer signal is processed in parallel and added onto the dry signal.
 
 ### Invert
 
@@ -132,25 +192,29 @@ On the top right is a High Frequency Enhancer. This is a saturating high-end boo
 
 Inverts the enhancer's signal for a change in response. This will generally function like a more resonant lowpass filter, which can end up functioning like a differently-voiced high-shelf at higher levels.
 
-### Audio Prism™
+### Auto
 
-Imagine if you were able to beam your sound through a prism and see the different light refractions. This is kinda like that.
+Enables auto-gain compensation for the enhancer filter, which will reduce the amount of frequency boost. The filtered signal is gain compensated after the saturation, so this is useful if you just want the saturation and less of a frequency boost.
 
-What it *really* is is a simplified, frequency-weighted waveform display of the outgoing audio.
+### Cut Filters
+
+A pair of 6db/octave high-pass and low-pass filters, processed after the enhancer filters
 
 ## Top Controls
 
-1. **Input:** An input gain before all processing, between -12dB and +12dB, useful for adding or decresing headroom before doing non-linear processing. Works just like a clean boost pedal for guitar, too.
+1. **Gate:** A simple noise gate before everything else (including the input gain). Threshold ranges from -95dB to -20dB
 
-2. **Output:** An output gain after all processing, between -12dB and +12dB, for fine-tuning the final level.
+2. **Input:** An input gain before all processing, between -12dB and +12dB, useful for adding or decresing distortion or compression.
 
-3. **Gate:** A simple noise gate before everything else (including the input gain). Threshold ranges from -95dB to -20dB
+3. **Link:** Link the input gain to the output gain, with the ability to still adjust the output gain. If you turn link off it will automatically adjust the output gain so you don't get a huge jump in volume.
 
-4. **Stereo | M/S:** Controls the channel format going into the processing. In Stereo mode, left and right will be processed as you would expect. In M/S (Mid/Side) mode, the incoming channels are encoded into Mid/Side and then processed as so. Mid/Side is a method of splitting a stereo signal by what is in the center -- otherwise known as the mono component or the Mid channel -- and the sides -- otherwise known as the Side channel. This can have an interesting spatial effect when the middle and sides of the stereo image are processed independently. For material with most of its energy or loud transients in the center, such as drums or a vocal group, this can lead to a perceived widening of the stereo image. You can further tune this effect with the next control:
+4. **Output:** An output gain after all processing, between -12dB and +12dB, for fine-tuning the final level.
 
-5. **Width:** Boosts the width of the stereo signal. This happens *before* the rest of the processing, so it can function like a threshold control for how the sides of your signal will be compressed and saturated.
+5. **Width:** Add or subtract stereo width. Use this in conjunction with Stereo Emphasis for interesting manipulations of the stereo field.
 
-*Note:* The Stereo | M/S and Width controls won't have any effect if you are only inputting one channel of audio into Gamma.
+6. **Mix:** A simple dry/wet mixer for global parallel processing. Keep in mind that many of Gamma's processes are non-linear phase, so you may encounter phase cancellation if using this.
+
+7. **Byp:** A global latency-compensated bypass control
 
 ## Menu
 
@@ -162,11 +226,7 @@ In the upper right is a popup menu for maintaining some of Gamma's more advanced
 
 - **Render HQ:** This will enable 4x oversampling when rendering. If HQ is too CPU-intensive for your computer, you could use this to keep aliasing out of your final mix, while getting better performance when mixing in real-time.
 
-- **Comp Stereo Link:** A stereo linking control for the compressor's sidechain.
-
-    - If that's gibberish to you, basically what that means is that if this is on, the compressor will process both channels, whether that's left & right, or Mid & Side, in a dependent fashion, where gain reduction on one channel will also apply gain reduction to the other channel. With this off, the channels will compress independent of each other. If linked compression is sounding overbearing, try turning this off.
-
-- **Comp Pos:** This governs the position of the compressor in the signal chain. **Pre** will place it before the amp, and **Post** will place at after the amp, and before the enhancers, cab and reverb sections.
+- **Show tooltips:** You can disable tooltip hints with this option
 
 - **Default UI Size:** This will reset the UI size to its default of 800x800
 
@@ -194,9 +254,9 @@ This plugin would not have been possible without the research and open-source co
 
 - Alexandre Bique and Paul Walker | [Free Audio/CLAP](https://github.com/free-audio) (c) 2021 Alexandre BIQUE
   (c) 2019-2020, Paul Walker <sup>2</sup>
-
+  
   And a huge thank-you to all beta testers:
-
+  
   Jatin Chowdhury, Florian Mrugalla, James Ure
 
 ### <sup>1</sup> BSD-3-Clause License
