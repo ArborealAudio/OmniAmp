@@ -77,6 +77,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         "Gamma-latest.json",
         true);
         p.checkedUpdate = true;
+        strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
         if (!dlResult.updateAvailable)
             NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
         else
@@ -193,7 +194,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
                             p.checkedUpdate = true;
                             dl.changes = dlResult.changes;
                             DBG("Changes: " << dl.changes);
-                            // strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
+                            strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
                             MessageManager::callAsync([&]
                                                       { dl.setVisible(dlResult.updateAvailable); });
                             });
