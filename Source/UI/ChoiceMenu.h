@@ -4,47 +4,133 @@
 
 struct MenuLookAndFeel : LookAndFeel_V4
 {
-    MenuLookAndFeel(){}
-    ~MenuLookAndFeel(){}
-
-    void drawComboBox(Graphics& g, int width, int height, bool isButtonDown, int buttonX, int buttonY, int buttonW, int buttonH, ComboBox& comboBox) override
+    void drawComboBox(Graphics &g, int width, int height, bool, int, int, int, int, ComboBox &comboBox) override
     {
-        if (comboBox.isMouseOver(true)) {
+        Rectangle<float> box(0.f, 0.f, (float)width, (float)height);
+        box.reduce(3, 3);
+        auto labelBounds = box.withSizeKeepingCentre(width * 0.66f, height);
+        g.setColour(backgroundColor);
+        g.fillRoundedRectangle(box, box.getHeight() * 0.5f);
+        g.setColour(outlineColor);
+        g.drawRoundedRectangle(box, box.getHeight() * 0.5f, 1.f);
+
+        const float arrowSize = (float)box.getWidth() / 6.5f;
+        const float padding = (float)box.getWidth() * 0.05f;
+        const float strokeWidth = 3.f;
+
+        auto drawArrow = [&](const Rectangle<float> &bounds, Path &path, bool leftArrow)
+        {
+            const float r = bounds.getRight();
+            const float bot = bounds.getBottom();
+            const float centerY = bounds.getY() + (bounds.getHeight() / 2);
+            const float arrowWidth = bounds.getWidth() * 0.9;
+            if (leftArrow)
+            {
+                path.startNewSubPath(bounds.getX() + arrowWidth, bounds.getY());
+                path.lineTo(bounds.getX(), centerY);
+                path.lineTo(bounds.getX() + arrowWidth, bot);
+            }
+            else
+            {
+                path.startNewSubPath(r - arrowWidth, bounds.getY());
+                path.lineTo(r, centerY);
+                path.lineTo(r - arrowWidth, bot);
+            }
+            g.strokePath(path, PathStrokeType(strokeWidth, PathStrokeType::beveled, PathStrokeType::rounded));
+        };
+        Path leftArrow;
+        drawArrow(box.removeFromLeft(arrowSize).reduced(padding), leftArrow, true);
+        Path rightArrow;
+        drawArrow(box.removeFromRight(arrowSize).reduced(padding), rightArrow, false);
+
+        g.drawText(comboBox.getItemText(comboBox.getSelectedItemIndex()), labelBounds, Justification::centred);
+    }
+
+    void drawLabel(Graphics &g, Label &label) override
+    {
+    }
+
+    void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override
+    {
+        if (isHighlighted)
+        {
             g.setColour(Colours::grey);
-            g.fillRoundedRectangle(0.f, 0.f, (float)width, (float)height, 10.f);
+            g.fillRoundedRectangle(area.toFloat(), 10.f);
         }
-        else {
+
+        if (isTicked)
+        {
             g.setColour(Colours::white);
-            Rectangle<float> box(0.f, 0.f, (float)width, (float)height);
-            g.drawRoundedRectangle(box.reduced(3), 10.f, 1.f);
+            g.fillEllipse(area.withTrimmedRight(area.getWidth() - area.getHeight()).reduced(area.getHeight() * 0.33f).toFloat());
         }
-    }
 
-    void positionComboBoxText(ComboBox& box, Label& label) override
-    {
-        label.setBounds(box.getLocalBounds());
-    }
-
-    void drawLabel(Graphics& g, Label& label) override
-    {
         g.setColour(Colours::white);
-        g.drawFittedText(label.getText(), label.getLocalBounds(), Justification::centred, 1);
+        g.drawFittedText(text, area, Justification::centred, 1);
     }
+
+    Colour outlineColor = Colours::white;
+    Colour backgroundColor = Colour(0x00000000);
 };
 
 struct ChoiceMenu : ComboBox
 {
-    ChoiceMenu()
+    ChoiceMenu(StringArray itemList)
     {
+        lnf.setColour(PopupMenu::ColourIds::backgroundColourId, Colour(BACKGROUND_COLOR));
         setLookAndFeel(&lnf);
-        addItemList(StringArray("Guitar", "Bass", "Channel"), 1);
-        setSelectedItemIndex(0);
+        addItemList(itemList, 1);
     }
-    ~ChoiceMenu()
+    ~ChoiceMenu() override
     {
         setLookAndFeel(nullptr);
     }
 
-private:
+    void leftArrowClicked()
+    {
+        const auto currentIndex = getSelectedItemIndex();
+        if (currentIndex != 0)
+            setSelectedItemIndex(currentIndex - 1);
+        else
+            setSelectedItemIndex(getNumItems() - 1);
+    }
+
+    void rightArrowClicked()
+    {
+        const auto currentIndex = getSelectedItemIndex();
+        if (currentIndex < getNumItems())
+            setSelectedItemIndex(currentIndex + 1);
+        else
+            setSelectedItemIndex(0);
+    }
+
+    void mouseDown(const MouseEvent &event) override
+    {
+        if (leftArrow.contains(event.position) && event.mouseWasClicked())
+        {
+            leftArrowClicked();
+            return;
+        }
+        if (rightArrow.contains(event.position) && event.mouseWasClicked())
+        {
+            rightArrowClicked();
+            return;
+        }
+
+        ComboBox::mouseDown(event);
+    }
+
+    void resized() override
+    {
+        const float w = getWidth();
+        const float subChunk = w - (w / 8.f);
+        auto b = getLocalBounds().toFloat();
+        leftArrow = b.withTrimmedRight(subChunk);
+        rightArrow = b.withTrimmedLeft(subChunk);
+        ComboBox::resized();
+    }
+
     MenuLookAndFeel lnf;
+private:
+
+    Rectangle<float> leftArrow, rightArrow;
 };

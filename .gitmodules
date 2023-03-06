@@ -4,9 +4,12 @@
 [submodule "modules/chowdsp_wdf"]
 	path = modules/chowdsp_wdf
 	url = https://github.com/Chowdhury-DSP/chowdsp_wdf
-[submodule "scripts"]
-	path = scripts
-	url = https://github.com/ArborealAudio/scripts
 [submodule "modules/gin"]
 	path = modules/gin
 	url = https://github.com/FigBug/gin
+[submodule "modules/juce"]
+	path = modules/juce
+	url = https://github.com/juce-framework/juce
+[submodule "modules/Arbor_modules"]
+	path = modules/Arbor_modules
+	url = https://github.com/ArborealAudio/Arbor_modules

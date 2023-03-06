@@ -94,41 +94,17 @@ struct OptoComp
     // set threshold based on comp param
     void setComp(double newComp)
     {
-        /*force static threshold if amp mode & post position*/
-        // if (*position && type != ProcessorType::Channel) {
-        //     setThreshold(-24.0);
-        //     return;
-        // }
-
         switch (type)
         {
         case ProcessorType::Guitar:
         case ProcessorType::Bass: {
-            // auto thresh_scale = c_comp / 3.0;
             double c_comp = jmap(newComp, 1.0, 3.0);
             threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
             break;
             }
         case ProcessorType::Channel: {
-            // auto thresh_scale = c_comp / 2.0;
             double c_comp = jmap(newComp, 1.0, 3.0);
-            threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
-            break;
-            }
-        }
-    }
-
-    // set threshold directly in dB
-    void setThreshold(double newThresh)
-    {
-        switch (type)
-        {
-        case ProcessorType::Guitar:
-        case ProcessorType::Bass:
-            threshold.store(std::pow(10.0, newThresh * 0.05)); /* static threshold at -36dB */
-            break;
-        case ProcessorType::Channel: {
-            threshold.store(std::pow(10.0, newThresh * 0.05)); /* start at -18dB and scale down 3x */
+            threshold.store(std::pow(10.0, (-12.0 * c_comp) * 0.05)); /* start at -12dB and scale down 3x */
             break;
             }
         }
@@ -136,6 +112,7 @@ struct OptoComp
 
     void processBlock(dsp::AudioBlock<double> &block, T comp, bool linked)
     {
+        CHECK_BLOCK(block)
         if (comp == 0.0) {
             grSource.measureGR(1.0);
             reset();
@@ -150,6 +127,7 @@ struct OptoComp
         }
         else
             processUnlinked(block.getChannelPointer(0), 0, comp, block.getNumSamples());
+        CHECK_BLOCK(block)
     }
 
     strix::VolumeMeterSource& getGRSource() { return grSource; }
@@ -173,7 +151,7 @@ private:
             max = sc_hp[0].processSample(max);
             max = sc_lp[0].processSample(max);
 
-            max = std::tanh(max);
+            max = strix::fast_tanh(max);
 
             auto gr = computeGR(0, max);
 
@@ -204,7 +182,7 @@ private:
             x = sc_hp[ch].processSample(x);
             x = sc_lp[ch].processSample(x);
 
-            x = std::tanh(x);
+            x = strix::fast_tanh(x);
 
             auto gr = computeGR(ch, x);
 
@@ -246,7 +224,8 @@ private:
         auto gr = std::pow(10.0, gr_db * 0.05);
         lastGR[ch] = gr;
 
-        grSource.measureGR(lastGR[0]); // TODO: this should average btw L&R if unlinked stereo. Maybe move it to the higher-level block call
+        grSource.measureGR(lastGR[0]);
+        /** TODO: this should average btw L&R if unlinked stereo. Maybe move it to the higher-level block call */
 
         return gr;
     }
