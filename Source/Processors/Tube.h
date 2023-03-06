@@ -10,164 +10,203 @@
 
 #pragma once
 
-/*a generic tube emulator for Class A and B simulation, with a dynamic bias*/
-template <typename T>
-struct Tube
+enum PentodeType
 {
-    Tube() = default;
+    Classic,
+    Nu
+};
 
-    void prepare(const dsp::ProcessSpec& spec)
+typedef struct
+{
+    double first = 1.0;
+    double second = 1.0;
+} bias_t;
+
+/**
+ * A tube emulator for Class B simulation, with option for a dynamic bias & different saturation algorithms
+ */
+template <typename T>
+struct Pentode
+{
+    Pentode() = default;
+
+    /**
+     * @param type Pentode Type. Use widely asymmetric values in Classic mode to get the intended effect
+     */
+    Pentode(PentodeType type) : type(type)
     {
-        lastSampleRate = spec.sampleRate;
+    }
 
-        sc_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(lastSampleRate, 5.f);
-        m_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(lastSampleRate, 10000.f);
+    void setType(const PentodeType newType)
+    {
+        type = newType;
+        if (type)
+        {
+            bpPre.setCutoffFreq(2000.0);
+            bpPre.setResonance(0.2);
+            bpPost.setCutoffFreq(2500.0);
+            bpPost.setResonance(0.2);
+        }
+        else
+        {
+            bpPre.setCutoffFreq(1000.0);
+            bpPre.setResonance(0.1);
+            bpPost.setCutoffFreq(1000.0);
+            bpPost.setResonance(0.1);
+        }
+    }
 
-        for (auto& f : sc_lp) {
+    void prepare(const dsp::ProcessSpec &spec)
+    {
+        for (auto &f : dcBlock)
+        {
             f.prepare(spec);
-            f.coefficients = sc_coeffs;
+            f.setCutoffFreq(10.0);
+            f.setType(strix::FilterType::highpass);
         }
-        for (auto& f : m_lp) {
-            f.prepare(spec);
-            f.coefficients = m_coeffs;
-        }
+
+        sc_lp.prepare(spec);
+        sc_lp.setType(strix::FilterType::lowpass);
+        sc_lp.setCutoffFreq(5.0);
+
+        bpPre.prepare(spec);
+        bpPre.setType(strix::FilterType::bandpass);
+        bpPost.prepare(spec);
+        bpPost.setType(strix::FilterType::bandpass);
+
+        setType(type);
     }
 
     void reset()
     {
-        for (auto& f : sc_lp)
+        for (auto &f : dcBlock)
             f.reset();
-        for (auto& f : m_lp)
-            f.reset();
+        sc_lp.reset();
     }
 
-    template <class Block>
-    void processBlock(Block& block, T gp, T gn)
+    template <typename Block>
+    void processBlockClassB(Block &block)
     {
         for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto in = block.getChannelPointer(ch);
-
-            processSamples(in, ch, block.getNumSamples(), gp, gn);
+            if (type == PentodeType::Nu)
+                processSamplesNu(in, ch, block.getNumSamples(), bias.first, bias.second);
+            else
+                processSamplesClassic(in, ch, block.getNumSamples(), bias.first, bias.second);
         }
     }
 
-    void processBlockClassB(dsp::AudioBlock<double>& block, T gp, T gn)
-    {
-        for (int ch = 0; ch < block.getNumChannels(); ++ch)
-        {
-            auto in = block.getChannelPointer(ch);
-
-            processSamplesClassB(in, ch, block.getNumSamples(), gp, gn);
-        }
-    }
-
-    void processBlockClassB(strix::AudioBlock<vec>& block, T gp, T gn)
-    {
-        auto in = block.getChannelPointer(0);
-
-        processSamplesClassBSIMD(in, 0, block.getNumSamples(), gp, gn);
-    }
+    bias_t bias;
+    PentodeType type = PentodeType::Nu;
+    float inGain = 1.f;
 
 private:
-
-    inline void processSamples(T* in, int ch, size_t numSamples, T gp, T gn)
+    void processSamplesNu(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
+        float bpPreGain = -inGain;
+        float bpPostGain = -bpPreGain;
         for (size_t i = 0; i < numSamples; ++i)
         {
-            in[i] -= processEnvelopeDetector(in[i], ch);
-
-            in[i] = -1.0 * saturate(in[i], gp, gn);
-
-            x_1 = in[i];
-            in[i] = x_1 - xm1[ch] + r * ym1[ch];
-            xm1[ch] = x_1;
-            ym1[ch] = in[i];
-
-            in[i] = m_lp[ch].processSample(in[i]);
-        }
-    }
-
-    inline void processSamplesClassB(T* in, int ch, size_t numSamples, T gp, T gn)
-    {
-        for (size_t i = 0; i < numSamples; ++i)
-        {
+            in[i] += bpPreGain * bpPre.processSample(ch, in[i]);
             in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
-
-            in[i] = saturate(in[i], gp, gn);
-
-            in[i] = std::sinh(in[i]) / 6.f;
+            in[i] = saturateSym(in[i], gp);
+            in[i] += bpPostGain * bpPost.processSample(ch, in[i]);
         }
     }
 
-    inline void processSamplesClassBSIMD(T* in, int ch, size_t numSamples, T gp, T gn)
+    void processSamplesClassic(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
+        float bpPreGain = jmap(inGain, 1.f, -1.f);
+        float bpPostGain = -bpPreGain;
         for (size_t i = 0; i < numSamples; ++i)
-        {            
-            in[i] -= 1.2 * processEnvelopeDetectorSIMD(in[i], ch);
+        {
+            in[i] += bpPreGain * bpPre.processSample(ch, in[i]);
+            in[i] -= 0.8 * processEnvelopeDetector(in[i], ch);
 
-            in[i] = saturateSIMD(in[i], gp, gn);
+            T yn_pos = classicPentode(in[i], gn, gp);
+            T yn_neg = classicPentode(in[i], gp, gn);
 
-            in[i] = xsimd::sinh(in[i]) / (T)6.0;
+            dcBlock[0].processSample(ch, yn_pos);
+            dcBlock[1].processSample(ch, yn_neg);
+
+            yn_pos = classicPentode(yn_pos, 2.01, 2.01);
+            yn_neg = classicPentode(yn_neg, 2.01, 2.01);
+
+            in[i] = 0.5 * (yn_pos + yn_neg);
+            in[i] += bpPostGain * bpPost.processSample(ch, in[i]);
         }
     }
 
-    inline T saturate(T x, T gp, T gn)
+    inline T saturateSym(T x, T g = 1.0)
     {
-        if (x > 0.f)
-        {
-            x = ((1.f / gp) * std::tanh(gp * x));
-        }
+        x = xsimd::select(x > (T)4.0, (T)4.0, x);
+        x = xsimd::select(x < (T)-4.0, (T)-4.0, x);
+        return (1.0 / g) * strix::fast_tanh(x * g);
+    }
+
+    inline T saturateAsym(T x, T gp, T gn)
+    {
+#if USE_SIMD
+        xsimd::batch_bool<double> pos{x > 0.0};
+        return xsimd::select(pos, ((1.0 / gp) * strix::fast_tanh(gp * x)),
+                             ((1.0 / gn) * strix::fast_tanh(gn * x)));
+#else
+        if (x > 0.0)
+            return (1.0 / gp) * strix::fast_tanh(gp * x);
         else
-        {
-            x = ((1.f / gn) * std::tanh(gn * x));
-        }
-
-        return x;
+            return (1.0 / gn) * strix::fast_tanh(gn * x);
+#endif
     }
 
-    inline T saturateSIMD(T x, T gp, T gn)
+    inline T classicPentode(T xn, T Ln, T Lp, T g = 1.0)
     {
-        xsimd::batch_bool<double> pos {x > 0.0};
-        return xsimd::select(pos, ((1.0 / gp) * xsimd::tanh(gp * x)),
-        ((1.0 / gn) * xsimd::tanh(gn * x)));
+#if USE_SIMD
+        return xsimd::select(xn <= 0.0,
+                             (g * xn) / (1.0 - ((g * xn) / Ln)),
+                             (g * xn) / (1.0 + ((g * xn) / Lp)));
+#else
+        if (xn <= 0.0)
+            return (xn * g) / (1.0 - ((g * xn) / Ln));
+        else
+            return (xn * g) / (1.0 + ((g * xn) / Lp));
+#endif
     }
 
     inline T processEnvelopeDetector(T x, int ch)
     {
-        auto xr = std::fabs(x);
-
-        return 0.251188 * sc_lp[ch].processSample(xr);
+#if USE_SIMD
+        x = xsimd::abs(x);
+#else
+        x = std::abs(x);
+#endif
+        return 0.151188 * sc_lp.processSample(ch, x);
     }
 
-    inline T processEnvelopeDetectorSIMD(T x, int ch)
-    {
-        auto xr = xsimd::fabs(x);
-
-        return 0.251188 * sc_lp[ch].processSample(xr);
-    }
-
-    dsp::IIR::Coefficients<double>::Ptr sc_coeffs, m_coeffs;
-
-    std::array<dsp::IIR::Filter<T>, 2> sc_lp, m_lp;
-
-    double lastSampleRate = 0.0;
-
-    T r = 1.0 - (1.0 / 800.0);
-
-    T x_1 = 0.0;
-    T xm1[2]{ 0.0 }, ym1[2]{ 0.0 };
+    std::array<strix::SVTFilter<T>, 2> dcBlock; /*need 2 for pos & neg signals*/
+    strix::SVTFilter<T> sc_lp, bpPre, bpPost;
 };
 
-/*a different tube emultaor for triodes, with parameterized bias levels & Stateful saturation*/
+enum TriodeType
+{
+    VintageTube,
+    ModernTube,
+    ChannelTube
+};
+/**
+ * A different tube emultaor for triodes, with parameterized bias levels & Stateful saturation
+ */
 template <typename T>
-struct AVTriode
+struct AVTriode : PreampProcessor
 {
     AVTriode() = default;
 
-    void prepare(const dsp::ProcessSpec& spec)
+    TriodeType type;
+
+    void prepare(const dsp::ProcessSpec &spec)
     {
         y_m.resize(spec.numChannels);
+        // std::fill(y_m.begin(), y_m.end(), 0.0);
 
         sc_hp.prepare(spec);
         sc_hp.setType(strix::FilterType::highpass);
@@ -177,79 +216,99 @@ struct AVTriode
     void reset()
     {
         std::fill(y_m.begin(), y_m.end(), 0.0);
-
         sc_hp.reset();
     }
 
-    inline void processSamples(T* x, size_t ch, size_t numSamples, T gp, T gn)
+    template <TriodeType mode = VintageTube>
+    inline void processSamples(T *x, size_t ch, size_t numSamples, T gp, T gn)
     {
-        auto inc_p = (gp - lastGp) / numSamples;
-        auto inc_n = (gn - lastGn) / numSamples;
-
-        for (size_t i = 0; i < numSamples; ++i)
+        switch (mode)
         {
-            auto f1 = (1.f / lastGp) * std::tanh(lastGp * x[i]) * y_m[ch];
-            auto f2 = (1.f / lastGn) * std::atan(lastGn * x[i]) * (1.f - y_m[ch]);
+        case VintageTube:
+            for (size_t i = 0; i < numSamples; ++i)
+            {
+#if USE_SIMD
+                x[i] = xsimd::select(x[i] > 0.0,
+                                     (x[i] + (x[i] * x[i])) / (1.0 + (gp * x[i] * x[i])),
+                                     x[i] / (1.0 - gn * x[i]));
+#else
+                if (x[i] > 0.0)
+                    x[i] = (x[i] + x[i] * x[i]) / (1.0 + gp * x[i] * x[i]);
+                else
+                    x[i] = x[i] / (1.0 - gn * x[i]);
+#endif
+            }
+            CHECK_BUFFER(x, numSamples)
+            break;
+        case ModernTube:
+            for (size_t i = 0; i < numSamples; ++i)
+            {
+                x[i] = (1.f / gp) * strix::fast_tanh(gp * x[i]);
+            }
+            CHECK_BUFFER(x, numSamples)
+            break;
+        case ChannelTube:
+            for (size_t i = 0; i < numSamples; ++i)
+            {
+                auto f1 = (1.f / gp) * strix::tanh(gp * x[i]) * y_m[ch];
+                auto f2 = (1.f / gn) * strix::atan(gn * x[i]) * (1.f - y_m[ch]);
 
-            lastGp += inc_p;
-            lastGn += inc_n;
-
-            auto y = sc_hp.processSample(ch, f1 + f2);
-            y_m[ch] = y;
-            x[i] = y;
-        }
-
-        lastGp = gp;
-        lastGn = gn;
-    }
-
-    inline void processSamplesSIMD(T* x, size_t numSamples, T gp, T gn)
-    {
-        auto inc_p = (gp - lastGp) / numSamples;
-        auto inc_n = (gn - lastGn) / numSamples;
-
-        for (size_t i = 0; i < numSamples; ++i)
-        {
-            auto f1 = (1.0 / lastGp) * xsimd::tanh(lastGp * x[i]) * y_m[0];
-            auto f2 = (1.0 / lastGn) * xsimd::atan(lastGn * x[i]) * (1.0 - y_m[0]);
-
-            lastGp += inc_p;
-            lastGn += inc_n;
-
-            auto y = sc_hp.processSample(0, f1 + f2);
-            y_m[0] = y;
-            x[i] = y;
-        }
-
-        lastGp = gp;
-        lastGn = gn;
-    }
-
-    void processBlock(dsp::AudioBlock<double>& block, T gp, T gn)
-    {
-        for (size_t ch = 0; ch < block.getNumChannels(); ch++)
-        {
-            auto in = block.getChannelPointer(ch);
-
-            processSamples(in, ch, block.getNumSamples(), gp, gn);
+                x[i] = f1 + f2;
+                y_m[ch] = sc_hp.processSample(ch, x[i]);
+            }
+            CHECK_BUFFER(x, numSamples)
+            break;
         }
     }
 
-    void processBlock(strix::AudioBlock<vec>& block, T gp, T gn)
+#if USE_SIMD
+    void process(strix::AudioBlock<vec> &block) override
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
             auto in = block.getChannelPointer(ch);
 
-            processSamplesSIMD(in, block.getNumSamples(), gp, gn);
+            switch (type)
+            {
+            case VintageTube:
+                processSamples<VintageTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                break;
+            case ModernTube:
+                processSamples<ModernTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                break;
+            case ChannelTube:
+                processSamples<ChannelTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                break;
+            }
         }
     }
+#else
+    void process(dsp::AudioBlock<double> &block) override
+    {
+        for (size_t ch = 0; ch < block.getNumChannels(); ch++)
+        {
+            auto in = block.getChannelPointer(ch);
+
+            switch (type)
+            {
+            case VintageTube:
+                processSamples<VintageTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                break;
+            case ModernTube:
+                processSamples<ModernTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                break;
+            case ChannelTube:
+                processSamples<ChannelTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                break;
+            }
+        }
+    }
+#endif
+
+    bias_t bias;
 
 private:
-
     std::vector<T> y_m;
-
     strix::SVTFilter<T> sc_hp;
-
     T lastGp = 1.0, lastGn = 1.0;
 };

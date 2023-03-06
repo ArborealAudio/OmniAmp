@@ -11,91 +11,105 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
+#define SITE_URL "https://arborealaudio.com"
+#if JUCE_WINDOWS
+#define DL_BIN "Gamma-windows.exe"
+#elif JUCE_MAC
+#define DL_BIN "Gamma-mac.dmg"
+#elif JUCE_LINUX
+#define DL_BIN "Gamma-linux.tar.gz"
+#endif
+
+
+static strix::UpdateResult dlResult;
+
+
 //==============================================================================
 /**
-*/
-class GammaAudioProcessorEditor  : public juce::AudioProcessorEditor
+ */
+class GammaAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
-    GammaAudioProcessorEditor (GammaAudioProcessor&);
+    GammaAudioProcessorEditor(GammaAudioProcessor &);
     ~GammaAudioProcessorEditor() override;
 
     //==============================================================================
-    void paint (juce::Graphics&) override;
+    void paint(juce::Graphics &) override;
     void resized() override;
-    bool hitTest(int x, int y) override
+    void mouseDown(const MouseEvent &event) override
     {
-        auto leftClick = ModifierKeys::currentModifiers.isLeftButtonDown();
+        auto pos = getMouseXYRelative().toFloat();
 
-        if (logoBounds.contains(x, y) && leftClick) {
+        if (logoBounds.contains(pos))
+        {
             if (splash.onLogoClick)
                 splash.onLogoClick();
-            
-            return true;
+            repaint();
         }
-        else if (splash.isVisible()) {
-            if (splash.getBounds().contains(x, y))
-                return splash.hitTest(x, y);
-            else if (leftClick) {
+        else if (splash.isVisible())
+        {
+            if (splash.getBounds().contains(pos.toInt()))
+                splash.mouseDown(event);
+            else
+            {
                 splash.setVisible(false);
-                return true;
+                repaint();
             }
-            else
-                return false;
-        }
-        else if (init.isVisible()) {
-            if (init.getBounds().contains(x, y))
-                return init.hitTest(x, y);
-            else
-                return false;
         }
         else
-            return AudioProcessorEditor::hitTest(x, y);
+            AudioProcessorEditor::mouseDown(event);
     }
 
-    void resetWindowSize() noexcept;
-    void checkUpdate() noexcept;
+    void resetWindowSize();
 
 private:
-
-    GammaAudioProcessor& audioProcessor;
+    GammaAudioProcessor &audioProcessor;
 
     std::unique_ptr<Drawable> logo;
     Rectangle<float> logoBounds;
 
-    TopComponent top;
-
     AmpControls ampControls;
 
-    Knob inGain{KnobType::Simple}, outGain{KnobType::Simple}, gate{KnobType::Simple}, width{KnobType::Simple};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach;
+    Knob::flags_t knobFlags = 0;
+    Knob gate{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, width{knobFlags}, mix{knobFlags};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach, mixAttach;
+    LightButton bypass;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> bypassAttach;
 
-    LightButton midSide;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> msAttach;
+    LinkButton link;
 
+    std::vector<Component *> getTopComponents()
+    {
+        return {
+            &gate,
+            &inGain,
+            &link,
+            &outGain,
+            &width,
+            &mix,
+            &bypass};
+    }
+
+    PreComponent preComponent;
     CabsComponent cabComponent;
-
     ReverbComponent reverbComp;
+    EnhancerComponent enhancers;
 
     Label pluginTitle;
-
     MenuComponent menu;
-
     PresetComp presetMenu;
 
-    DownloadManager dl;
+    std::unique_ptr<strix::LiteThread> lThread;
 
+    strix::DownloadManager dl;
     Splash splash;
-
     ActivationComponent activation;
-
-    InitComponent init;
 
 #if JUCE_WINDOWS || JUCE_LINUX
     OpenGLContext opengl;
 #endif
 
-    TooltipWindow tooltip;
+    std::unique_ptr<TooltipWindow> tooltip = nullptr;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GammaAudioProcessorEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GammaAudioProcessorEditor)
 };

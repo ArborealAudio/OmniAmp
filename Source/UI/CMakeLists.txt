@@ -4,12 +4,11 @@ PRIVATE
     Knob.h
     ChoiceMenu.h
     Button.h
+    PreComponent.h
     AmpControls.h
     SineWave.hpp
     CabComponent.h
     ReverbComponent.h
     Menu.h
-    UI_Top.h
-    DownloadManager.h
-    Splash.h
-    Init.h)
+    EnhancerComponent.h
+    Splash.h)
