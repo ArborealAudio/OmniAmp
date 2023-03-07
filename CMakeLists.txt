@@ -41,6 +41,7 @@ juce_add_plugin(Gamma
     VST3_CATEGORY Fx Distortion
     AU_MAIN_TYPE kAudioUnitType_Effect
     PRODUCT_NAME "OmniAmp"
+    NEEDS_CURL TRUE
     HARDENED_RUNTIME_ENABLE TRUE)
 
 clap_juce_extensions_plugin(TARGET Gamma
@@ -74,7 +75,7 @@ juce_add_modules(
 target_compile_definitions(Gamma
     PUBLIC
         JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
+        JUCE_USE_CURL=1
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
         JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
