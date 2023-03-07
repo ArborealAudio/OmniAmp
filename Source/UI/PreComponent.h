@@ -91,6 +91,10 @@ struct PreComponent : Component,
         grMeter.meterColor = Colours::oldlace;
         addAndMakeVisible(grMeter);
 
+        addAndMakeVisible(resizeButton);
+        resizeButton.onClick = [&]
+        {if (onResizeClick)onResizeClick(); };
+
         addAndMakeVisible(title);
         title.setText("Pre", NotificationType::dontSendNotification);
         title.setJustificationType(Justification::centred);
@@ -99,6 +103,8 @@ struct PreComponent : Component,
     }
 
     ~PreComponent() override{ stopTimer(); }
+
+    std::function<void()> onResizeClick;
 
     void timerCallback() override
     {
@@ -128,11 +134,13 @@ struct PreComponent : Component,
         auto w = bounds.getWidth();
         int chunk = w / 5;
         
-        title.setBounds(bounds.withTrimmedBottom(bounds.getHeight() * 0.75f).withTrimmedRight(chunk * 4));
-        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
-
         midSide.setBounds(bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight() * 0.33f));
         midSide.lnf.cornerRadius = midSide.getHeight() * 0.25f;
+
+        title.setBounds(midSide.getX(), bounds.getY(), midSide.getWidth(), midSide.getHeight());
+        title.setFont(Font(title.getHeight() * 0.65f).withExtraKerningFactor(0.25f));
+
+        resizeButton.setBounds(Rectangle(title.getRight(), title.getY(), title.getHeight(), title.getHeight()).reduced(6));
 
         for (auto *c : getSelectComps(StereoEmphasis | LFEmph | HFEmph | Doubler))
         {
@@ -180,6 +188,8 @@ private:
 
     strix::VolumeMeterComponent grMeter;
 
+    ResizeButton resizeButton;
+
     Label title;
 
     enum
@@ -196,7 +206,8 @@ private:
         CompLink = 1 << 9
     };
 
-    std::vector<Component *> getComps() // returns top knobs & buttons
+    // returns top knobs & buttons
+    std::vector<Component *> getComps() 
     {
         return {
             &midSide,
@@ -210,8 +221,8 @@ private:
             &compPos,
             &compLink};
     }
-
-    std::vector<Component *> getSelectComps(uint16_t mask) // get a vector of select components using a bitmask
+    // get a vector of select components using a bitmask
+    std::vector<Component *> getSelectComps(uint16_t mask) 
     {
         auto c = getComps();
         std::vector<Component *> out;

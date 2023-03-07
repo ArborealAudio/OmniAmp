@@ -133,6 +133,42 @@ namespace Blur
     }
 } // namespace Blur
 
+struct ResizeButton : TextButton
+{
+    ResizeButton()
+    {
+        setClickingTogglesState(true);
+    }
+
+    void paint (Graphics &g) override
+    {
+        auto bounds = getLocalBounds().reduced(2);
+        auto w = jmin(bounds.getWidth(), bounds.getHeight());
+
+        bool state = getToggleState();
+        bool mouseOver = isMouseButtonDown();
+        Path p;
+        if (state)
+        {
+            p.startNewSubPath(bounds.getX(), bounds.getY());
+            p.lineTo(w / 2, w);
+            p.lineTo(w, bounds.getY());
+        }
+        else
+        {
+            p.startNewSubPath(bounds.getX(), bounds.getY());
+            p.lineTo(w, w / 2);
+            p.lineTo(bounds.getX(), w);
+        }
+        g.setColour(Colours::white);
+        g.strokePath(p, PathStrokeType(3.f));
+    }
+    void resized() override
+    {
+
+    }
+};
+
 #include "Button.h"
 #include "ChoiceMenu.h"
 #include "Knob.h"
