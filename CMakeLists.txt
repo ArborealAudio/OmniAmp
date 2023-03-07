@@ -13,7 +13,7 @@ if (PRODUCTION_BUILD)
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "")
 endif()
 
-project(Gamma VERSION 0.6)
+project(Gamma VERSION 1.0)
 
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
@@ -40,7 +40,7 @@ juce_add_plugin(Gamma
     VST2_CATEGORY kPlugCategEffect
     VST3_CATEGORY Fx Distortion
     AU_MAIN_TYPE kAudioUnitType_Effect
-    PRODUCT_NAME "Gamma"
+    PRODUCT_NAME "OmniAmp"
     HARDENED_RUNTIME_ENABLE TRUE)
 
 clap_juce_extensions_plugin(TARGET Gamma
