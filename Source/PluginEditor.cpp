@@ -50,7 +50,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     setSize(lastWidth, lastWidth);
 
     addAndMakeVisible(pluginTitle);
-    String title = "GAMMA";
+    String title = String(ProjectInfo::projectName).toUpperCase();
     Colour titleColor = Colours::antiquewhite;
 #if !PRODUCTION_BUILD && DEV_BUILD
     title.append("\nDEV", 5);
@@ -247,12 +247,13 @@ void GammaAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
     auto w = getWidth();
     auto h = getHeight();
+
     auto topSection = bounds.removeFromTop(h * 0.15f);
-    auto mainHeight = bounds.getHeight();
-    auto enhancerSection = bounds.removeFromBottom(mainHeight * 0.25f);
-    auto cabVerbSection = bounds.removeFromBottom(mainHeight * 0.3f);
-    auto ampSection = bounds.removeFromBottom(bounds.getHeight() * 0.65f);
-    auto preSection = bounds;
+    auto mainHeight = bounds.getHeight(); // height after top trimmed off
+    auto preSection = bounds.removeFromTop(mainHeight * 0.17f);
+    auto ampSection = bounds.removeFromTop(mainHeight * 0.30f);
+    auto cabVerbSection = bounds.removeFromTop(mainHeight * 0.28f);
+    auto enhancerSection = bounds;
 
     /* set bounds of top controls */
     auto topSectionQtr = topSection.getWidth() / 4;
