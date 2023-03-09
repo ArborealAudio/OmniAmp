@@ -23,11 +23,11 @@
 #endif
 
 #include <JuceHeader.h>
+
 #include <chowdsp_wdf/chowdsp_wdf.h>
 #include "Processors/Processors.h"
 #include "Presets/PresetManager.h"
 #include "UI/UI.h"
-#include "UI/SineWave.hpp"
 #if !PRODUCTION_BUILD
     #define DEV_BUILD 1
 #endif
