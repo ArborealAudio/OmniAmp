@@ -209,8 +209,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     preComponent.onResize = [&] {resized();};
     enhancers.onResize = [&] {resized();};
-
-    addMouseListener(this, true);
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -218,7 +216,6 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.detach();
 #endif
-    removeMouseListener(this);
 }
 
 void GammaAudioProcessorEditor::resetWindowSize()
