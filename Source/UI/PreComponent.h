@@ -93,7 +93,13 @@ struct PreComponent : Component,
 
         addAndMakeVisible(resizeButton);
         resizeButton.onClick = [&]
-        {if (onResizeClick)onResizeClick(); };
+        {
+            minimized = !resizeButton.getToggleState();
+            for (auto *c : getComps()) c->setVisible(!minimized);
+            grMeter.setVisible(!minimized);
+            if (onResize)
+                onResize();
+        };
 
         addAndMakeVisible(title);
         title.setText("Pre", NotificationType::dontSendNotification);
@@ -102,9 +108,10 @@ struct PreComponent : Component,
         startTimerHz(30);
     }
 
-    ~PreComponent() override{ stopTimer(); }
+    ~PreComponent() override { stopTimer(); }
 
-    std::function<void()> onResizeClick;
+    std::function<void()> onResize;
+    std::atomic<bool> minimized = false;
 
     void timerCallback() override
     {
@@ -120,8 +127,11 @@ struct PreComponent : Component,
         g.setColour(Colours::antiquewhite);
         g.drawRoundedRectangle(bounds, 5.f, 3.f);
 
-        float div = doubler.getRight() + (grMeter.getX() - doubler.getRight()) / 2;
-        g.fillRoundedRectangle(div - 1.5f, 5.f, 3.f, getHeight() - 10.f, 3.f);
+        if (!minimized)
+        {
+            float div = doubler.getRight() + (grMeter.getX() - doubler.getRight()) / 2;
+            g.fillRoundedRectangle(div - 1.5f, 5.f, 3.f, getHeight() - 10.f, 3.f);
+        }
     }
 
     void resized() override
@@ -133,14 +143,19 @@ struct PreComponent : Component,
         const auto compSectH = compSection.getHeight(); // compSect height after GR meter
         auto w = bounds.getWidth();
         int chunk = w / 5;
-        
-        midSide.setBounds(bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight() * 0.33f));
+
+        auto msBounds = minimized ? Rectangle(0, 0, 0, 0) : bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight() * 0.33f);
+        auto titleBounds = minimized ? bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight())
+                      : msBounds.translated(0, -bounds.getHeight() / 3);
+        midSide.setBounds(msBounds);
         midSide.lnf.cornerRadius = midSide.getHeight() * 0.25f;
 
-        title.setBounds(midSide.getX(), bounds.getY(), midSide.getWidth(), midSide.getHeight());
+        title.setBounds(titleBounds);
         title.setFont(Font(title.getHeight() * 0.65f).withExtraKerningFactor(0.25f));
 
         resizeButton.setBounds(Rectangle(title.getRight(), title.getY(), title.getHeight(), title.getHeight()).reduced(6));
+
+        if (minimized) return;
 
         for (auto *c : getSelectComps(StereoEmphasis | LFEmph | HFEmph | Doubler))
         {
@@ -206,8 +221,8 @@ private:
         CompLink = 1 << 9
     };
 
-    // returns top knobs & buttons
-    std::vector<Component *> getComps() 
+    // returns top knobs & buttons (everything but GR meter)
+    std::vector<Component *> getComps()
     {
         return {
             &midSide,
@@ -222,7 +237,7 @@ private:
             &compLink};
     }
     // get a vector of select components using a bitmask
-    std::vector<Component *> getSelectComps(uint16_t mask) 
+    std::vector<Component *> getSelectComps(uint16_t mask)
     {
         auto c = getComps();
         std::vector<Component *> out;

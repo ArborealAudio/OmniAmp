@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9 CACHE INTERNAL "")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -60,6 +62,7 @@ target_sources(Gamma
     PRIVATE
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
+        Source/MainComponent.cpp
         Source/Activation.hpp)
 
 add_subdirectory(Source/Processors)

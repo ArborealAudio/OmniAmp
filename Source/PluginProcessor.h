@@ -10,16 +10,16 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-#if NDEBUG
-#define USE_SIMD 1
-#else // make sure DBG builds are labeled non-production
-#ifndef PRODUCTION_BUILD
-#define PRODUCTION_BUILD 0
-#endif
-#endif
+    #if NDEBUG
+        #define USE_SIMD 1
+    #else // make sure DBG builds are labeled non-production
+        #ifndef PRODUCTION_BUILD
+            #define PRODUCTION_BUILD 0
+        #endif
+    #endif
 #endif
 #ifndef PRODUCTION_BUILD // use this to control production build parameter
-#define PRODUCTION_BUILD 1
+    #define PRODUCTION_BUILD 1
 #endif
 
 #include <JuceHeader.h>
@@ -29,7 +29,7 @@
 #include "UI/UI.h"
 #include "UI/SineWave.hpp"
 #if !PRODUCTION_BUILD
-#define DEV_BUILD 1
+    #define DEV_BUILD 1
 #endif
 #include "Activation.hpp"
 

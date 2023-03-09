@@ -77,6 +77,16 @@ struct EnhancerComponent : Component
         addAndMakeVisible(title);
         title.setText("Post", NotificationType::dontSendNotification);
         title.setJustificationType(Justification::centred);
+
+        addAndMakeVisible(resizeButton);
+        resizeButton.onClick = [&]
+        {
+            minimized = !resizeButton.getToggleState();
+            for (auto *c : getKnobs()) c->setVisible(!minimized);
+            for (auto *b : getButtons()) b->setVisible(!minimized);
+            if (onResize)
+                onResize();
+        };
     }
 
     void paint(Graphics &g) override
@@ -88,6 +98,7 @@ struct EnhancerComponent : Component
 
         g.setFont(getHeight() * 0.085f);
         g.setColour(Colours::white);
+        if (minimized) return;
         auto LFLabel = bounds.withTrimmedRight(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).translated(0, 5).toNearestInt();
         g.drawFittedText("Low Freq", LFLabel, Justification::centredTop, 1);
         auto HFLabel = bounds.withTrimmedLeft(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).translated(0, 5).toNearestInt();
@@ -103,8 +114,13 @@ struct EnhancerComponent : Component
         const auto width = bounds.getWidth();
         const auto height = bounds.getHeight();
 
-        title.setBounds(bounds.removeFromTop(height * 0.15f));
-        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
+        auto titleBounds = minimized ? bounds.reduced(width * 0.33f, 0) : bounds.removeFromTop(height * 0.2f).reduced(width * 0.33f, 0);
+
+        title.setBounds(titleBounds);
+        title.setFont(Font(title.getHeight() * 0.65f).withExtraKerningFactor(0.25f));
+        resizeButton.setBounds(Rectangle(title.getRight(), title.getY(), title.getHeight(), title.getHeight()).reduced(3));
+
+        if (minimized) return;
 
         const auto buttonHeight = left.getHeight() * 0.25f;
         const auto buttonWidth = left.getWidth() * 0.25f;
@@ -125,6 +141,9 @@ struct EnhancerComponent : Component
         hfEnhance.setBounds(right);
     }
 
+    std::function<void()> onResize;
+    std::atomic<bool> minimized = false;
+
 private:
     Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
     Knob::flags_t hfFlags = knobFlags | Knob::LOG_KNOB;
@@ -140,10 +159,21 @@ private:
     }
 
     LightButton hfAutoGain, lfAutoGain, hfInvert, lfInvert;
+    std::vector<LightButton*> getButtons()
+    {
+        return {
+            &hfAutoGain,
+            &lfAutoGain,
+            &hfInvert,
+            &lfInvert
+        };
+    }
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> hfAttach, lfAttach, lfCutAttach, hfCutAttach;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hfAutoGainAttach, lfAutoGainAttach, hfInvAttach, lfInvAttach;
 
     Label title;
+
+    ResizeButton resizeButton;
 
     Colour background = Colour(DEEP_BLUE);
 };

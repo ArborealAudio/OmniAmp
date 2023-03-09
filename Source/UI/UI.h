@@ -2,6 +2,7 @@
 // header for including all UI-related files, global UI definitions & functions
 
 #pragma once
+#include <JuceHeader.h>
 
 #define BACKGROUND_COLOR 0xff293236
 #define DEEP_BLUE 0xff194545
@@ -142,30 +143,36 @@ struct ResizeButton : TextButton
 
     void paint (Graphics &g) override
     {
-        auto bounds = getLocalBounds().reduced(2);
-        auto w = jmin(bounds.getWidth(), bounds.getHeight());
+        auto bounds = getLocalBounds().reduced(6);
+        float x = bounds.getX();
+        float y = bounds.getY();
+        float r = bounds.getRight();
+        float bot = bounds.getBottom();
+        float midX = bounds.getCentreX();
+        float midY = bounds.getCentreY();
 
         bool state = getToggleState();
-        bool mouseOver = isMouseButtonDown();
+        if (isMouseOver())
+        {
+            g.setColour(Colours::grey);
+            g.fillEllipse(getLocalBounds().toFloat());
+        }
+        float strokeWidth = 2.f;
         Path p;
         if (state)
         {
-            p.startNewSubPath(bounds.getX(), bounds.getY());
-            p.lineTo(w / 2, w);
-            p.lineTo(w, bounds.getY());
+            p.startNewSubPath(x, y);
+            p.lineTo(midX , bot);
+            p.lineTo(r, y);
         }
         else
         {
-            p.startNewSubPath(bounds.getX(), bounds.getY());
-            p.lineTo(w, w / 2);
-            p.lineTo(bounds.getX(), w);
+            p.startNewSubPath(x, y);
+            p.lineTo(r, midY);
+            p.lineTo(x, bot);
         }
         g.setColour(Colours::white);
-        g.strokePath(p, PathStrokeType(3.f));
-    }
-    void resized() override
-    {
-
+        g.strokePath(p, PathStrokeType(3.f, PathStrokeType::JointStyle::curved, PathStrokeType::EndCapStyle::rounded));
     }
 };
 
