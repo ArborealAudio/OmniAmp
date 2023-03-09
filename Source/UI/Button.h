@@ -1,6 +1,7 @@
 // Button.h
 
 #pragma once
+#include <JuceHeader.h>
 
 struct ButtonLookAndFeel : LookAndFeel_V4
 {

@@ -2,7 +2,6 @@
 // A quick little MD5 hash checker for the beta version. Only checks the hash of a predetermined string which shall be given to beta testers. Should be replaced with the final version when ready.
 
 #pragma once
-#include <thread>
 
 #if BETA_BUILD || DEV_BUILD
 
