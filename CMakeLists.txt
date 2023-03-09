@@ -62,7 +62,6 @@ target_sources(Gamma
     PRIVATE
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
-        Source/MainComponent.cpp
         Source/Activation.hpp)
 
 add_subdirectory(Source/Processors)
