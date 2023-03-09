@@ -45,7 +45,7 @@ public:
             }
         }
         else
-            GammaAudioProcessorEditor::mouseDown(event);
+            AudioProcessorEditor::mouseDown(event);
     }
 
     void resetWindowSize();
