@@ -19,7 +19,7 @@ class GammaAudioProcessorEditor : public AudioProcessorEditor
 {
 public:
     GammaAudioProcessorEditor(GammaAudioProcessor &);
-    ~GammaAudioProcessorEditor();
+    ~GammaAudioProcessorEditor() override;
 
     //==============================================================================
     void paint(juce::Graphics &) override;
