@@ -157,7 +157,6 @@ struct ResizeButton : TextButton
             g.setColour(Colours::grey);
             g.fillEllipse(getLocalBounds().toFloat());
         }
-        float strokeWidth = 2.f;
         Path p;
         if (state)
         {

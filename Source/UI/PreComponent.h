@@ -111,7 +111,7 @@ struct PreComponent : Component,
     ~PreComponent() override { stopTimer(); }
 
     std::function<void()> onResize;
-    std::atomic<bool> minimized = false;
+    std::atomic<bool> minimized = true;
 
     void timerCallback() override
     {

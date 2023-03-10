@@ -142,7 +142,7 @@ struct EnhancerComponent : Component
     }
 
     std::function<void()> onResize;
-    std::atomic<bool> minimized = false;
+    std::atomic<bool> minimized = true;
 
 private:
     Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
