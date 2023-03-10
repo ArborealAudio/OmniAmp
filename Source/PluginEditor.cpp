@@ -155,9 +155,9 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(reverbComp);
     addAndMakeVisible(enhancers);
 
-    // setResizable(true, true);
-    // getConstrainer()->setMinimumSize(600, 600);
-    // getConstrainer()->setMaximumSize(1600, 1600);
+    setResizable(true, true);
+    getConstrainer()->setMinimumSize(600, 600);
+    getConstrainer()->setMaximumSize(1600, 1600);
     // getConstrainer()->setFixedAspectRatio(1.0);
 
     dl.changes = dlResult.changes;
@@ -229,9 +229,10 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 
 void GammaAudioProcessorEditor::resetWindowSize()
 {
-    setSize(800, 610);
     preComponent.minimized = true;
     enhancers.minimized = true;
+    setSize(800, 610);
+    repaint();
     strix::writeConfigFile(CONFIG_PATH, "size", 800);
 }
 
