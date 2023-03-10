@@ -3,7 +3,8 @@
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p),
+    : AudioProcessorEditor(&p),
+      audioProcessor(p),
       ampControls(p.apvts),
       link(p.apvts),
       preComponent(p.getActiveGRSource(), p.apvts),
@@ -13,11 +14,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       menu(p.apvts),
       presetMenu(p.apvts),
       dl(SITE_URL
-        "/downloads/"
-        DL_BIN,
-        "~/Downloads/"
-        DL_BIN
-      )
+         "/downloads/" DL_BIN,
+         "~/Downloads/" DL_BIN)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
@@ -37,7 +35,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     logo->setInterceptsMouseClicks(true, false);
 
     auto lastWidth = strix::readConfigFile(CONFIG_PATH, "size");
-    if (lastWidth <= 0)
+    if (lastWidth <= 600)
         lastWidth = 800;
     setSize(lastWidth, lastWidth * 0.7625f);
 
@@ -61,13 +59,13 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     menu.checkUpdateCallback = [&]
     {
         dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::versionString,
-        SITE_URL
-        "/versions/"
+                                                          SITE_URL
+                                                          "/versions/"
 #if !PRODUCTION_BUILD
-        "test/"
+                                                          "test/"
 #endif
-        "Gamma-latest.json",
-        true);
+                                                          "Gamma-latest.json",
+                                                          true);
         p.checkedUpdate = true;
         strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
         if (!dlResult.updateAvailable)
@@ -160,7 +158,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     getConstrainer()->setMaximumSize(1600, 1220);
     getConstrainer()->setFixedAspectRatio(1.311);
 
-    addChildComponent(dl);
+    // setPositioner(&pos);
+
     dl.changes = dlResult.changes;
     dl.centreWithSize(300, 200);
 
@@ -188,8 +187,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
                             DBG("Changes: " << dl.changes);
                             strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
                             MessageManager::callAsync([&]
-                                                      { dl.setVisible(dlResult.updateAvailable); });
-                            });
+                                                      { dl.setVisible(dlResult.updateAvailable); }); });
         if (!p.checkedActivation)
             lThread->addJob([&]
                             { activation.checkSite(); p.checkedActivation = true; });
@@ -207,10 +205,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         }
     };
 
-    preComponent.onResize = [&] {resized();};
-    enhancers.onResize = [&] {resized();};
-
-    addMouseListener(this, true);
+    preComponent.onResize = [&]
+    {
+        resized();
+    };
+    enhancers.onResize = [&]
+    {
+        resized();
+    };
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -241,16 +243,23 @@ void GammaAudioProcessorEditor::resized()
     auto bounds = Rectangle(0, 0, 800, 800);
     auto scale = (float)getWidth() / (float)800;
     bounds *= scale;
-    auto w = bounds.getWidth();
-    auto h = bounds.getHeight();
+    const auto w = bounds.getWidth();
+    const auto h = bounds.getHeight();
+
+    /**
+     * HEIGHTS: They need to be determined for both, upfront, based on minimzed states
+     * What is the absolute height of preSection as % of total height?
+     * What is the absolute height of postSection as % of total height?
+     * And...where are we in height btw 610 & 800?
+     */
 
     auto topSection = bounds.removeFromTop(h * 0.15f);
-    auto mainHeight = bounds.getHeight(); // height after top trimmed off
-    float preSectMult = preComponent.minimized ? 0.07f : 0.17f; // reduces total height by 8.5%?
-    auto preSection = bounds.removeFromTop(mainHeight * preSectMult);
-    auto ampSection = bounds.removeFromTop(mainHeight * 0.30f);
-    auto cabVerbSection = bounds.removeFromTop(mainHeight * 0.28f);
-    auto enhancerSection = enhancers.minimized ? bounds.removeFromTop(mainHeight * 0.07f) : bounds;
+    // auto mainHeight = bounds.getHeight(); // height after top trimmed off
+    float preSectMult = preComponent.minimized ? 0.06f : 0.145f;
+    auto preSection = bounds.removeFromTop(h * preSectMult);
+    auto ampSection = bounds.removeFromTop(h * 0.255f);
+    auto cabVerbSection = bounds.removeFromTop(h * 0.238f);
+    auto enhancerSection = enhancers.minimized ? bounds.removeFromTop(h * 0.06f) : bounds;
 
     /* set bounds of top controls */
     auto topSectionQtr = topSection.getWidth() / 4;
@@ -289,7 +298,7 @@ void GammaAudioProcessorEditor::resized()
             }
             c->setBounds(knobsBottom.removeFromLeft(knobFrac));
         }
-        
+
         if (auto *k = static_cast<Knob *>(c))
         {
             k->setTextOffset(0, -3);
