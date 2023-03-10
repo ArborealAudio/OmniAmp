@@ -99,5 +99,7 @@ private:
 
     std::unique_ptr<TooltipWindow> tooltip = nullptr;
 
+    float uiScale = 1.f, delta = 0.f;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GammaAudioProcessorEditor)
 };

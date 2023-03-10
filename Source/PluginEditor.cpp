@@ -14,8 +14,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       menu(p.apvts),
       presetMenu(p.apvts),
       dl(SITE_URL
-         "/downloads/" DL_BIN,
-         "~/Downloads/" DL_BIN)
+         "/downloads/"
+         DL_BIN,
+         "~/Downloads/"
+         DL_BIN)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
@@ -153,12 +155,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(reverbComp);
     addAndMakeVisible(enhancers);
 
-    setResizable(true, true);
-    getConstrainer()->setMinimumSize(600, 457);
-    getConstrainer()->setMaximumSize(1600, 1220);
-    getConstrainer()->setFixedAspectRatio(1.311);
-
-    // setPositioner(&pos);
+    // setResizable(true, true);
+    // getConstrainer()->setMinimumSize(600, 600);
+    // getConstrainer()->setMaximumSize(1600, 1600);
+    // getConstrainer()->setFixedAspectRatio(1.0);
 
     dl.changes = dlResult.changes;
     dl.centreWithSize(300, 200);
@@ -207,10 +207,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     preComponent.onResize = [&]
     {
+        delta = (preComponent.minimized ? -95 : 95);
+        setSize(getWidth(), getHeight() + (int)delta);
         resized();
     };
     enhancers.onResize = [&]
     {
+        delta = (enhancers.minimized ? -95 : 95);
+        setSize(getWidth(), getHeight() + (int)delta);
         resized();
     };
 }
@@ -226,6 +230,8 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 void GammaAudioProcessorEditor::resetWindowSize()
 {
     setSize(800, 610);
+    preComponent.minimized = true;
+    enhancers.minimized = true;
     strix::writeConfigFile(CONFIG_PATH, "size", 800);
 }
 
@@ -241,25 +247,29 @@ void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 void GammaAudioProcessorEditor::resized()
 {
     auto bounds = Rectangle(0, 0, 800, 800);
-    auto scale = (float)getWidth() / (float)800;
-    bounds *= scale;
+    uiScale = (float)getWidth() / (float)800;
+    bounds *= uiScale;
     const auto w = bounds.getWidth();
     const auto h = bounds.getHeight();
 
     /**
-     * HEIGHTS: They need to be determined for both, upfront, based on minimzed states
-     * What is the absolute height of preSection as % of total height?
-     * What is the absolute height of postSection as % of total height?
-     * And...where are we in height btw 610 & 800?
+     * HEIGHTS: express as absolute pixel amt added or subtracted from height
+     * total height when both minimized = 610
+     * total height when both maximized = 800
+     * max delta: 190
+     * lets say they both end up at the same size maximized:
+     * each a delta of 95px / 11.875% of 800
+     * Their bounds will be determined by either adding or subtracting 11.875%?
      */
 
     auto topSection = bounds.removeFromTop(h * 0.15f);
     // auto mainHeight = bounds.getHeight(); // height after top trimmed off
-    float preSectMult = preComponent.minimized ? 0.06f : 0.145f;
-    auto preSection = bounds.removeFromTop(h * preSectMult);
+    float preSectMult = preComponent.minimized ? 0.06f : 0.17875f;
+    auto preSection = bounds.removeFromTop((float)h * preSectMult);
     auto ampSection = bounds.removeFromTop(h * 0.255f);
     auto cabVerbSection = bounds.removeFromTop(h * 0.238f);
-    auto enhancerSection = enhancers.minimized ? bounds.removeFromTop(h * 0.06f) : bounds;
+    float postSectMult = enhancers.minimized ? 0.06f : 0.17875f;
+    auto enhancerSection = bounds.removeFromTop(h * postSectMult);
 
     /* set bounds of top controls */
     auto topSectionQtr = topSection.getWidth() / 4;
