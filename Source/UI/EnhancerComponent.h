@@ -143,6 +143,14 @@ struct EnhancerComponent : Component
 
     std::function<void()> onResize;
     std::atomic<bool> minimized = true;
+    void toggleMinimized(bool state)
+    {
+        minimized = state;
+        resizeButton.setToggleState(state, NotificationType::dontSendNotification);
+        for (auto *c : getKnobs()) c->setVisible(!state);
+        for (auto *c : getButtons()) c->setVisible(!state);
+        repaint();
+    }
 
 private:
     Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;

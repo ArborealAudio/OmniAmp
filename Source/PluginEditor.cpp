@@ -229,10 +229,9 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
 
 void GammaAudioProcessorEditor::resetWindowSize()
 {
-    preComponent.minimized = true;
-    enhancers.minimized = true;
+    preComponent.toggleMinimized(true);
+    enhancers.toggleMinimized(true);
     setSize(800, 610);
-    repaint();
     strix::writeConfigFile(CONFIG_PATH, "size", 800);
 }
 
