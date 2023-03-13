@@ -112,6 +112,14 @@ struct PreComponent : Component,
 
     std::function<void()> onResize;
     std::atomic<bool> minimized = true;
+    void toggleMinimized(bool state)
+    {
+        minimized = state;
+        resizeButton.setToggleState(state, NotificationType::dontSendNotification);
+        for (auto *c : getComps()) c->setVisible(!state);
+        grMeter.setVisible(!state);
+        repaint();
+    }
 
     void timerCallback() override
     {

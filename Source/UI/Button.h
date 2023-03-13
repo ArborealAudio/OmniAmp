@@ -141,3 +141,47 @@ private:
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> attach;
     std::unique_ptr<Drawable> on, overOn, overOff, off;
 };
+
+/*
+    Button for minimizing dynamically-sized components
+*/
+struct ResizeButton : TextButton
+{
+    ResizeButton()
+    {
+        setClickingTogglesState(true);
+    }
+
+    void paint (Graphics &g) override
+    {
+        auto bounds = getLocalBounds().reduced(6);
+        float x = bounds.getX();
+        float y = bounds.getY();
+        float r = bounds.getRight();
+        float bot = bounds.getBottom();
+        float midX = bounds.getCentreX();
+        float midY = bounds.getCentreY();
+
+        bool state = getToggleState();
+        if (isMouseOver())
+        {
+            g.setColour(Colours::grey);
+            g.fillEllipse(getLocalBounds().toFloat());
+        }
+        Path p;
+        if (state)
+        {
+            p.startNewSubPath(x, y);
+            p.lineTo(midX , bot);
+            p.lineTo(r, y);
+        }
+        else
+        {
+            p.startNewSubPath(x, y);
+            p.lineTo(r, midY);
+            p.lineTo(x, bot);
+        }
+        g.setColour(Colours::white);
+        g.strokePath(p, PathStrokeType(3.f, PathStrokeType::JointStyle::curved, PathStrokeType::EndCapStyle::rounded));
+    }
+};
