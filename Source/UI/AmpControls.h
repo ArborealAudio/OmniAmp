@@ -303,7 +303,7 @@ struct AmpControls : Component, private Timer
 private:
     AudioProcessorValueTreeState &vts;
 
-    Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_TICKS | Knob::DRAW_SHADOW;
+    Knob::Flags knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_TICKS | Knob::DRAW_SHADOW;
     Knob dist{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, bass{knobFlags}, mid{knobFlags}, treble{knobFlags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> distAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
 

@@ -115,10 +115,10 @@ struct PreComponent : Component,
     void toggleMinimized(bool state)
     {
         minimized = state;
-        resizeButton.setToggleState(state, NotificationType::dontSendNotification);
+        resizeButton.setToggleState(!state, NotificationType::sendNotificationSync);
         for (auto *c : getComps()) c->setVisible(!state);
         grMeter.setVisible(!state);
-        repaint();
+        // repaint();
     }
 
     void timerCallback() override
@@ -199,7 +199,7 @@ struct PreComponent : Component,
 private:
     AudioProcessorValueTreeState &vts;
 
-    Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
+    Knob::Flags knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
 
     Knob emphasis{knobFlags}, doubler{knobFlags}, lfEmph{knobFlags}, hfEmph{knobFlags}, comp{knobFlags};
     SimpleSlider lfFreq, hfFreq;

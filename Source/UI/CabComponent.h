@@ -90,7 +90,7 @@ private:
     ChoiceMenu menu;
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> menuAttach;
 
-    Knob::flags_t flags{Knob::DRAW_GRADIENT | Knob::DRAW_ARC | Knob::DRAW_SHADOW};
+    Knob::Flags flags{Knob::DRAW_GRADIENT | Knob::DRAW_ARC | Knob::DRAW_SHADOW};
     Knob resoLo{flags}, resoHi{flags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> resoLoAttach, resoHiAttach;
 

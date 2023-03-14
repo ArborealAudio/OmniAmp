@@ -158,7 +158,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     setResizable(true, true);
     getConstrainer()->setMinimumSize(600, 600);
     getConstrainer()->setMaximumSize(1600, 1600);
-    // getConstrainer()->setFixedAspectRatio(1.0);
 
     dl.changes = dlResult.changes;
     dl.centreWithSize(300, 200);
@@ -207,16 +206,16 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     preComponent.onResize = [&]
     {
-        delta = (preComponent.minimized ? -95 : 95);
-        setSize(getWidth(), getHeight() + (int)delta);
-        resized();
+        auto delta = (preComponent.minimized ? -95 : 95);
+        setSize(getWidth(), getHeight() + delta);
     };
     enhancers.onResize = [&]
     {
-        delta = (enhancers.minimized ? -95 : 95);
-        setSize(getWidth(), getHeight() + (int)delta);
-        resized();
+        auto delta = (enhancers.minimized ? -95 : 95);
+        setSize(getWidth(), getHeight() + delta);
     };
+
+    addMouseListener(this, true);
 }
 
 GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
@@ -239,7 +238,7 @@ void GammaAudioProcessorEditor::resetWindowSize()
 void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
     g.fillAll(Colour(BACKGROUND_COLOR));
-    auto trimmedTop = getLocalBounds().removeFromTop(getHeight() * 0.15f);
+    auto trimmedTop = getLocalBounds().removeFromTop(uiScale * 800 * 0.15f);
     logoBounds = trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).toFloat();
     logo->drawWithin(g, logoBounds.reduced(5.f), RectanglePlacement::centred, 1.f);
 }

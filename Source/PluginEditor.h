@@ -58,7 +58,7 @@ private:
 
     AmpControls ampControls;
 
-    Knob::flags_t knobFlags = 0;
+    Knob::Flags knobFlags = 0;
     Knob gate{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, width{knobFlags}, mix{knobFlags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach, mixAttach;
     LightButton bypass;
@@ -99,7 +99,7 @@ private:
 
     std::unique_ptr<TooltipWindow> tooltip = nullptr;
 
-    float uiScale = 1.f, delta = 0.f;
+    float uiScale = 1.f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GammaAudioProcessorEditor)
 };

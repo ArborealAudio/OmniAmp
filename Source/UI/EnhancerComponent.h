@@ -146,15 +146,15 @@ struct EnhancerComponent : Component
     void toggleMinimized(bool state)
     {
         minimized = state;
-        resizeButton.setToggleState(state, NotificationType::dontSendNotification);
+        resizeButton.setToggleState(!state, NotificationType::sendNotificationSync);
         for (auto *c : getKnobs()) c->setVisible(!state);
         for (auto *c : getButtons()) c->setVisible(!state);
-        repaint();
+        // repaint();
     }
 
 private:
-    Knob::flags_t knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
-    Knob::flags_t hfFlags = knobFlags | Knob::LOG_KNOB;
+    Knob::Flags knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_SHADOW | Knob::DRAW_ARC;
+    Knob::Flags hfFlags = knobFlags | Knob::LOG_KNOB;
     Knob hfEnhance{knobFlags}, lfEnhance{knobFlags}, lfCut{knobFlags}, hfCut{hfFlags};
 
     std::vector<Knob*> getKnobs()
