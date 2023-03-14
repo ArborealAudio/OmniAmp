@@ -85,8 +85,6 @@ public:
 
     AudioProcessorValueTreeState apvts;
 
-    strix::AudioSource audioSource;
-
     double lastSampleRate = 0.0, SR = 0.0;
     int maxBlockSize = 0;
 

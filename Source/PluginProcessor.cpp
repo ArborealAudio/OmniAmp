@@ -189,8 +189,6 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     doubler.prepare(spec);
     doubler.setDelayTime(18);
 
-    audioSource.prepare(spec);
-
     doubleBuffer.setSize(2, samplesPerBlock);
 
     simd.setInterleavedBlockSize(spec.numChannels, samplesPerBlock);

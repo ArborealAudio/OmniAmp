@@ -10,7 +10,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       preComponent(p.getActiveGRSource(), p.apvts),
       cabComponent(p.apvts),
       reverbComp(p.apvts),
-      enhancers(p.audioSource, p.apvts),
+      enhancers(p.apvts),
       menu(p.apvts),
       presetMenu(p.apvts),
       dl(SITE_URL

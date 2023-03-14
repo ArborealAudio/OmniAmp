@@ -5,7 +5,7 @@
 
 struct EnhancerComponent : Component
 {
-    EnhancerComponent(strix::AudioSource &s, AudioProcessorValueTreeState &apvts)
+    EnhancerComponent(AudioProcessorValueTreeState &apvts)
     {
         auto percent = [](float val)
         {
