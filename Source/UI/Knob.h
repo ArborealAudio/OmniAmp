@@ -38,13 +38,15 @@ struct SimpleSlider : Slider
 
         void drawLinearSlider(Graphics &g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, const Slider::SliderStyle style, Slider &slider) override
         {
-            auto bounds = slider.getLocalBounds().reduced(2).toFloat();
-            g.setColour(owner.baseColor);
-            g.fillRect(2.f, bounds.getY(), sliderPos + 4.f, bounds.getHeight());
+            auto bounds = slider.getLocalBounds().reduced(width * 0.07f, 5).toFloat();
+            Path outline;
+            outline.addRoundedRectangle(bounds, owner.cornerRadius);
             g.setColour(owner.outlineColor);
-            g.drawRoundedRectangle(bounds, owner.cornerRadius, 2.f);
-            g.setColour(Colour(BACKGROUND_COLOR));
-            g.drawRoundedRectangle(bounds.expanded(3.f), owner.cornerRadius, 4.f);
+            g.strokePath(outline, PathStrokeType(2.f));
+            auto fillBounds = bounds.reduced(1);
+            g.reduceClipRegion(outline);
+            g.setColour(owner.baseColor);
+            g.fillRect(fillBounds.withRight(fillBounds.getX() + sliderPos));
 
             g.setColour(owner.outlineColor);
             String valStr;
@@ -79,10 +81,10 @@ struct Knob : Slider
         DRAW_TICKS = 1 << 3,
         LOG_KNOB = 1 << 4 // used for setting log mapping i.e. for freq. params
     };
-    typedef uint8_t flags_t;
-    flags_t flags;
+    typedef uint8_t Flags;
+    Flags flags;
 
-    Knob(flags_t f) : lnf(f), flags(f)
+    Knob(Flags f) : lnf(f), flags(f)
     {
         setLookAndFeel(&lnf);
         setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
@@ -162,7 +164,7 @@ private:
     struct KnobLookAndFeel : LookAndFeel_V4
     {
         Colour baseColor = Colours::antiquewhite, accentColor = Colours::grey, textColor = Colours::antiquewhite;
-        flags_t flags;
+        Flags flags;
 
         int xOffset = 0, yOffset = 0;
         int textXOffset = 0, textYOffset = 0;
@@ -171,7 +173,7 @@ private:
 
         std::function<String(float)> valueToString = nullptr;
 
-        KnobLookAndFeel(flags_t f) : flags(f)
+        KnobLookAndFeel(Flags f) : flags(f)
         {
             label = std::make_unique<String>("");
         }

@@ -6,7 +6,7 @@
 
 class ReverbComponent : public Component
 {
-    Knob::flags_t knobFlags = 0;
+    Knob::Flags knobFlags = 0;
     Knob reverbAmount{knobFlags}, reverbDecay{knobFlags}, reverbSize{knobFlags}, predelay{knobFlags};
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> amtAttach, decayAttach, sizeAttach, predelayAttach;
 
