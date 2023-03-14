@@ -13,14 +13,27 @@
 template <typename T>
 struct OptoComp
 {
-    OptoComp(ProcessorType t, strix::VolumeMeterSource& s, std::atomic<float>* pos) : type(t), position(pos), grSource(s)
-    {}
+    OptoComp(ProcessorType t, strix::VolumeMeterSource &s, std::atomic<float> *pos) : position(pos), type(t), grSource(s)
+    {
+    }
 
-    void prepare(const dsp::ProcessSpec& spec)
+    ~OptoComp()
+    {
+        for (size_t ch = 0; ch < nChannels; ++ch)
+            free(GRdata[ch]);
+        free(GRdata);
+    }
+
+    void prepare(const dsp::ProcessSpec &spec)
     {
         lastSR = spec.sampleRate;
+        nChannels = spec.numChannels;
 
-        grSource.prepare(spec);
+        grSource.prepare(spec, 0.01f);
+
+        GRdata = (float **)malloc(sizeof(float *) * nChannels);
+        for (size_t i = 0; i < nChannels; ++i)
+            GRdata[i] = (float *)malloc(spec.maximumBlockSize * sizeof(float));
 
         switch (type)
         {
@@ -36,7 +49,8 @@ struct OptoComp
                 h.prepare(spec);
                 h.coefficients = hp_coeffs;
             }
-            for (auto& l : lp) {
+            for (auto &l : lp)
+            {
                 l.prepare(spec);
                 l.coefficients = lp_coeffs;
             }
@@ -48,11 +62,13 @@ struct OptoComp
             hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 1000.0);
             lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 3500.0);
 
-            for (auto& h : hp) {
+            for (auto &h : hp)
+            {
                 h.prepare(spec);
                 h.coefficients = hp_coeffs;
             }
-            for (auto& l : lp) {
+            for (auto &l : lp)
+            {
                 l.prepare(spec);
                 l.coefficients = lp_coeffs;
             }
@@ -85,9 +101,9 @@ struct OptoComp
         for (auto &l : sc_lp)
             l.reset();
 
-        for (auto& h : hp)
+        for (auto &h : hp)
             h.reset();
-        for (auto& l : lp)
+        for (auto &l : lp)
             l.reset();
     }
 
@@ -97,23 +113,25 @@ struct OptoComp
         switch (type)
         {
         case ProcessorType::Guitar:
-        case ProcessorType::Bass: {
+        case ProcessorType::Bass:
+        {
             double c_comp = jmap(newComp, 1.0, 3.0);
             threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
             break;
-            }
-        case ProcessorType::Channel: {
+        }
+        case ProcessorType::Channel:
+        {
             double c_comp = jmap(newComp, 1.0, 3.0);
             threshold.store(std::pow(10.0, (-12.0 * c_comp) * 0.05)); /* start at -12dB and scale down 3x */
             break;
-            }
+        }
         }
     }
 
     void processBlock(dsp::AudioBlock<double> &block, T comp, bool linked)
     {
-        CHECK_BLOCK(block)
-        if (comp == 0.0) {
+        if (comp == 0.0)
+        {
             grSource.measureGR(1.0);
             reset();
             return;
@@ -127,10 +145,12 @@ struct OptoComp
         }
         else
             processUnlinked(block.getChannelPointer(0), 0, comp, block.getNumSamples());
-        CHECK_BLOCK(block)
+            
+        // copy data to GR meter
+        grSource.copyBuffer(GRdata, block.getNumChannels(), block.getNumSamples());
     }
 
-    strix::VolumeMeterSource& getGRSource() { return grSource; }
+    strix::VolumeMeterSource &getGRSource() { return grSource; }
 
 private:
     /* linked stereo */
@@ -154,6 +174,7 @@ private:
             max = strix::fast_tanh(max);
 
             auto gr = computeGR(0, max);
+            GRdata[0][i] = GRdata[1][i] = lastGR[0];
 
             postComp(inL[i], 0, gr, lastComp, last_c);
             postComp(inR[i], 1, gr, lastComp, last_c);
@@ -186,6 +207,8 @@ private:
 
             auto gr = computeGR(ch, x);
 
+            GRdata[ch][i] = lastGR[ch];
+
             postComp(in[i], ch, gr, lastComp, last_c);
 
             lastComp += inc;
@@ -198,7 +221,7 @@ private:
 
     /*returns gain reduction multiplier*/
     inline T computeGR(int ch, T x)
-    {     
+    {
         if (x < 1.175494351e-38)
             x = 1.175494351e-38;
 
@@ -223,9 +246,6 @@ private:
         auto gr_db = 10.0 * -env;
         auto gr = std::pow(10.0, gr_db * 0.05);
         lastGR[ch] = gr;
-
-        grSource.measureGR(lastGR[0]);
-        /** TODO: this should average btw L&R if unlinked stereo. Maybe move it to the higher-level block call */
 
         return gr;
     }
@@ -273,16 +293,19 @@ private:
     T lastSR = 44100.0;
 
     std::atomic<float> threshold = std::pow(10.0, -18.0 * 0.05),
-    *position = nullptr;
+                       *position = nullptr;
 
     double lastComp = 0.0;
 
     T lastEnv[2]{0.0}, lastGR[2]{0.0}, xm[2]{0.0};
+
+    float **GRdata; // memory of GR to be passed to GR meter. Floats bc that's what the meter uses
+    size_t nChannels = 0;
 
     dsp::IIR::Filter<T> sc_hp[2], sc_lp[2], lp[2], hp[2];
     dsp::IIR::Coefficients<double>::Ptr sc_hp_coeffs, sc_lp_coeffs, lp_coeffs, hp_coeffs;
 
     ProcessorType type;
 
-    strix::VolumeMeterSource& grSource;
+    strix::VolumeMeterSource &grSource;
 };
