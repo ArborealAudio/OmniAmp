@@ -7,29 +7,39 @@ struct ButtonLookAndFeel : LookAndFeel_V4
 {
     ButtonLookAndFeel() = default;
 
-    void drawButtonBackground(Graphics &g, Button &button, const Colour &backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+    void drawButtonBackground(Graphics &g, Button &button, const Colour &, bool, bool) override
     {
         g.setColour(Colours::white);
         auto bounds = button.getLocalBounds().reduced(3).toFloat();
         g.drawRoundedRectangle(bounds, cornerRadius, 1.f);
-        if (button.getToggleState())
+
+        auto state = button.getToggleState() && shouldFillOnToggle;
+        auto currentColor = state ? Colours::white : Colours::transparentBlack;
+
+        if (button.isMouseOver())
         {
-            g.setColour(Colours::white);
+            g.setColour(currentColor.contrasting(0.2f));
+            g.fillRoundedRectangle(bounds, cornerRadius);
+        }
+        else
+        {
+            g.setColour(currentColor);
             g.fillRoundedRectangle(bounds, cornerRadius);
         }
     }
 
-    void drawButtonText(Graphics &g, TextButton &button, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+    void drawButtonText(Graphics &g, TextButton &button, bool, bool) override
     {
         auto text = button.getButtonText();
-        if (button.getToggleState())
-            g.setColour(Colours::black);
-        else
-            g.setColour(Colours::white);
+        auto state = button.getToggleState() && shouldFillOnToggle;
+        auto currentColor = state ? Colours::white : Colours::transparentBlack;
+        g.setColour(currentColor.contrasting(0.8f));
         g.drawText(text, button.getLocalBounds(), Justification::centred, false);
     }
 
     float cornerRadius = 0.f;
+    bool shouldFillOnToggle = true; /*disable this to avoid filling the button with white when it is on,
+    if the button is intended to be a two-way switch rather than an on-off toggle*/
 };
 
 struct LightButton : TextButton
@@ -167,7 +177,11 @@ struct ResizeButton : TextButton
         {
             g.setColour(Colours::grey);
             g.fillEllipse(getLocalBounds().toFloat());
+            g.setColour(Colours::antiquewhite);
         }
+        else
+            g.setColour(Colours::grey);
+        g.drawEllipse(getLocalBounds().reduced(1).toFloat(), 1.f);
         Path p;
         if (state)
         {
@@ -181,7 +195,6 @@ struct ResizeButton : TextButton
             p.lineTo(r, midY);
             p.lineTo(x, bot);
         }
-        g.setColour(Colours::white);
-        g.strokePath(p, PathStrokeType(3.f, PathStrokeType::JointStyle::curved, PathStrokeType::EndCapStyle::rounded));
+        g.strokePath(p, PathStrokeType(2.f, PathStrokeType::JointStyle::curved, PathStrokeType::EndCapStyle::rounded));
     }
 };
