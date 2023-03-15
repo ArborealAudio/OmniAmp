@@ -82,6 +82,7 @@ struct PreComponent : Component,
         compLink.setButtonText("Link");
 
         compPosAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "compPos", compPos);
+        compPos.lnf.shouldFillOnToggle = false;
         compPos.setButtonText(compPos.getToggleState() ? "Post" : "Pre");
         compPos.onStateChange = [&]
         {
@@ -152,8 +153,8 @@ struct PreComponent : Component,
         auto w = bounds.getWidth();
         int chunk = w / 5;
 
-        auto msBounds = minimized ? Rectangle(0, 0, 0, 0) : bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight() * 0.33f);
-        auto titleBounds = minimized ? bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.75f, bounds.getHeight())
+        auto msBounds = minimized ? Rectangle(0, 0, 0, 0) : bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.66f, bounds.getHeight() * 0.33f);
+        auto titleBounds = minimized ? bounds.removeFromLeft(chunk).withSizeKeepingCentre(chunk * 0.66f, bounds.getHeight())
                       : msBounds.translated(0, -bounds.getHeight() / 3);
         midSide.setBounds(msBounds);
         midSide.lnf.cornerRadius = midSide.getHeight() * 0.25f;
@@ -161,7 +162,7 @@ struct PreComponent : Component,
         title.setBounds(titleBounds);
         title.setFont(Font(title.getHeight() * 0.65f).withExtraKerningFactor(0.25f));
 
-        resizeButton.setBounds(Rectangle(title.getRight(), title.getY(), title.getHeight(), title.getHeight()).reduced(6));
+        resizeButton.setBounds(Rectangle(title.getRight() - 10, title.getY(), title.getHeight(), title.getHeight()).reduced(12));
 
         if (minimized) return;
 
@@ -190,8 +191,8 @@ struct PreComponent : Component,
         comp.setBounds(compKnobBounds);
         comp.setOffset(0, -5);
         comp.setTextOffset(0, -2);
-        compPos.setBounds(compSection.removeFromTop(compSectH * 0.5f - 2).reduced(compSectW * 0.125f, 0));
-        compLink.setBounds(compSection.removeFromTop(compSectH * 0.5f - 2).reduced(compSectW * 0.125f, 0));
+        compPos.setBounds(compSection.removeFromTop(compSectH * 0.5f - 2).reduced(compSectW * 0.125f, compSectH * 0.07f));
+        compLink.setBounds(compSection.removeFromTop(compSectH * 0.5f - 2).reduced(compSectW * 0.125f, compSectH * 0.07f));
         compPos.lnf.cornerRadius = compPos.getHeight() * 0.25f;
         compLink.lnf.cornerRadius = compLink.getHeight() * 0.25f;
     }

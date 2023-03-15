@@ -96,7 +96,7 @@ struct EnhancerComponent : Component
         g.setColour(Colours::grey);
         g.drawRoundedRectangle(bounds, 5.f, 3.f);
 
-        g.setFont(getHeight() * 0.085f);
+        g.setFont(getHeight() * 0.14f);
         g.setColour(Colours::white);
         if (minimized) return;
         auto LFLabel = bounds.withTrimmedRight(getWidth() * 0.8f).withTrimmedBottom(getHeight() * 0.5f).translated(0, 5).toNearestInt();
@@ -114,30 +114,34 @@ struct EnhancerComponent : Component
         const auto width = bounds.getWidth();
         const auto height = bounds.getHeight();
 
-        auto titleBounds = minimized ? bounds.reduced(width * 0.33f, 0) : bounds.removeFromTop(height * 0.2f).reduced(width * 0.33f, 0);
+        auto titleBounds = minimized ? bounds.reduced(width * 0.33f, 0) : bounds.removeFromTop(height * 0.33f).reduced(width * 0.33f, 0);
 
         title.setBounds(titleBounds);
         title.setFont(Font(title.getHeight() * 0.65f).withExtraKerningFactor(0.25f));
-        resizeButton.setBounds(Rectangle(title.getRight(), title.getY(), title.getHeight(), title.getHeight()).reduced(3));
+        resizeButton.setBounds(Rectangle(title.getRight() - 10, title.getY(), title.getHeight(), title.getHeight()).reduced(12));
 
         if (minimized) return;
 
         const auto buttonHeight = left.getHeight() * 0.25f;
         const auto buttonWidth = left.getWidth() * 0.25f;
-        auto leftButtons = left.removeFromLeft(buttonWidth).reduced(0, height * 0.1f);
-        auto rightButtons = right.removeFromRight(buttonWidth).reduced(0, height * 0.1f);
+        auto leftButtons = left.removeFromLeft(buttonWidth).reduced(0, height * 0.17f);
+        auto rightButtons = right.removeFromRight(buttonWidth).reduced(0, height * 0.17f);
 
-        lfCut.setBounds(bounds.removeFromLeft(width * 0.5f));
-        hfCut.setBounds(bounds.removeFromLeft(width * 0.5f));
+        lfCut.setBounds(bounds.removeFromLeft(width * 0.5f).reduced(0, 5));
+        hfCut.setBounds(bounds.removeFromLeft(width * 0.5f).reduced(0, 5));
+
         lfInvert.setBounds(leftButtons.removeFromTop(height * 0.5f).withSizeKeepingCentre(buttonWidth, buttonHeight));
         lfAutoGain.setBounds(leftButtons.withSizeKeepingCentre(buttonWidth, buttonHeight));
         lfInvert.lnf.cornerRadius = lfInvert.getHeight() * 0.25f;
         lfAutoGain.lnf.cornerRadius = lfAutoGain.getHeight() * 0.25f;
+
         lfEnhance.setBounds(left);
+
         hfInvert.setBounds(rightButtons.removeFromTop(height * 0.5f).withSizeKeepingCentre(buttonWidth, buttonHeight));
         hfAutoGain.setBounds(rightButtons.withSizeKeepingCentre(buttonWidth, buttonHeight));
         hfInvert.lnf.cornerRadius = hfInvert.getHeight() * 0.25f;
         hfAutoGain.lnf.cornerRadius = hfAutoGain.getHeight() * 0.25f;
+
         hfEnhance.setBounds(right);
     }
 
