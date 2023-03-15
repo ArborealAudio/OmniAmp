@@ -217,11 +217,14 @@ struct AVTriode : PreampProcessor
     {
         std::fill(y_m.begin(), y_m.end(), 0.0);
         sc_hp.reset();
+        lastGn = lastGp = 0.0;
     }
 
     template <TriodeType mode = VintageTube>
     inline void processSamples(T *x, size_t ch, size_t numSamples, T gp, T gn)
     {
+        auto incP = (gp - lastGp) / (T)numSamples;
+        auto incN = (gn - lastGn) / (T)numSamples;
         switch (mode)
         {
         case VintageTube:
@@ -229,34 +232,37 @@ struct AVTriode : PreampProcessor
             {
 #if USE_SIMD
                 x[i] = xsimd::select(x[i] > 0.0,
-                                     (x[i] + (x[i] * x[i])) / (1.0 + (gp * x[i] * x[i])),
-                                     x[i] / (1.0 - gn * x[i]));
+                                     (x[i] + (x[i] * x[i])) / (1.0 + (lastGp * x[i] * x[i])),
+                                     x[i] / (1.0 - lastGn * x[i]));
 #else
                 if (x[i] > 0.0)
-                    x[i] = (x[i] + x[i] * x[i]) / (1.0 + gp * x[i] * x[i]);
+                    x[i] = (x[i] + x[i] * x[i]) / (1.0 + lastGp * x[i] * x[i]);
                 else
-                    x[i] = x[i] / (1.0 - gn * x[i]);
+                    x[i] = x[i] / (1.0 - lastGn * x[i]);
 #endif
+                lastGp += incP;
+                lastGn += incN;
             }
-            CHECK_BUFFER(x, numSamples)
             break;
         case ModernTube:
             for (size_t i = 0; i < numSamples; ++i)
             {
-                x[i] = (1.f / gp) * strix::fast_tanh(gp * x[i]);
+                x[i] = (1.f / lastGp) * strix::fast_tanh(lastGp * x[i]);
+                lastGp += incP;
+                lastGn += incN;
             }
-            CHECK_BUFFER(x, numSamples)
             break;
         case ChannelTube:
             for (size_t i = 0; i < numSamples; ++i)
             {
-                auto f1 = (1.f / gp) * strix::tanh(gp * x[i]) * y_m[ch];
-                auto f2 = (1.f / gn) * strix::atan(gn * x[i]) * (1.f - y_m[ch]);
+                auto f1 = (1.f / lastGp) * strix::tanh(lastGp * x[i]) * y_m[ch];
+                auto f2 = (1.f / lastGn) * strix::atan(lastGn * x[i]) * (1.f - y_m[ch]);
 
                 x[i] = f1 + f2;
                 y_m[ch] = sc_hp.processSample(ch, x[i]);
+                lastGp += incP;
+                lastGn += incN;
             }
-            CHECK_BUFFER(x, numSamples)
             break;
         }
     }
