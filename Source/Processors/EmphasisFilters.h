@@ -3,6 +3,8 @@
  * for managing emphasis filters
  */
 
+#include <JuceHeader.h>
+
 enum EmphasisFilterType
 {
     Low,
@@ -14,73 +16,62 @@ struct EmphasisFilter
 {
     EmphasisFilter(strix::FloatParameter *_amount, strix::FloatParameter *_freq) : amount(_amount), freq(_freq)
     {
-        lastFreq = *freq;
     }
 
     void prepare(const dsp::ProcessSpec &spec)
     {
         SR = spec.sampleRate;
         float freq_ = *freq;
-        if (*freq >= SR * 0.5)
+        if (freq_ >= SR * 0.5)
             freq_ = SR * 0.49;
-        float amount_ = Decibels::decibelsToGain(amount->get());
-        float namount_ = Decibels::decibelsToGain(-amount->get());
-        for (size_t i = 0; i < 2; ++i)
+        fIn.prepare(spec);
+        fOut.prepare(spec);
+        fIn.setCutoffFreq(freq_);
+        fOut.setCutoffFreq(freq_);
+
+        if (type == Low)
         {
-            fIn[i].prepare(spec);
-            fOut[i].prepare(spec);
-            if (type == Low)
-            {
-                fIn[i].coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, freq_, 0.707, amount_);
-                fOut[i].coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, freq_, 0.707, namount_);
-            }
-            else
-            {
-                fIn[i].coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, freq_, 0.707, amount_);
-                fOut[i].coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, freq_, 0.707, namount_);
-            }
+            fIn.setType(strix::FilterType::firstOrderLowpass);
+            fOut.setType(strix::FilterType::firstOrderLowpass);
+            // fIn.coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, freq_, 0.707, amount_);
+            // fOut.coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, freq_, 0.707, namount_);
+        }
+        else
+        {
+            fIn.setType(strix::FilterType::firstOrderHighpass);
+            fOut.setType(strix::FilterType::firstOrderHighpass);
+            // fIn.coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, freq_, 0.707, amount_);
+            // fOut.coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, freq_, 0.707, namount_);
         }
     }
 
     void updateFilters()
     {
-        float amount_ = Decibels::decibelsToGain(amount->get());
-        float namount_ = Decibels::decibelsToGain(-amount->get());
         float freq_ = *freq;
-        for (size_t i = 0; i < 2; ++i)
-        {
-            if (type == Low)
-            {
-                *fIn[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, freq_, 0.707, amount_);
-                *fOut[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, freq_, 0.707, namount_);
-            }
-            else
-            {
-                *fIn[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq_, 0.707, amount_);
-                *fOut[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq_, 0.707, namount_);
-            }
-        }
+        fIn.setCutoffFreq(freq_);
+        fOut.setCutoffFreq(freq_);
     }
 
     void reset()
     {
-        fIn[0].reset();
-        fIn[1].reset();
-        fOut[0].reset();
-        fOut[1].reset();
+        fIn.reset();
+        fOut.reset();
     }
 
     template <typename Block>
     void processIn(Block &block)
     {
-        if (lastFreq != *freq || lastAmount != *amount)
+        auto amtDB = amount->get();
+        auto sign = amtDB >= 0.f;
+        float amt = sign ? Decibels::decibelsToGain(amtDB) - 1.f : (Decibels::decibelsToGain(-amtDB) - 1.f) * -1.f;
+        if (lastFreq != *freq)
             updateFilters();
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto *in = block.getChannelPointer(ch);
             for (size_t i = 0; i < block.getNumSamples(); ++i)
             {
-                in[i] = fIn[ch].processSample(in[i]);
+                in[i] += amt * fIn.processSample(ch, in[i]);
             }
         }
     }
@@ -88,22 +79,24 @@ struct EmphasisFilter
     template <typename Block>
     void processOut(Block &block)
     {
+        auto amtDB = amount->get();
+        auto sign = amtDB >= 0.f;
+        float amt = sign ? (Decibels::decibelsToGain(-amtDB) - 1.f) * -1.f : Decibels::decibelsToGain(amtDB) - 1.f;
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
         {
             auto *in = block.getChannelPointer(ch);
             for (size_t i = 0; i < block.getNumSamples(); ++i)
             {
-                in[i] = fOut[ch].processSample(in[i]);
+                in[i] += amt * fOut.processSample(ch, in[i]);
             }
         }
         lastFreq = *freq;
-        lastAmount = *amount;
     }
 
     strix::FloatParameter *amount, *freq;
 
 private:
-    dsp::IIR::Filter<T> fIn[2], fOut [2];
+    strix::SVTFilter<T> fIn, fOut;
     double SR = 44100.0;
-    float lastFreq = 1.f, lastAmount = 1.f;
+    float lastFreq = 1.f;
 };
