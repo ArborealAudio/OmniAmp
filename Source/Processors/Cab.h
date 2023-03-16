@@ -1,6 +1,7 @@
 // Cab.h
 
 #pragma once
+#include <JuceHeader.h>
 
 enum CabType
 {
@@ -13,16 +14,27 @@ template <typename Type>
 class FDNCab : AudioProcessorValueTreeState::Listener
 {
     template <typename T>
-    struct FDN
+    struct FDN : AudioProcessorValueTreeState::Listener
     {
         CabType type;
 
         FDN(AudioProcessorValueTreeState &a, CabType t) : apvts(a), type(t)
         {
             micDepth = static_cast<strix::FloatParameter *>(apvts.getParameter("cabMicPosZ"));
+            apvts.addParameterListener("cabMicPosZ", this);
             micPos = static_cast<strix::FloatParameter *>(apvts.getParameter("cabMicPosX"));
 
             changeDelay();
+        }
+
+        ~FDN()
+        {
+            apvts.removeParameterListener("cabMicPosZ", this);
+        }
+
+        void parameterChanged(const String &, float newValue) override
+        {
+            sm_micDepth.setTargetValue(newValue * 0.5f);
         }
 
         void prepare(const dsp::ProcessSpec &spec)
@@ -54,6 +66,8 @@ class FDNCab : AudioProcessorValueTreeState::Listener
             ap.setType(strix::FilterType::allpass);
             ap.setCutoffFreq(3500.0 * mic_);
             ap.setResonance(0.7);
+
+            sm_micDepth.reset(spec.sampleRate, 0.01f);
         }
 
         void changeDelay()
@@ -96,11 +110,47 @@ class FDNCab : AudioProcessorValueTreeState::Listener
             ap.reset();
         }
 
-        template <class Block>
+        template <typename Block>
         void processBlock(Block &block)
         {
-            float mic_ = micDepth->get() * 0.5f;
+            if (sm_micDepth.isSmoothing())
+            {
+                for (size_t i = 0; i < block.getNumSamples(); ++i)
+                {
+                    auto depth_ = sm_micDepth.getNextValue();
 
+                    for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+                    {
+                        T out = 0.0;
+                        auto in = block.getChannelPointer(ch);
+
+                        for (size_t n = 0; n < f_order; ++n)
+                        {
+                            auto d = delay[n].popSample(ch, dtime[n]);
+
+                            out += d;
+                            if (n % 2 == 0)
+                                out += in[i] * -fdbk;
+
+                            auto f = d * fdbk + in[i];
+
+                            f = lp[n].processSample(ch, f);
+
+                            delay[n].pushSample(ch, f);
+                        }
+
+                        out += depth_ * ap.processSample(ch, out);
+                        out *= 0.65f;
+
+                        in[i] = out;
+                    }
+                }
+                block.multiplyBy(1.0 / (f_order * 2.0));
+                return;
+            }
+
+            float micDepth_ = micDepth->get() * 0.5f;
+            
             for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
             {
                 auto in = block.getChannelPointer(ch);
@@ -124,7 +174,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
                         delay[n].pushSample(ch, f);
                     }
 
-                    out += mic_ * ap.processSample(ch, out);
+                    out += micDepth_ * ap.processSample(ch, out);
                     out *= 0.65f;
 
                     in[i] = out;
@@ -143,15 +193,16 @@ class FDNCab : AudioProcessorValueTreeState::Listener
         T fdbk = 0.1f;
 
         std::array<strix::SVTFilter<T>, f_order> lp;
-        strix::SVTFilter<T> ap;
+        strix::SVTFilter<T, true> ap;
 
         AudioProcessorValueTreeState &apvts;
 
         strix::FloatParameter *micDepth, *micPos;
+        SmoothedValue<float> sm_micDepth;
     };
 
-    strix::SVTFilter<Type> hp, lp1, lp2, lowshelf, ap;
-
+    strix::SVTFilter<Type, true> hp, lp1, lp2, ap;
+    strix::SVTFilter<Type> lowshelf;
     double sr = 44100.0;
 
     AudioProcessorValueTreeState &apvts;
@@ -286,7 +337,7 @@ public:
         ap.setCutoffFreq(5000.0 * jmap(micPos->get(), 0.1f, 1.f));
     }
 
-    template <class Block>
+    template <typename Block>
     void processBlock(Block &block)
     {
         if (updateType)
