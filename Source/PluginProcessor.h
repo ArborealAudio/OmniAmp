@@ -170,6 +170,7 @@ private:
     Processors::CutFilters cutFilters;
 
     dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> mixDelay;
+    SmoothedValue<float> sm_mix;
     dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> dryDelay;
     bool lastBypass = false;
 
@@ -302,11 +303,16 @@ private:
         mixDelay.setDelay(latency);
         dryDelay.setDelay((int)latency);
         float mixAmt = *apvts.getRawParameterValue("mix");
-        for (size_t ch = 0; ch < numChannels; ++ch)
+        if (mixAmt != sm_mix.getCurrentValue())
+            sm_mix.setTargetValue(mixAmt);
+        for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
-            auto *out = block.getChannelPointer(ch);
-            for (size_t i = 0; i < block.getNumSamples(); ++i)
-                out[i] = ((1.f - mixAmt) * mixDelay.popSample(ch)) + mixAmt * out[i];
+            float mix = sm_mix.getNextValue();
+            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+            {
+                auto out = block.getChannelPointer(ch);
+                out[i] = ((1.f - mix) * mixDelay.popSample(ch)) + mix * out[i];
+            }
         }
 
         /* manage bypass */

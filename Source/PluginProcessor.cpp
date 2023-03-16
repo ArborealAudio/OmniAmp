@@ -183,6 +183,7 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
     mixDelay.prepare(spec);
     mixDelay.setMaximumDelayInSamples(spec.maximumBlockSize + 256);
+    sm_mix.reset(spec.sampleRate, 0.01f);
     dryDelay.prepare(spec);
     dryDelay.setMaximumDelayInSamples(spec.maximumBlockSize + 256);
 
