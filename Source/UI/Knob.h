@@ -19,12 +19,12 @@ struct SimpleSlider : Slider
 
     double proportionOfLengthToValue(double proportion) override
     {
-        return mapToLog10(proportion, minValue, maxValue);
+        return mapToLog10(proportion, minValue, maxValue * 1.05); // 1.05 = fudge factor to get slider to fill up
     }
 
     double valueToProportionOfLength(double value) override
     {
-        return mapFromLog10(value, minValue, maxValue);
+        return mapFromLog10(value, minValue, maxValue * 1.05);
     }
 
     Colour outlineColor, baseColor;
@@ -39,11 +39,11 @@ struct SimpleSlider : Slider
         void drawLinearSlider(Graphics &g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, const Slider::SliderStyle style, Slider &slider) override
         {
             auto bounds = slider.getLocalBounds().reduced(width * 0.07f, 5).toFloat();
-            Path outline;
-            outline.addRoundedRectangle(bounds, owner.cornerRadius);
             g.setColour(owner.outlineColor);
-            g.strokePath(outline, PathStrokeType(2.f));
+            g.drawRoundedRectangle(bounds, owner.cornerRadius, 2.f);
             auto fillBounds = bounds.reduced(1);
+            Path outline;
+            outline.addRoundedRectangle(bounds.reduced(2), owner.cornerRadius);
             g.reduceClipRegion(outline);
             g.setColour(owner.baseColor);
             g.fillRect(fillBounds.withRight(fillBounds.getX() + sliderPos));
