@@ -9,7 +9,7 @@ struct PreComponent : Component,
 {
 
     PreComponent(strix::VolumeMeterSource &vs, AudioProcessorValueTreeState &v) : vts(v),
-                                                                                  grMeter(vs, strix::VolumeMeterComponent::Horizontal | strix::VolumeMeterComponent::Reduction, vts.getRawParameterValue("comp"))
+                                                                                  grMeter(vs, strix::VolumeMeterComponent::Horizontal | strix::VolumeMeterComponent::Reduction | strix::VolumeMeterComponent::Background, vts.getRawParameterValue("comp"))
     {
         for (auto c : getComps())
         {
@@ -90,6 +90,7 @@ struct PreComponent : Component,
         };
 
         grMeter.meterColor = Colours::oldlace;
+        grMeter.backgroundColor = Colour(BACKGROUND_COLOR).contrasting(0.25f);
         addAndMakeVisible(grMeter);
 
         addAndMakeVisible(resizeButton);
