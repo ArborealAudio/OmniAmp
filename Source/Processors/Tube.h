@@ -16,11 +16,11 @@ enum PentodeType
     Nu
 };
 
-typedef struct
+struct bias_t
 {
     double first = 1.0;
     double second = 1.0;
-} bias_t;
+};
 
 /**
  * A tube emulator for Class B simulation, with option for a dynamic bias & different saturation algorithms
@@ -217,7 +217,7 @@ struct AVTriode : PreampProcessor
     {
         std::fill(y_m.begin(), y_m.end(), 0.0);
         sc_hp.reset();
-        lastGn = lastGp = 0.0;
+        lastGn = lastGp = 1.0;
     }
 
     template <TriodeType mode = VintageTube>
