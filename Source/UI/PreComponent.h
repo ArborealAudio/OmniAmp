@@ -90,7 +90,7 @@ struct PreComponent : Component,
         };
 
         grMeter.meterColor = Colours::oldlace;
-        grMeter.backgroundColor = Colour(BACKGROUND_COLOR).contrasting(0.25f);
+        grMeter.backgroundColor = Colour(BACKGROUND_COLOR).contrasting(0.15f);
         addAndMakeVisible(grMeter);
 
         addAndMakeVisible(resizeButton);
