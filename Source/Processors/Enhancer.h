@@ -277,8 +277,8 @@ struct CutFilters
         hfCut.prepare(spec);
         lfCut.setType(strix::FilterType::highpass);
         hfCut.setType(strix::FilterType::lowpass);
-        lfCut.setCutoffFreq(*apvts.getRawParameterValue("lfCut"));
-        hfCut.setCutoffFreq(*apvts.getRawParameterValue("hfCut"));
+        lfCut.setCutoffFreq(apvts.getRawParameterValue("lfCut")->load());
+        hfCut.setCutoffFreq(apvts.getRawParameterValue("hfCut")->load());
 
         cutoffLo.reset(spec.maximumBlockSize);
         cutoffHi.reset(spec.maximumBlockSize);
