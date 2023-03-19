@@ -11,13 +11,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       cabComponent(p.apvts),
       reverbComp(p.apvts),
       enhancers(p.apvts),
-      menu(p.apvts),
+      menu(p.apvts, p.isUnlocked),
       presetMenu(p.apvts),
       dl(SITE_URL
          "/downloads/"
          DL_BIN,
          "~/Downloads/"
-         DL_BIN)
+         DL_BIN),
+      activation(p.trialRemaining_ms)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
@@ -86,6 +87,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         else
             tooltip = nullptr;
         strix::writeConfigFile(CONFIG_PATH, "tooltips", state);
+    };
+    menu.activateCallback = [&]
+    {
+        activation.setVisible(true);
     };
 #if JUCE_WINDOWS || JUCE_LINUX
     menu.openGLCallback = [&](bool state)
@@ -163,14 +168,15 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     dl.centreWithSize(300, 200);
 
     addChildComponent(activation);
+    if (!p.checkUnlock())
+        activation.setVisible(true);
     activation.onActivationCheck = [&](bool result)
     {
-        activation.setVisible(!result);
-        p.lockProcessing(!result);
+        p.isUnlocked = result;
     };
     activation.centreWithSize(300, 200);
 
-    if (!p.checkedUpdate || !p.checkedActivation)
+    if (!p.checkedUpdate)
     {
         lThread = std::make_unique<strix::LiteThread>(2);
         if (!p.checkedUpdate)
@@ -187,9 +193,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
                             strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
                             MessageManager::callAsync([&]
                                                       { dl.setVisible(dlResult.updateAvailable); }); });
-        if (!p.checkedActivation)
-            lThread->addJob([&]
-                            { activation.checkSite(); p.checkedActivation = true; });
     }
 
     addChildComponent(splash);

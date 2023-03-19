@@ -1,48 +1,30 @@
 // Activation.hpp
-// A quick little MD5 hash checker for the beta version. Only checks the hash of a predetermined string which shall be given to beta testers. Should be replaced with the final version when ready.
 
 #pragma once
-
-#if BETA_BUILD || DEV_BUILD
-
-#define KEY "gamma-beta-1108"
-
-struct HashChecker
-{
-    HashChecker() : reference(KEY)
-    {
-    }
-
-    // expects UNhashed string, checks against expected hash
-    bool checkString(const String &input)
-    {
-        auto inHash = MD5(input.toUTF8()).toHexString();
-        auto refHash = MD5(reference).toHexString();
-        return inHash == refHash;
-    }
-
-    // compare a hash input to expected hash
-    bool compareHash(const String &input)
-    {
-        auto refHash = MD5(reference).toHexString();
-        return refHash == input;
-    }
-
-    String getHash(const String &input)
-    {
-        return MD5(input.toUTF8()).toHexString();
-    }
-
-private:
-    const CharPointer_UTF8 reference;
-};
-#endif
+#include <JuceHeader.h>
 
 struct ActivationComponent : Component
 {
-    ActivationComponent()
+    enum CheckResult
+    {
+        None,
+        Success,
+        InvalidLicense,
+        ActivationsMaxed,
+        WrongProduct,
+        ConnectionFailed
+    };
+
+    enum CheckStatus
+    {
+        NotSubmitted,
+        Finished
+    };
+
+    ActivationComponent(int64 _trialRemaining) : trialRemaining(_trialRemaining)
     {
         addAndMakeVisible(editor);
+        editor.setFont(Font(18.f));
         editor.onReturnKey = [&]
         {
             checkInput();
@@ -54,48 +36,107 @@ struct ActivationComponent : Component
         {
             checkInput();
         };
+
+        addChildComponent(close);
+        if (trialRemaining <= 0)
+            close.setEnabled(false);
+        else
+            close.setVisible(true);
+        close.onClick = [&]
+        {
+            setVisible(false);
+        };
     }
 
-    /* called when UI submits a beta key & when site check is successful */
+    /* called when UI submits a license key & when site check is successful.
+    Basically you set the visibility of this ActivationComponent and set the
+    AudioProcessor's `isUnlocked` variable */
     std::function<void(bool)> onActivationCheck;
 
     void checkInput()
     {
         auto text = editor.getText();
-        if (check.checkString(text))
+        if (text.isEmpty())
         {
-            writeFile(check.getHash(text).toRawUTF8());
+            editor.clear();
+            editor.setTextToShowWhenEmpty("Actually enter a license...", Colour::fromHSL((float)color / 360.f, 1.f, 0.75f, 1.f));
+            color += 45;
+            if (color % 360 == 0)
+                color = 0;
             if (onActivationCheck)
-                onActivationCheck(true);
+                onActivationCheck(false);
+            repaint();
+            return;
+        }
+        m_result = checkSite(text, false);
+        if (m_result == CheckResult::Success)
+        {
+            if (checkSite(text, true) == CheckResult::Success)
+            {
+                writeFile(text.toRawUTF8());
+                if (onActivationCheck)
+                    onActivationCheck(true);
+                editor.setVisible(false);
+                close.setVisible(true);
+                close.setEnabled(true);
+                submit.setVisible(false);
+            }
         }
         else
         {
             if (onActivationCheck)
                 onActivationCheck(false);
 
+            editor.setVisible(true);
             editor.clear();
             editor.giveAwayKeyboardFocus();
             editor.setTextToShowWhenEmpty("Invalid license...", Colours::red);
-            repaint(getLocalBounds());
         }
+        m_status = Finished;
+        repaint();
     }
 
     void paint(Graphics &g) override
     {
-        g.setColour(Colours::darkslategrey.withAlpha(0.9f));
+        g.setColour(Colours::black.withAlpha(0.9f));
         g.fillRoundedRectangle(getLocalBounds().reduced(5).toFloat(), 10.f);
 
-        if (!m_betaLive)
-        {
-            g.setFont(22.f);
-            g.setColour(Colours::white);
-            g.drawFittedText("The beta period has ended. Thank you for participating.", getLocalBounds().reduced(getWidth() * 0.1f), Justification::centred, 3);
-            return;
-        }
-
-        g.setFont(22.f);
+        g.setFont(18.f);
         g.setColour(Colours::white);
-        g.drawFittedText("Please enter your license key:", getLocalBounds().removeFromTop(getHeight() * 0.3f), Justification::centred, 3);
+        String message;
+        String trialDesc = "";
+        if (m_status == NotSubmitted)
+        {
+            message = "Enter your license:";
+        }
+        else if (m_status == Finished)
+        {
+            g.setColour(Colours::red);
+            switch (m_result)
+            {
+                case Success:
+                    message = "License activated! Thank you!";
+                    g.setColour(Colours::white);
+                    break;
+                case InvalidLicense:
+                    message = "Invalid license";
+                    break;
+                case ActivationsMaxed:
+                    message = "Activations maxed";
+                    break;
+                case WrongProduct:
+                    message = "Wrong product";
+                    break;
+                case ConnectionFailed:
+                    message = "Connection failed. Try again.";
+                    break;
+            }
+        }
+        if (trialRemaining > 0 && m_result != Success)
+            trialDesc = RelativeTime::milliseconds(trialRemaining).getDescription() + " remaining in free trial";
+        else if (trialRemaining <= 0 && m_result != Success)
+            trialDesc = "Trial expired.";
+        g.drawFittedText(message + "\n" + trialDesc, getLocalBounds().removeFromTop(getHeight() * 0.3f), Justification::centred, 3);
     }
 
     void resized() override
@@ -107,83 +148,73 @@ struct ActivationComponent : Component
         auto editorPadding = BorderSize<int>(h * 0.4, 20, h * 0.4, 20);
         editor.setBoundsInset(editorPadding);
 
-        submit.setBounds(b.removeFromBottom(h * 0.3f).reduced(50, 10));
+        auto buttons = b.removeFromBottom(h * 0.3f);
+        submit.setBounds(buttons.removeFromLeft(w * 0.5f).reduced(10));
+        close.setBounds(buttons.removeFromLeft(w * 0.5f).reduced(10));
     }
 
-    var isBetaLive() { return m_betaLive; }
-
-    bool readFile()
+    CheckResult checkSite(const String &input, bool activate)
     {
-        File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + CONFIG_PATH};
-        if (!config.existsAsFile())
-            return false;
+        auto url = URL("https://3pvj52nx17.execute-api.us-east-1.amazonaws.com");
+        if (activate)
+            url = url.withNewSubPath("/default/licenses/activate/" + input);
+        else
+            url = url.withNewSubPath("/default/licenses/" + input);
 
-        auto xml = parseXML(config);
-        if (xml == nullptr)
-            return false;
+        CheckResult result = CheckResult::ConnectionFailed;
 
-        auto key = xml->getStringAttribute("Key");
-        auto result = check.compareHash(key);
+        if (auto stream = url.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)
+                                                .withExtraHeaders("x-api-key: Fb5mXNfHiNaSKABQEl0PiFmYBthvv457bOCA1ou2")
+                                                .withConnectionTimeoutMs(10000)))
+        {
+            if (activate)
+                return CheckResult::Success;
+            
+            auto response = stream->readEntireStreamAsString();
+            auto json = JSON::parse(response);
 
-        if (onActivationCheck)
-            onActivationCheck(result);
+            if ((bool)json.getProperty("success", var(false)) != true)
+                return CheckResult::InvalidLicense;
+            
+            auto item = json.getProperty("Item", var());
+            if (item.isObject())
+            {
+                // it should be a JSON object
+                auto product = item.getProperty("product", var(false));
+                auto numActivations = item.getProperty("activationCount", var());
+                auto maxActivations = item.getProperty("maxActivations", var());
+
+                if (product.toString() != "omniamp")
+                    return CheckResult::WrongProduct;
+                if (numActivations >= maxActivations)
+                    return CheckResult::ActivationsMaxed;
+
+                return CheckResult::Success;
+            }
+            else
+                return CheckResult::InvalidLicense;
+        }
+
         return result;
     }
 
-    void checkSite()
-    {
-        /* first check if 24hrs since last check */
-        auto lastCheck = strix::readConfigFileString(CONFIG_PATH, "betaCheck").getLargeIntValue();
-        auto dayAgo = Time::getCurrentTime() - RelativeTime::hours(24);
-        if (lastCheck > dayAgo.toMilliseconds())
-            return;
-
-        auto url = URL("https://arborealaudio.com/.netlify/functions/beta-check");
-        bool checkResult = false;
-
-        if (auto stream = url.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress).withExtraHeaders("name: Gamma\nkey: ArauGammBeta").withConnectionTimeoutMs(10000)))
-        {
-            auto response = stream->readEntireStreamAsString();
-
-            checkResult = strcmp(response.toRawUTF8(), "true") == 0;
-            strix::writeConfigFileString(CONFIG_PATH, "betaCheck", String(Time::currentTimeMillis()));
-        }
-        else
-            checkResult = false;
-        
-        m_betaLive = checkResult;
-
-        MessageManager::callAsync([&]
-                                  {
-        /* these methods need to be run on msg thread */
-        setVisible(!m_betaLive);
-        editor.setVisible(m_betaLive);
-        submit.setVisible(m_betaLive);
-        repaint();
-        if (m_betaLive)
-            readFile(); });
-    }
-
     TextEditor editor;
-    TextButton submit{"Submit"};
-    var m_betaLive;
+    TextButton submit{"Submit"}, close{"Close"};
 
 private:
-    HashChecker check;
+    std::atomic<CheckResult> m_result = None;
+    std::atomic<CheckStatus> m_status = NotSubmitted;
+
+    int64 trialRemaining = 0;
+
+    uint16 color;
 
     void writeFile(const char *key)
     {
-        File config{File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + CONFIG_PATH};
-        if (!config.existsAsFile())
-            config.create();
+        File license {File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/License/license"};
+        if (!license.existsAsFile())
+            license.create();
 
-        auto xml = parseXML(config);
-        if (xml == nullptr)
-        {
-            xml.reset(new XmlElement("Config"));
-        }
-
-        xml->setAttribute("Key", key);
-        xml->writeTo(config);
+        license.replaceWithText(String(key));
     }
 };

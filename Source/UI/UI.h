@@ -17,7 +17,7 @@ static const Typeface::Ptr getCustomFont()
     return typeface;
 }
 
-#define CONFIG_PATH "/Arboreal Audio/Gamma/config.xml"
+#define CONFIG_PATH "/Arboreal Audio/OmniAmp/config.xml"
 
 /**
  * will lay out components in vector-wise order, either horizontally or vertically across the bounds provided.

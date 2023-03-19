@@ -10,16 +10,16 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-    #if NDEBUG
-        #define USE_SIMD 1
-    #else // make sure DBG builds are labeled non-production
-        #ifndef PRODUCTION_BUILD
-            #define PRODUCTION_BUILD 0
-        #endif
-    #endif
+#if NDEBUG
+#define USE_SIMD 1
+#else // make sure DBG builds are labeled non-production
+#ifndef PRODUCTION_BUILD
+#define PRODUCTION_BUILD 0
+#endif
+#endif
 #endif
 #ifndef PRODUCTION_BUILD // use this to control production build parameter
-    #define PRODUCTION_BUILD 1
+#define PRODUCTION_BUILD 1
 #endif
 
 #include <JuceHeader.h>
@@ -29,7 +29,7 @@
 #include "Presets/PresetManager.h"
 #include "UI/UI.h"
 #if !PRODUCTION_BUILD
-    #define DEV_BUILD 1
+#define DEV_BUILD 1
 #endif
 #include "Activation.hpp"
 
@@ -120,7 +120,12 @@ public:
         return juce::AudioProcessor::getWrapperTypeDescription(wrapperType);
     }
 
-    bool checkedUpdate = false, checkedActivation = false;
+    bool checkedUpdate = false;
+
+    var isUnlocked = false;
+    var trialEnded = false;
+    int64 trialRemaining_ms = 0;
+    inline var checkUnlock() { return isUnlocked; }
 
 private:
     AudioProcessorValueTreeState::ParameterLayout createParams();
@@ -369,6 +374,44 @@ private:
                     block.getChannelPointer(ch)[i] = (dryDelay.popSample(ch) * (1.f - gain)) + (block.getChannelPointer(ch)[i] * gain);
                 gain += inc;
             }
+        }
+    }
+
+    void checkLicense()
+    {
+        auto file = File(File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/License/license");
+        /* check license file */
+        if (file.exists() && !checkUnlock())
+        {
+            FileInputStream read(file);
+            if (!read.openedOk())
+                return;
+            auto license = read.readString();
+            isUnlocked = license.isNotEmpty();
+        }
+
+        if (isUnlocked)
+            return;
+
+        /* check trial time */
+        File timeFile = File(File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/License/trialkey");
+        if (!timeFile.exists())
+        {
+            timeFile.create();
+            auto trialStart = Time::currentTimeMillis();
+            timeFile.replaceWithText(String(trialStart));
+            trialRemaining_ms = RelativeTime::days(14).inMilliseconds();
+        }
+        else
+        {
+            FileInputStream read (timeFile);
+            if (!read.openedOk())
+                return;
+            auto fileTime = read.readString();
+            auto trialEnd = RelativeTime::days(14) + Time(fileTime.getLargeIntValue());
+            trialEnded = trialEnd.toMilliseconds() <= Time::currentTimeMillis();
+            if (!trialEnded)
+                trialRemaining_ms = trialEnd.toMilliseconds() - Time::currentTimeMillis();
         }
     }
 
