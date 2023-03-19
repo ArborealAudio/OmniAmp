@@ -55,17 +55,17 @@ class MenuComponent : public Component
     DrawableButton menuButton;
     std::unique_ptr<Drawable> icon;
 
-    #if ! JUCE_MAC
+#if !JUCE_MAC
     ListButton openGL;
-    #endif
-    ListButton HQ, renderHQ, windowSize, checkUpdate, showTooltips;
+#endif
+    ListButton HQ, renderHQ, windowSize, checkUpdate, showTooltips, activate;
 
     bool openGLOn = false, showTooltipsOn = false;
 
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hqAttach, renderHQAttach;
 
 public:
-    MenuComponent(AudioProcessorValueTreeState &a) : vts(a), menuButton("Menu", DrawableButton::ButtonStyle::ImageFitted)
+    MenuComponent(AudioProcessorValueTreeState &a, var isActivated) : vts(a), menuButton("Menu", DrawableButton::ButtonStyle::ImageFitted)
     {
 #if JUCE_WINDOWS || JUCE_LINUX
         openGL.setButtonText("OpenGL On/Off");
@@ -97,10 +97,13 @@ public:
         showTooltips.setToggleState(strix::readConfigFile(CONFIG_PATH, "tooltips"), NotificationType::dontSendNotification);
         showTooltips.toggle = true;
 
+        activate.setButtonText("Activate");
+        activate.setTooltip("Activate your license of OmniAmp");
+
         addAndMakeVisible(menuButton);
         icon = Drawable::createFromImageData(BinaryData::Hamburger_icon_svg, BinaryData::Hamburger_icon_svgSize);
         menuButton.setImages(icon.get());
-        menuButton.onClick = [&]
+        menuButton.onClick = [&, isActivated]
         {
             PopupMenu m;
 #if !JUCE_MAC
@@ -115,6 +118,8 @@ public:
             m.addCustomItem(4, showTooltips, getWidth(), 35, true, nullptr, "Show Tooltips");
             m.addCustomItem(5, windowSize, getWidth(), 35, true, nullptr, "Default window size");
             m.addCustomItem(6, checkUpdate, getWidth(), 35, true, nullptr, "Check update");
+            if (!isActivated)
+                m.addCustomItem(7, activate, getWidth(), 35, true, nullptr, "Activate");
             m.showMenuAsync(PopupMenu::Options().withMinimumWidth(175).withStandardItemHeight(35),
                             [&](int result)
                             {
@@ -142,6 +147,10 @@ public:
                                     if (checkUpdateCallback)
                                         checkUpdateCallback();
                                     break;
+                                case 7:
+                                    if (activateCallback)
+                                        activateCallback();
+                                    break;
                                 }
                             });
         };
@@ -154,6 +163,7 @@ public:
     std::function<void()> checkUpdateCallback;
     std::function<void(bool)> openGLCallback;
     std::function<void(bool)> showTooltipCallback;
+    std::function<void()> activateCallback;
 
     void resized() override
     {

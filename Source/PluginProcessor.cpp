@@ -51,6 +51,8 @@ GammaAudioProcessor::GammaAudioProcessor()
     apvts.addParameterListener("hq", this);
 
     LookAndFeel::getDefaultLookAndFeel().setDefaultSansSerifTypeface(getCustomFont());
+
+    checkLicense();
 }
 
 GammaAudioProcessor::~GammaAudioProcessor()

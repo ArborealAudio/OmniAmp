@@ -108,7 +108,6 @@ target_link_libraries(Gamma
         BinaryData
         juce::juce_audio_utils
         juce::juce_dsp
-        juce::juce_cryptography
         gin
         gin_graphics
         Arbor_modules
