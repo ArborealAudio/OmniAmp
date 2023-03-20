@@ -4,8 +4,7 @@
  * compressor, distortion, and pre-emphasis filters
  */
 
-struct PreComponent : Component,
-                      Timer
+struct PreComponent : Component
 {
 
     PreComponent(strix::VolumeMeterSource &vs, AudioProcessorValueTreeState &v) : vts(v),
@@ -106,11 +105,7 @@ struct PreComponent : Component,
         addAndMakeVisible(title);
         title.setText("Pre", NotificationType::dontSendNotification);
         title.setJustificationType(Justification::centred);
-
-        startTimerHz(30);
     }
-
-    ~PreComponent() override { stopTimer(); }
 
     std::function<void()> onResize;
     std::atomic<bool> minimized = true;
@@ -121,14 +116,6 @@ struct PreComponent : Component,
         for (auto *c : getComps()) c->setVisible(!state);
         grMeter.setVisible(!state);
         // repaint();
-    }
-
-    void timerCallback() override
-    {
-        if (*vts.getRawParameterValue("ampOn"))
-            grMeter.setState(vts.getRawParameterValue("comp"));
-        else
-            grMeter.setState(vts.getRawParameterValue("ampOn"));
     }
 
     void paint(Graphics &g) override

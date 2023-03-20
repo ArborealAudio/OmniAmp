@@ -239,20 +239,37 @@ private:
 
         auto osBlock = oversample[os_index_].processSamplesUp(block);
 
-        if ((bool)*apvts.getRawParameterValue("ampOn"))
+        auto p_comp = apvts.getRawParameterValue("comp");
+        auto linked = (bool)apvts.getRawParameterValue("compLink")->load();
+        auto compPos = (bool)apvts.getRawParameterValue("compPos")->load();
+        auto ampOn = (bool)apvts.getRawParameterValue("ampOn")->load();
+
+        switch (currentMode)
         {
-            switch (currentMode)
-            {
-            case Guitar:
+        case Guitar:
+            if (!compPos)
+                guitar.comp.processBlock(osBlock, *p_comp, linked);
+            if (ampOn)
                 guitar.processBlock(osBlock);
-                break;
-            case Bass:
+            if (compPos)
+                guitar.comp.processBlock(osBlock, *p_comp, linked);
+            break;
+        case Bass:
+            if (!compPos)
+                bass.comp.processBlock(osBlock, *p_comp, linked);
+            if (ampOn)
                 bass.processBlock(osBlock);
-                break;
-            case Channel:
+            if (compPos)
+                bass.comp.processBlock(osBlock, *p_comp, linked);
+            break;
+        case Channel:
+            if (!compPos)
+                channel.comp.processBlock(osBlock, *p_comp, linked);
+            if (ampOn)
                 channel.processBlock(osBlock);
-                break;
-            }
+            if (compPos)
+                channel.comp.processBlock(osBlock, *p_comp, linked);
+            break;
         }
 
         oversample[os_index_].processSamplesDown(block);
