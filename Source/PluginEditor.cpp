@@ -190,11 +190,16 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         "Gamma-latest.json", false, strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
                             p.checkedUpdate = true;
                             dl.changes = dlResult.changes;
-                            DBG("Changes: " << dl.changes);
                             strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
                             MessageManager::callAsync([&]
-                                                      { dl.setVisible(dlResult.updateAvailable); }); });
+                                                      { dl.setVisible(dlResult.updateAvailable); });
+            });
     }
+
+    lThread->onLoopExit = [&] { 
+        MessageManager::callAsync([&]
+        {lThread.reset(nullptr);});
+    };
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
