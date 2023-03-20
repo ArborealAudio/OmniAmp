@@ -238,7 +238,7 @@ struct AVTriode : PreampProcessor
                 auto n = sm_gn.getNextValue();
 #if USE_SIMD
                 x[i] = xsimd::select(x[i] > 0.0,
-                                     (x[i] + (x[i] * x[i])) / (1.0 + p * x[i] * x[i])),
+                                     (x[i] + (x[i] * x[i])) / (1.0 + p * x[i] * x[i]),
                                      x[i] / (1.0 - n * x[i]));
 #else
                 if (x[i] > 0.0)
