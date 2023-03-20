@@ -164,6 +164,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     getConstrainer()->setMinimumSize(600, 600);
     getConstrainer()->setMaximumSize(1600, 1600);
 
+    addChildComponent(dl);
     dl.changes = dlResult.changes;
     dl.centreWithSize(300, 200);
 
@@ -178,7 +179,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     if (!p.checkedUpdate)
     {
-        lThread = std::make_unique<strix::LiteThread>(2);
+        lThread = std::make_unique<strix::LiteThread>(1);
         if (!p.checkedUpdate)
             lThread->addJob([&]
                             { dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::versionString, SITE_URL
