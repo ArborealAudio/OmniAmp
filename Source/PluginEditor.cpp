@@ -13,10 +13,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       enhancers(p.apvts),
       menu(p.apvts, p.isUnlocked),
       presetMenu(p.apvts),
-      dl(SITE_URL
-         "/downloads/"
-         DL_BIN,
-         "~/Downloads/"
+      dl("~/Downloads/"
          DL_BIN),
       activation(p.trialRemaining_ms)
 {
@@ -61,13 +58,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     { resetWindowSize(); };
     menu.checkUpdateCallback = [&]
     {
-        dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::versionString,
+        dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::projectName,
+                                                          ProjectInfo::versionString,
                                                           SITE_URL
-                                                          "/versions/"
-#if !PRODUCTION_BUILD
-                                                          "test/"
-#endif
-                                                          "Gamma-latest.json",
+                                                          "/versions/index.json",
                                                           true);
         p.checkedUpdate = true;
         strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
@@ -182,12 +176,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         lThread = std::make_unique<strix::LiteThread>(1);
         if (!p.checkedUpdate)
             lThread->addJob([&]
-                            { dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::versionString, SITE_URL
-        "/versions/"
-#if !PRODUCTION_BUILD
-        "test/"
-#endif
-        "Gamma-latest.json", false, strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
+                            { dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::projectName, ProjectInfo::versionString,
+                    SITE_URL
+                    "/versions/index.json",
+                    false, strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
                             p.checkedUpdate = true;
                             dl.changes = dlResult.changes;
                             strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
@@ -196,10 +188,13 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
             });
     }
 
-    lThread->onLoopExit = [&] { 
-        MessageManager::callAsync([&]
-        {lThread.reset(nullptr);});
-    };
+    if (lThread)
+    {
+        lThread->onLoopExit = [&] { 
+            MessageManager::callAsync([&]
+            {lThread.reset(nullptr);});
+        };
+    }
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
