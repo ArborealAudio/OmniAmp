@@ -211,57 +211,60 @@ struct AVTriode : PreampProcessor
         sc_hp.prepare(spec);
         sc_hp.setType(strix::FilterType::highpass);
         sc_hp.setCutoffFreq(20.0);
+
+        sm_gp.reset(spec.sampleRate, 0.01);
+        sm_gn.reset(spec.sampleRate, 0.01);
+        sm_gp.setCurrentAndTargetValue(bias.first);
+        sm_gn.setCurrentAndTargetValue(bias.second);
     }
 
     void reset()
     {
         std::fill(y_m.begin(), y_m.end(), 0.0);
         sc_hp.reset();
-        lastGn = lastGp = 1.0;
     }
 
     template <TriodeType mode = VintageTube>
-    inline void processSamples(T *x, size_t ch, size_t numSamples, T gp, T gn)
+    inline void processSamples(T *x, size_t ch, size_t numSamples)
     {
-        auto incP = (gp - lastGp) / (T)numSamples;
-        auto incN = (gn - lastGn) / (T)numSamples;
+        sm_gp.setTargetValue(bias.first);
+        sm_gn.setTargetValue(bias.second);
         switch (mode)
         {
         case VintageTube:
             for (size_t i = 0; i < numSamples; ++i)
             {
+                auto p = sm_gp.getNextValue();
+                auto n = sm_gn.getNextValue();
 #if USE_SIMD
                 x[i] = xsimd::select(x[i] > 0.0,
-                                     (x[i] + (x[i] * x[i])) / (1.0 + (lastGp * x[i] * x[i])),
-                                     x[i] / (1.0 - lastGn * x[i]));
+                                     (x[i] + (x[i] * x[i])) / (1.0 + p * x[i] * x[i])),
+                                     x[i] / (1.0 - n * x[i]));
 #else
                 if (x[i] > 0.0)
-                    x[i] = (x[i] + x[i] * x[i]) / (1.0 + lastGp * x[i] * x[i]);
+                    x[i] = (x[i] + x[i] * x[i]) / (1.0 + p * x[i] * x[i]);
                 else
-                    x[i] = x[i] / (1.0 - lastGn * x[i]);
+                    x[i] = x[i] / (1.0 - n * x[i]);
 #endif
-                lastGp += incP;
-                lastGn += incN;
             }
             break;
         case ModernTube:
             for (size_t i = 0; i < numSamples; ++i)
             {
-                x[i] = (1.f / lastGp) * strix::fast_tanh(lastGp * x[i]);
-                lastGp += incP;
-                lastGn += incN;
+                auto p = sm_gp.getNextValue();
+                x[i] = (1.f / p) * strix::fast_tanh(p * x[i]);
             }
             break;
         case ChannelTube:
             for (size_t i = 0; i < numSamples; ++i)
             {
-                auto f1 = (1.f / lastGp) * strix::tanh(lastGp * x[i]) * y_m[ch];
-                auto f2 = (1.f / lastGn) * strix::atan(lastGn * x[i]) * (1.f - y_m[ch]);
+                auto p = sm_gp.getNextValue();
+                auto n = sm_gn.getNextValue();
+                auto f1 = (1.f / p) * strix::tanh(p * x[i]) * y_m[ch];
+                auto f2 = (1.f / n) * strix::atan(n * x[i]) * (1.f - y_m[ch]);
 
                 x[i] = f1 + f2;
                 y_m[ch] = sc_hp.processSample(ch, x[i]);
-                lastGp += incP;
-                lastGn += incN;
             }
             break;
         }
@@ -277,13 +280,13 @@ struct AVTriode : PreampProcessor
             switch (type)
             {
             case VintageTube:
-                processSamples<VintageTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                processSamples<VintageTube>(in, ch, block.getNumSamples());
                 break;
             case ModernTube:
-                processSamples<ModernTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                processSamples<ModernTube>(in, ch, block.getNumSamples());
                 break;
             case ChannelTube:
-                processSamples<ChannelTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                processSamples<ChannelTube>(in, ch, block.getNumSamples());
                 break;
             }
         }
@@ -298,13 +301,13 @@ struct AVTriode : PreampProcessor
             switch (type)
             {
             case VintageTube:
-                processSamples<VintageTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                processSamples<VintageTube>(in, ch, block.getNumSamples());
                 break;
             case ModernTube:
-                processSamples<ModernTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                processSamples<ModernTube>(in, ch, block.getNumSamples());
                 break;
             case ChannelTube:
-                processSamples<ChannelTube>(in, ch, block.getNumSamples(), bias.first, bias.second);
+                processSamples<ChannelTube>(in, ch, block.getNumSamples());
                 break;
             }
         }
@@ -316,5 +319,5 @@ struct AVTriode : PreampProcessor
 private:
     std::vector<T> y_m;
     strix::SVTFilter<T> sc_hp;
-    T lastGp = 1.0, lastGn = 1.0;
+    SmoothedValue<double> sm_gp, sm_gn;
 };

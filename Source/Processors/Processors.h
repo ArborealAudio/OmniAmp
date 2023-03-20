@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "Arbor_modules/modules/SmoothGain.h"
 namespace Processors
 {
     enum class ProcessorType
@@ -454,7 +455,8 @@ namespace Processors
             else
                 mxr.setInit(true);
 
-            processBlock.multiplyBy(gain_raw);
+            // processBlock.multiplyBy(gain_raw);
+            strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
             if (ampAutoGain_)
                 autoGain *= 1.0 / gain_raw;
 
@@ -478,7 +480,8 @@ namespace Processors
             }
             preamp.process(processBlock);
 
-            processBlock.multiplyBy(out_raw);
+            // processBlock.multiplyBy(out_raw);
+            strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
             pentode.processBlockClassB(processBlock);
 
             if (ampAutoGain_)
@@ -697,7 +700,8 @@ namespace Processors
 
             triode[0].process(processBlock);
 
-            processBlock.multiplyBy(gain_raw);
+            // processBlock.multiplyBy(gain_raw);
+            strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
 
             if (ampAutoGain_)
                 autoGain *= 1.0 / gain_raw;
@@ -722,7 +726,8 @@ namespace Processors
             triode[3].shouldBypass = !*hiGain;
             preamp.process(processBlock);
 
-            processBlock.multiplyBy(out_raw);
+            // processBlock.multiplyBy(out_raw);
+            strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
 
             if (ampAutoGain_)
                 autoGain *= 1.0 / out_raw;

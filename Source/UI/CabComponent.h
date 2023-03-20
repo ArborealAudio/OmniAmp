@@ -56,8 +56,8 @@ private:
         void mouseDoubleClick(const MouseEvent &event) override
         {
             auto adjBounds = micBounds.reduced(micWidth * 0.5f);
-            apvts.getParameterAsValue("cabMicPosX").setValue(0.5f);
-            apvts.getParameterAsValue("cabMicPosZ").setValue(1.f);
+            apvts.getParameterAsValue("cabMicPosX").setValue(apvts.getParameter("cabMicPosX")->getDefaultValue());
+            apvts.getParameterAsValue("cabMicPosZ").setValue(apvts.getParameter("cabMicPosZ")->getDefaultValue());
             pos = adjBounds.getRelativePoint(micPos->get(), micDepth->get());
             clampPoints();
             repaint();
