@@ -195,6 +195,8 @@ namespace Processors
 
         virtual strix::VolumeMeterSource &getActiveGRSource() { return comp.getGRSource(); }
 
+        OptoComp<double> comp;
+
     protected:
         void defaultPrepare(const dsp::ProcessSpec &spec)
         {
@@ -219,7 +221,6 @@ namespace Processors
 
         AudioProcessorValueTreeState &apvts;
 
-        OptoComp<double> comp;
 #if USE_SIMD
         MXRDistWDF<vec> mxr;
         std::unique_ptr<ToneStack<vec>> toneStack;
@@ -442,9 +443,6 @@ namespace Processors
             FloatType autoGain = 1.0;
             bool ampAutoGain_ = *ampAutoGain;
 
-            if (!*apvts.getRawParameterValue("compPos"))
-                comp.processBlock(block, *p_comp, *linked);
-
 #if USE_SIMD
             auto simdBlock = simd.interleaveBlock(block);
             auto &&processBlock = simdBlock;
@@ -491,9 +489,6 @@ namespace Processors
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
 #endif
-
-            if (*apvts.getRawParameterValue("compPos"))
-                comp.processBlock(block, *p_comp, *linked);
         }
 
         GuitarMode currentType = GammaRay;
@@ -689,9 +684,6 @@ namespace Processors
             FloatType autoGain = 1.0;
             bool ampAutoGain_ = *ampAutoGain;
 
-            if (!*apvts.getRawParameterValue("compPos"))
-                comp.processBlock(block, *p_comp, *linked);
-
 #if USE_SIMD
             auto simdBlock = simd.interleaveBlock(block);
             auto &&processBlock = simdBlock;
@@ -745,9 +737,6 @@ namespace Processors
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
 #endif
-
-            if (*apvts.getRawParameterValue("compPos"))
-                comp.processBlock(block, *p_comp, *linked);
         }
 
     private:
@@ -919,9 +908,6 @@ namespace Processors
             FloatType autoGain = 1.0;
             bool ampAutoGain_ = *ampAutoGain;
 
-            if (!*apvts.getRawParameterValue("compPos"))
-                comp.processBlock(block, *p_comp, *linked);
-
 #if USE_SIMD
             auto &&processBlock = simd.interleaveBlock(block);
 #else
@@ -964,8 +950,6 @@ namespace Processors
             simd.deinterleaveBlock(processBlock);
 #endif
             block.multiplyBy(autoGain);
-            if (*apvts.getRawParameterValue("compPos"))
-                comp.processBlock(block, *p_comp, *linked);
         }
 
     private:
