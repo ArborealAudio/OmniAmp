@@ -254,10 +254,10 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     }
     else if (parameterID == "dist")
     {
-        // auto logval = std::tanh(3.0 * newValue);
+        auto logval = std::tanh(3.f * newValue);
         // auto map = [](float x)
         // { return (std::pow(0.1f, x) - 1.f) / -0.9f; };
-        auto logval = std::sqrt(newValue);
+        // auto logval = std::sqrt(newValue);
         guitar.setDistParam(logval);
         bass.setDistParam(logval);
         channel.setDistParam(logval);
