@@ -1,6 +1,7 @@
 // CabComponent.h
 
 #pragma once
+#include <JuceHeader.h>
 
 struct CabsComponent : Component, AudioProcessorValueTreeState::Listener, Timer
 {
@@ -45,6 +46,9 @@ private:
             pos.y = event.position.y + (micWidth * 0.5f);
             auto xFrac = (pos.x - micBounds.getX()) / adjBounds.getWidth();
             auto yFrac = (pos.y - (getHeight() - micBounds.getHeight())) / adjBounds.getHeight();
+
+            xFrac = jlimit(0.f, 1.f, xFrac);
+            yFrac = jlimit(0.f, 1.f, yFrac);
 
             apvts.getParameterAsValue("cabMicPosX").setValue(xFrac);
             apvts.getParameterAsValue("cabMicPosZ").setValue(yFrac);
