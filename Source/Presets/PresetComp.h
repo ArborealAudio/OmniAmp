@@ -7,12 +7,88 @@
 */
 
 #pragma once
+#include <JuceHeader.h>
+
+// Custom ComboBox because this is a great codebase
+struct PresetComboBoxLNF : LookAndFeel_V4
+{
+    void drawComboBox(Graphics& g, int width, int height, bool,
+                                   int, int, int, int, ComboBox& box) override
+    {
+        auto cornerSize = (float)width * 0.1f;
+        Rectangle<int> boxBounds (0, 0, width, height);
+
+        g.setColour (box.findColour (ComboBox::backgroundColourId));
+        g.fillRoundedRectangle (boxBounds.toFloat(), cornerSize);
+
+        g.setColour (box.findColour (ComboBox::outlineColourId));
+        g.drawRoundedRectangle (boxBounds.toFloat().reduced (0.5f, 0.5f), cornerSize, 1.0f);
+
+        // chunk of L/R end used for arrow
+        arrowSize = (float)box.getWidth() / 6.5f;
+        const float padding = (float)box.getWidth() * 0.05f;
+        const float strokeWidth = 3.f;
+
+        auto drawArrow = [&](const Rectangle<float> &bounds, Path &path, bool leftArrow)
+        {
+            const float r = bounds.getRight();
+            const float bot = bounds.getBottom();
+            const float centerY = bounds.getY() + (bounds.getHeight() / 2);
+            const float arrowWidth = bounds.getHeight() * 0.9f;
+            if (leftArrow)
+            {
+                path.startNewSubPath(bounds.getX() + arrowWidth, bounds.getY());
+                path.lineTo(bounds.getX(), centerY);
+                path.lineTo(bounds.getX() + arrowWidth, bot);
+            }
+            else
+            {
+                path.startNewSubPath(r - arrowWidth, bounds.getY());
+                path.lineTo(r, centerY);
+                path.lineTo(r - arrowWidth, bot);
+            }
+            g.strokePath(path, PathStrokeType(strokeWidth, PathStrokeType::beveled, PathStrokeType::rounded));
+        };
+        Path leftArrow;
+        drawArrow(boxBounds.toFloat().removeFromLeft(arrowSize).reduced(padding), leftArrow, true);
+        Path rightArrow;
+        drawArrow(boxBounds.toFloat().removeFromRight(arrowSize).reduced(padding), rightArrow, false);
+    }
+    
+    void positionComboBoxText (ComboBox& box, Label& label) override
+    {
+        label.setJustificationType(Justification::centred);
+        label.setBounds (1, 1,
+                         box.getWidth() - 1,
+                         box.getHeight() - 2);
+
+        label.setFont (getComboBoxFont (box));
+    }
+
+    void drawComboBoxTextWhenNothingSelected (Graphics& g, ComboBox& box, Label& label) override
+    {
+        g.setColour (findColour (ComboBox::textColourId).withMultipliedAlpha (0.5f));
+
+        auto font = label.getLookAndFeel().getLabelFont (label);
+
+        g.setFont (font);
+
+        auto textArea = getLabelBorderSize (label).subtractedFrom (label.getLocalBounds());
+
+        g.drawFittedText (box.getTextWhenNothingSelected(), textArea, Justification::centred,
+                          jmax (1, (int) ((float) textArea.getHeight() / font.getHeight())),
+                          label.getMinimumHorizontalScale());
+    }
+
+    float arrowSize;
+};
 
 struct PresetComp : Component, private Timer
 {
     PresetComp(AudioProcessorValueTreeState& vts) : manager(vts)
     {
         addAndMakeVisible(box);
+        box.setLookAndFeel(&boxLNF);
         box.setJustificationType(Justification::centredLeft);
         box.setTextWhenNothingSelected("Presets");
 
@@ -22,10 +98,16 @@ struct PresetComp : Component, private Timer
         editor.setJustification(Justification::centredLeft);
 
         startTimerHz(2);
+
+        setInterceptsMouseClicks(true, false);
+
+        addMouseListener(this, true);
     }
 
     ~PresetComp()
     {
+        removeMouseListener(this);
+        box.setLookAndFeel(nullptr);
         stopTimer();
     }
 
@@ -100,7 +182,7 @@ struct PresetComp : Component, private Timer
     void setPresetWithChange(const String& newPreset) noexcept
     {
         currentPreset = newPreset;
-        box.setText(currentPreset, NotificationType::sendNotificationAsync);
+        box.setText(currentPreset, NotificationType::sendNotificationSync);
     }
 
     void savePreset() noexcept
@@ -174,14 +256,53 @@ struct PresetComp : Component, private Timer
             box.setText(currentPreset, NotificationType::dontSendNotification);
     }
 
+    void leftArrowClicked()
+    {
+        const auto currentIndex = box.getSelectedItemIndex();
+        if (currentIndex != 0)
+            box.setSelectedItemIndex(currentIndex - 1);
+        else
+            box.setSelectedItemIndex(currentIndex + 1);
+    }
+    
+    void rightArrowClicked()
+    {
+        const auto currentIndex = box.getSelectedItemIndex();
+        if (currentIndex < box.getNumItems())
+            box.setSelectedItemIndex(currentIndex + 1);
+        else
+            box.setSelectedItemIndex(0);
+    }
+
+    void mouseDown(const MouseEvent &event) override
+    {
+        if (leftArrow.contains(event.position) && event.mouseWasClicked())
+        {
+            leftArrowClicked();
+            return;
+        }
+        if (rightArrow.contains(event.position) && event.mouseWasClicked())
+        {
+            rightArrowClicked();
+            return;
+        }
+
+        Component::mouseDown(event);
+    }
+
     void timerCallback() override
     {
-        if (manager.hasStateChanged() && currentPreset != "")
+        if (manager.stateChanged && currentPreset != "")
             box.setText(currentPreset + "*", NotificationType::dontSendNotification);
     }
 
     void resized() override
     {
+        const float w = getWidth();
+        const float subChunk = w - (w / 8.f);
+        auto b = getLocalBounds().toFloat();
+        leftArrow = b.withTrimmedRight(subChunk);
+        rightArrow = b.withTrimmedLeft(subChunk);
         box.setBounds(getLocalBounds());
         editor.setBounds(getLocalBounds());
     }
@@ -189,6 +310,7 @@ struct PresetComp : Component, private Timer
     ComboBox box;
 
 private:
+    PresetComboBoxLNF boxLNF;
 
     PopupMenu userPresets;
 
@@ -198,6 +320,8 @@ private:
 
     StringArray presetList;
     String currentPreset;
+
+    Rectangle<float> leftArrow, rightArrow;
 
     PresetManager manager;
 };

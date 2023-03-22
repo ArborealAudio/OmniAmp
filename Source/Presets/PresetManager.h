@@ -136,7 +136,7 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
         return true;
     }
 
-    bool hasStateChanged() { return stateChanged; }
+    bool stateChanged = false;
 
     String getStateAsString() const
     {
@@ -151,12 +151,11 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
     }
 
     File userDir{ File::getSpecialLocation(File::userApplicationDataDirectory)
-        .getFullPathName() + "/Arboreal Audio/Gamma/Presets/User_presets" };
+        .getFullPathName() + "/Arboreal Audio/OmniAmp/Presets/User" };
 
 private:
     AudioProcessorValueTreeState& apvts;
 
-    bool stateChanged = false;
 
     Array<File> factoryPresets;
     Array<File> userPresets;

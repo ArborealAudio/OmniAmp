@@ -14,6 +14,7 @@ struct MenuLookAndFeel : LookAndFeel_V4
         g.setColour(outlineColor);
         g.drawRoundedRectangle(box, box.getHeight() * 0.5f, 1.f);
 
+        // chunk of L/R end used for arrow
         const float arrowSize = (float)box.getWidth() / 6.5f;
         const float padding = (float)box.getWidth() * 0.05f;
         const float strokeWidth = 3.f;
