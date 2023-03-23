@@ -87,10 +87,10 @@ class FDNCab : AudioProcessorValueTreeState::Listener
                 dtime[3] = 79.f;
                 break;
             case large:
-                dtime[0] = 40.f;
-                dtime[1] = 71.f;
-                dtime[2] = 53.f;
-                dtime[3] = 15.f;
+                dtime[0] = (45.f);
+                dtime[1] = (71.f);
+                dtime[2] = (51.f);
+                dtime[3] = (5.f);
                 break;
             }
         }
@@ -180,7 +180,6 @@ class FDNCab : AudioProcessorValueTreeState::Listener
                     in[i] = out;
                 }
             }
-
             block.multiplyBy(1.0 / (f_order * 2.0));
         }
 
@@ -190,7 +189,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
         std::array<strix::Delay<T>, f_order> delay;
         std::array<double, f_order> dtime;
 
-        T fdbk = 0.1f;
+        double fdbk = 0.1;
 
         std::array<strix::SVTFilter<T>, f_order> lp;
         strix::SVTFilter<T, true> ap;
@@ -326,7 +325,7 @@ public:
             hp.setCutoffFreq(70.0);
             hp.setResonance(1.0 * resoLo_);
             lp1.setCutoffFreq(5511.0 * mic_);
-            lp1.setResonance(0.7 * resoHi_);
+            lp1.setResonance(1.25 * resoHi_);
             lp2.setCutoffFreq(4500.0 * mic_);
             lp2.setResonance(1.29 * resoHi_);
             lowshelf.setCutoffFreq(232.0);
@@ -379,7 +378,7 @@ public:
 
         // PROBLEM: We need to call ap block-wise since that's how the built-in smoother works
         ap.processBlock(apBlock.getSubBlock(0, block.getNumSamples()));
-        apBlock *= 0.4;
+        apBlock *= 0.2;
         block += apBlock;
         block *= 0.65;
 
