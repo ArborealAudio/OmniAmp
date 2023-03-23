@@ -130,6 +130,9 @@ struct ActivationComponent : Component
                 case ConnectionFailed:
                     message = "Connection failed. Try again.";
                     break;
+                case None:
+                    message = "Activation...not run? Error!";
+                    break;
             }
         }
         if (trialRemaining > 0 && m_result != Success)
