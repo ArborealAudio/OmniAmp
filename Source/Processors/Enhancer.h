@@ -261,27 +261,38 @@ private:
 //sticking this here bc i don't want to make a new file
 
 /**
- * a wrapper for low- and high-cut filters w/ param smoothing
+ * a wrapper for low- and high-cut filters
 */
-struct CutFilters
+struct CutFilters : AudioProcessorValueTreeState::Listener
 {
     CutFilters(AudioProcessorValueTreeState &a) : apvts(a)
     {
-        lfParam = static_cast<strix::FloatParameter*>(apvts.getParameter("lfCut"));
-        hfParam = static_cast<strix::FloatParameter*>(apvts.getParameter("hfCut"));
+        apvts.addParameterListener("lfCut", this);
+        apvts.addParameterListener("hfCut", this);
+    }
+
+    ~CutFilters()
+    {
+        apvts.removeParameterListener("lfCut", this);
+        apvts.removeParameterListener("hfCut", this);
+    }
+
+    void parameterChanged(const String &paramID, float newValue) override
+    {
+        if (paramID == "lfCut")
+            lfCut.setCutoffFreq(newValue);
+        else if (paramID == "hfCut")
+            hfCut.setCutoffFreq(newValue);
     }
 
     void prepare(const dsp::ProcessSpec &spec)
     {
+        lfCut.setCutoffFreq(apvts.getRawParameterValue("lfCut")->load());
+        hfCut.setCutoffFreq(apvts.getRawParameterValue("hfCut")->load());
         lfCut.prepare(spec);
         hfCut.prepare(spec);
         lfCut.setType(strix::FilterType::highpass);
         hfCut.setType(strix::FilterType::lowpass);
-        lfCut.setCutoffFreq(apvts.getRawParameterValue("lfCut")->load());
-        hfCut.setCutoffFreq(apvts.getRawParameterValue("hfCut")->load());
-
-        cutoffLo.reset(spec.maximumBlockSize);
-        cutoffHi.reset(spec.maximumBlockSize);
     }
 
     void reset()
@@ -292,52 +303,13 @@ struct CutFilters
 
     void process(dsp::AudioBlock<double> &block)
     {
-        float lfParam_ = *lfParam;
-        float hfParam_ = *hfParam;
-        cutoffLo.setTargetValue(lfParam_);
-        cutoffHi.setTargetValue(hfParam_);
-
-        if (cutoffLo.isSmoothing())
-        {
-            for (size_t i = 0; i < block.getNumSamples(); ++i)
-            {
-                lfCut.setCutoffFreq(cutoffLo.getNextValue());
-                for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
-                {
-                    auto &in = block.getChannelPointer(ch)[i];
-                    in = lfCut.processSample(ch, in);
-                }
-            }
-        }
-        else
-        {
-            lfCut.setCutoffFreq(cutoffLo.getNextValue());
-            if (lfParam_ > 5.f)
-                lfCut.processBlock(block);
-        }
-        if (cutoffHi.isSmoothing())
-        {
-            for (size_t i = 0; i < block.getNumSamples(); ++i)
-            {
-                hfCut.setCutoffFreq(cutoffHi.getNextValue());
-                for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
-                {
-                    auto &in = block.getChannelPointer(ch)[i];
-                    in = hfCut.processSample(ch, in);
-                }
-            }
-        }
-        else
-        {
-            hfCut.setCutoffFreq(cutoffHi.getNextValue());
-            if (hfParam_ < 22000.f)
-                hfCut.processBlock(block);
-        }
+        if (lfCut.getCutoffFreq() > 5.f)
+            lfCut.processBlock(block);
+        if (hfCut.getCutoffFreq() < 22000.f)
+            hfCut.processBlock(block);
     }
 
 private:
-    strix::SVTFilter<double> lfCut, hfCut;
+    strix::SVTFilter<double, true> lfCut, hfCut;
     AudioProcessorValueTreeState &apvts;
-    SmoothedValue<float> cutoffLo, cutoffHi;
-    strix::FloatParameter *lfParam, *hfParam;
 };
