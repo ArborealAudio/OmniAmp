@@ -34,7 +34,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
 
         void parameterChanged(const String &, float newValue) override
         {
-            sm_micDepth.setTargetValue(newValue * 0.5f);
+            sm_micDepth.setTargetValue(newValue);
         }
 
         void prepare(const dsp::ProcessSpec &spec)
@@ -61,13 +61,13 @@ class FDNCab : AudioProcessorValueTreeState::Listener
                 lp[i].setResonance(0.7);
             }
 
-            float mic_ = jmap(micPos->get(), 0.8f, 1.f);
+            changeAllpass(micPos->get());
             ap.prepare(spec);
-            ap.setType(strix::FilterType::allpass);
-            ap.setCutoffFreq(3500.0 * mic_);
             ap.setResonance(0.7);
+            ap.setType(strix::FilterType::allpass);
 
             sm_micDepth.reset(spec.sampleRate, 0.01f);
+            sm_micDepth.setCurrentAndTargetValue(micDepth->get());
         }
 
         void changeDelay()
@@ -117,7 +117,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
             {
                 for (size_t i = 0; i < block.getNumSamples(); ++i)
                 {
-                    auto depth_ = sm_micDepth.getNextValue();
+                    auto depth_ = 0.5f * sm_micDepth.getNextValue();
 
                     for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
                     {
@@ -150,7 +150,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
             }
 
             float micDepth_ = micDepth->get() * 0.5f;
-            
+
             for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
             {
                 auto in = block.getChannelPointer(ch);
@@ -208,6 +208,12 @@ class FDNCab : AudioProcessorValueTreeState::Listener
     AudioProcessorValueTreeState &apvts;
 
     FDN<Type> fdn;
+
+#if USE_SIMD
+    strix::Buffer<Type> apBuffer;
+#else
+    AudioBuffer<Type> apBuffer;
+#endif
 
     CabType type;
 
@@ -269,6 +275,10 @@ public:
     {
         sr = spec.sampleRate;
 
+        apBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
+
+        setCabType();
+
         hp.prepare(spec);
         hp.setType(strix::FilterType::highpass);
 
@@ -280,13 +290,11 @@ public:
         lowshelf.prepare(spec);
         lowshelf.setType(strix::FilterType::firstOrderLowpass);
 
+        ap.setResonance(0.5);
         ap.prepare(spec);
         ap.setType(strix::FilterType::allpass);
-        ap.setResonance(0.5);
 
         fdn.prepare(spec);
-
-        setCabType();
     }
 
     void reset()
@@ -365,14 +373,15 @@ public:
         }
 
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
-        {
-            auto *in = block.getChannelPointer(ch);
-            for (size_t i = 0; i < block.getNumSamples(); ++i)
-            {
-                in[i] += 0.4f * ap.processSample(ch, in[i]);
-                in[i] *= 0.65f;
-            }
-        }
+            apBuffer.copyFrom(ch, 0, block.getChannelPointer(ch), block.getNumSamples());
+
+        auto apBlock = Block(apBuffer);
+
+        // PROBLEM: We need to call ap block-wise since that's how the built-in smoother works
+        ap.processBlock(apBlock.getSubBlock(0, block.getNumSamples()));
+        apBlock *= 0.4;
+        block += apBlock;
+        block *= 0.65;
 
         lp2.processBlock(block);
     }
