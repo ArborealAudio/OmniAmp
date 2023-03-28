@@ -4,6 +4,10 @@
 #pragma once
 #include <JuceHeader.h>
 
+#define UI_WIDTH 800
+#define MIN_WIDTH 600
+#define MAX_WIDTH 1200
+
 #define BACKGROUND_COLOR 0xff293236
 #define DEEP_BLUE 0xff194545
 #define LIGHT_BLUE 0xff4b626c
