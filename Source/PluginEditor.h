@@ -87,6 +87,8 @@ private:
     MenuComponent menu;
     PresetComp presetMenu;
 
+    // FlexBox uiTopFlex, topControlsFlex;
+
     std::unique_ptr<strix::LiteThread> lThread;
 
     strix::DownloadManager dl;

@@ -167,7 +167,6 @@ public:
 
     void resized() override
     {
-        auto w = getLocalBounds().getWidth();
-        menuButton.setBounds(getLocalBounds().removeFromTop(20).removeFromRight(w / 2));
+        menuButton.setBounds(getLocalBounds());
     }
 };
