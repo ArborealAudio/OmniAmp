@@ -259,7 +259,6 @@ void GammaAudioProcessorEditor::resized()
     auto topSection = bounds.removeFromTop(h * 0.15f);
     auto topSectionHeight = topSection.getHeight();
     topSection.removeFromLeft(w / 12); // section where logo is drawn
-    // auto mainHeight = bounds.getHeight(); // height after top trimmed off
     float preSectMult = preComponent.minimized ? 0.06f : 0.17875f;
     auto preSection = bounds.removeFromTop((float)h * preSectMult);
     auto ampSection = bounds.removeFromTop(h * 0.255f);
@@ -271,31 +270,34 @@ void GammaAudioProcessorEditor::resized()
     FlexBox topControlsFlex, uiTopFlex;
     topControlsFlex.flexWrap = FlexBox::Wrap::wrap;
     topControlsFlex.justifyContent = FlexBox::JustifyContent::center;
-    topControlsFlex.alignContent = FlexBox::AlignContent::center;
     for (auto *c: getTopComponents())
     {
         if (c == &link)
         {
-            // c->setBounds(topKnobs.removeFromLeft(knobFrac * 0.4f));
-            topControlsFlex.items.add(FlexItem(25, 50, *c));
+            topControlsFlex.items.add(FlexItem(25 * uiScale, 50, *c));
             continue;
         }
         else if (auto *b = dynamic_cast<LightButton * >(c))
         {
-            topControlsFlex.items.add(FlexItem(50, 35, *c));
+            topControlsFlex.items.add(FlexItem(50 * uiScale, 35, *c).withMargin(FlexItem::Margin(15.f, 0, 15.f, 0)));
             b->lnf.cornerRadius = 12.f;
             continue;
         }
-        auto flexComp = FlexItem(*c).withMinWidth(50);
+        else if (auto *k = dynamic_cast<Knob *>(c))
+        {
+            k->setTextOffset(0, -3);
+            k->setOffset(0, -5);
+        }
+        auto flexComp = FlexItem(*c).withMinWidth(50 * uiScale);
         topControlsFlex.items.add(flexComp);
     }
 
     /* set bounds of top controls */
     uiTopFlex.justifyContent = FlexBox::JustifyContent::spaceAround;
     auto topSectionQtr = topSection.getWidth() / 4;
-    float topKnobs = (w * 0.5f - topSectionQtr * 0.5f);
+    float topKnobs = (w * 0.5f - topSectionQtr);
     float presetSection = topSectionQtr;
-    float titleSection = topSection.getWidth() / 6;
+    float titleSection = topSection.getWidth() * 0.22f;
     uiTopFlex.items.add(FlexItem(titleSection, topSectionHeight, pluginTitle));
     uiTopFlex.items.add(FlexItem(topKnobs, topSectionHeight, topControlsFlex));
     uiTopFlex.items.add(FlexItem(presetSection, 0, presetMenu).withMargin(FlexItem::Margin(topSectionHeight * 0.35f, 0, topSectionHeight * 0.35f, 0)));
@@ -303,43 +305,7 @@ void GammaAudioProcessorEditor::resized()
 
     uiTopFlex.performLayout(topSection);
 
-    pluginTitle.setFont(Font(h * 0.03f).withExtraKerningFactor(0.5f));
-    // pluginTitle.setBounds(titleSection);
-    // presetMenu.setBounds(presetSection.reduced(0, topSection.getHeight() * 0.35f));
-    // menu.setBounds(presetMenu.getBounds().translated(presetMenu.getWidth(), 0).withWidth(presetMenu.getWidth() / 6));
-
-    // auto knobFrac = topKnobs.getWidth() / 4;
-    // auto knobHalf = topKnobs.getHeight() / 2;
-    // auto knobsBottom = topKnobs.removeFromBottom(knobHalf);
-    // auto topComponents = getTopComponents();
-    // for (size_t i = 0; i < topComponents.size(); ++i)
-    // {
-    //     auto c = topComponents[i];
-    //     if (c == &link)
-    //     {
-    //         c->setBounds(topKnobs.removeFromLeft(knobFrac * 0.4f));
-    //         continue;
-    //     }
-    //     if (i < 4)
-    //      // c->setBounds(topKnobs.removeFromLeft(knobFrac));
-    //     else
-    //     {
-    //         if (c == &bypass)
-    //         {
-    //             c->setBounds(knobsBottom.removeFromLeft(knobFrac).reduced(0, knobFrac * 0.2f));
-    //             auto *b = static_cast<LightButton *>(c);
-    //             b->lnf.cornerRadius = b->getHeight() * 0.25f;
-    //             continue;
-    //         }
-    //         c->setBounds(knobsBottom.removeFromLeft(knobFrac));
-    //     }
-
-    //     if (auto *k = static_cast<Knob *>(c))
-    //     {
-    //         k->setTextOffset(0, -3);
-    //         k->setOffset(0, -c->getHeight() * 0.1f);
-    //     }
-    // }
+    pluginTitle.setFont(Font(pluginTitle.getHeight() * 0.25f).withExtraKerningFactor(0.25f));
 
     /* rest of UI */
     ampControls.setBounds(ampSection);

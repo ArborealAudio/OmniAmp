@@ -148,6 +148,7 @@ struct Knob : Slider
         lnf.textColor = newTextColor;
     }
 
+    // positional offset for knob within its bounds
     void setOffset(int xOffset, int yOffset)
     {
         lnf.xOffset = xOffset;
