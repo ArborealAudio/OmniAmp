@@ -62,7 +62,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
                                                           ProjectInfo::versionString,
                                                           SITE_URL
                                                           "/versions/index.json",
-                                                          true);
+                                                          true,
+                                                          strix::readConfigFile(CONFIG_PATH, "beta_update"));
         p.checkedUpdate = true;
         strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
         if (!dlResult.updateAvailable)
@@ -180,7 +181,9 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
                             { dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::projectName, ProjectInfo::versionString,
                     SITE_URL
                     "/versions/index.json",
-                    false, strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
+                    false,
+                    strix::readConfigFile(CONFIG_PATH, "beta_update"),
+                    strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
                             p.checkedUpdate = true;
                             dl.changes = dlResult.changes;
                             strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
