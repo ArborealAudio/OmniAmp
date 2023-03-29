@@ -47,7 +47,7 @@ juce_add_plugin(Gamma
     HARDENED_RUNTIME_ENABLE TRUE)
 
 clap_juce_extensions_plugin(TARGET Gamma
-    CLAP_ID "com.ArborealAudio.Gamma.clap"
+    CLAP_ID "com.ArborealAudio.OmniAmp.clap"
     CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 32
     CLAP_FEATURES audio-effect distortion reverb EQ)
 
