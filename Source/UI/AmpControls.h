@@ -87,7 +87,9 @@ struct AmpControls : Component, private Timer
 
         setColorScheme();
 
-        addAndMakeVisible(autoGain);
+        addChildComponent(autoGain);
+        if (*mode_p > 1)
+            autoGain.setVisible(true); 
         autoGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "ampAutoGain", autoGain);
         autoGain.setButtonText("Auto");
         autoGain.setTooltip("Enable auto gain compensation for the entire amp section.");
@@ -153,6 +155,8 @@ struct AmpControls : Component, private Timer
             {
                 return String(val * 10.0, 1);
             };
+
+            autoGain.setVisible(false);
         }
         else
         {
@@ -163,6 +167,7 @@ struct AmpControls : Component, private Timer
                 str.append("dB", 2);
                 return str;
             };
+            autoGain.setVisible(true);
         }
 
         bass.setValueToStringFunction(function);
