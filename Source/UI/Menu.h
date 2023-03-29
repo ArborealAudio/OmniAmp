@@ -88,7 +88,7 @@ public:
         windowSize.setClickingTogglesState(false);
 
         checkUpdate.setButtonText("Check update");
-        checkUpdate.setTooltip("Check for new versions of Gamma");
+        checkUpdate.setTooltip("Check for new versions of OmniAmp");
         checkUpdate.setClickingTogglesState(false);
 
         showTooltips.setButtonText("Show tooltips");
