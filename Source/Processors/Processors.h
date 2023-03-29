@@ -581,6 +581,7 @@ namespace Processors
                 preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(&triode[3]);
                 preamp.procs.push_back(toneStack.get());
+                fudgeGain = 2.0;
                 break;
             case Emerald:
                 preamp.procs.push_back(toneStack.get());
@@ -588,6 +589,7 @@ namespace Processors
                 preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(&triode[3]);
                 preamp.procs.push_back(&preFilter);
+                fudgeGain = 1.0;
                 break;
             case Quartz:
                 preamp.procs.push_back(&triode[1]);
@@ -595,6 +597,7 @@ namespace Processors
                 preamp.procs.push_back(&preFilter);
                 preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(&triode[3]);
+                fudgeGain = 2.0;
                 break;
             }
         }
@@ -681,6 +684,8 @@ namespace Processors
             //     autoGain *= 1.0 / out_raw;
 
             pentode.processBlockClassB(processBlock);
+
+            processBlock *= fudgeGain;
 
             // processBlock.multiplyBy(autoGain);
 
