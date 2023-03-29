@@ -33,7 +33,7 @@ struct Pentode
     /**
      * @param type Pentode Type. Use widely asymmetric values in Classic mode to get the intended effect
      */
-    Pentode(PentodeType type) : type(type)
+    Pentode(PentodeType _type) : type(_type)
     {
     }
 
