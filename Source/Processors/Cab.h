@@ -229,7 +229,6 @@ public:
         resoLo = static_cast<strix::FloatParameter *>(apvts.getParameter("cabResoLo"));
         resoHi = static_cast<strix::FloatParameter *>(apvts.getParameter("cabResoHi"));
         apvts.addParameterListener("cabMicPosX", this);
-        // apvts.addParameterListener("cabMicPosZ", this);
         apvts.addParameterListener("cabType", this);
         apvts.addParameterListener("cabResoLo", this);
         apvts.addParameterListener("cabResoHi", this);
@@ -238,7 +237,6 @@ public:
     ~FDNCab()
     {
         apvts.removeParameterListener("cabMicPosX", this);
-        // apvts.removeParameterListener("cabMicPosZ", this);
         apvts.removeParameterListener("cabType", this);
         apvts.removeParameterListener("cabResoLo", this);
         apvts.removeParameterListener("cabResoHi", this);
@@ -331,7 +329,7 @@ public:
             lowshelf.setCutoffFreq(232.0);
             break;
         case large:
-            hp.setCutoffFreq(80.0);
+            hp.setCutoffFreq(50.0);
             hp.setResonance(1.0 * resoLo_);
             lp1.setCutoffFreq(7033.0 * mic_);
             lp1.setResonance(1.21 * resoHi_);
@@ -359,8 +357,8 @@ public:
 
         if (type > 0)
         {
-            // auto lsgain = type > 1 ? 0.7 : 0.5;
-            auto lsgain = 0.5;
+            auto lsgain = type > 1 ? -0.5 : 0.5;
+            // auto lsgain = 0.5;
             for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
             {
                 auto in = block.getChannelPointer(ch);
