@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include "Arbor_modules/modules/SmoothGain.h"
 namespace Processors
 {
     enum class ProcessorType
@@ -54,33 +53,6 @@ namespace Processors
 
         bool shouldBypass = false;
     };
-
-    namespace clip
-    {
-        template <typename SampleType, typename T>
-        inline void clip(SampleType *in, size_t numSamples, T pLim, T nLim)
-        {
-            for (size_t i = 0; i < numSamples; ++i)
-            {
-#if USE_SIMD
-                in[i] = xsimd::select(in[i] > (SampleType)pLim, (SampleType)pLim, in[i]);
-                in[i] = xsimd::select(in[i] < (SampleType)nLim, (SampleType)nLim, in[i]);
-#else
-                if (in[i] > pLim)
-                    in[i] = pLim;
-                else if (in[i] < nLim)
-                    in[i] = nLim;
-#endif
-            }
-        }
-
-        template <typename Block, typename T>
-        inline void clip(Block &block, T pLim, T nLim)
-        {
-            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
-                clip(block.getChannelPointer(ch), block.getNumSamples(), pLim, nLim);
-        }
-    }
 
 #include "Tube.h"
 #include "PreFilters.h"
@@ -234,6 +206,8 @@ namespace Processors
         Pentode<double> pentode;
 #endif
         Preamp preamp;
+
+        double fudgeGain = 1.f; // dumb thing we need to keep diff. amp types in similar ballpark
 
         strix::FloatParameter *inGain, *outGain, *p_comp, *dist;
         strix::BoolParameter *ampAutoGain, *hiGain, *linked;
@@ -455,10 +429,9 @@ namespace Processors
             else
                 mxr.setInit(true);
 
-            // processBlock.multiplyBy(gain_raw);
             strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
-            if (ampAutoGain_)
-                autoGain *= 1.0 / gain_raw;
+            // if (ampAutoGain_)
+            //     autoGain *= 1.0 / gain_raw;
 
             /* perform sync swap of preamp & poweramp if needed */
             if (ampChanged)
@@ -480,14 +453,13 @@ namespace Processors
             }
             preamp.process(processBlock);
 
-            // processBlock.multiplyBy(out_raw);
             strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
             pentode.processBlockClassB(processBlock);
 
-            if (ampAutoGain_)
-                autoGain *= 1.0 / out_raw;
+            // if (ampAutoGain_)
+            //     autoGain *= 1.0 / out_raw;
 
-            processBlock.multiplyBy(autoGain);
+            // processBlock.multiplyBy(autoGain);
 
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
@@ -553,24 +525,15 @@ namespace Processors
             switch (currentType)
             {
             case Cobalt:
-                toneStack->setNodalCoeffs((T)0.25e-9, (T)25e-9, (T)15e-9, (T)250e3, (T)500e3, (T)50e3, (T)75e3);
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)25e-9, (T)15e-9, (T)250e3, (T)500e3, (T)50e3, (T)200e3);
                 break;
             case Emerald:
                 toneStack->setBiquadFreqs(300.0, 900.0, 200.0, 1000.0, 2300.0);
                 break;
             case Quartz:
-                toneStack->setNodalCoeffs((T)2.5e-10, (T)8e-9, (T)12e-9, (T)250e3, (T)750e3, (T)100e3, (T)500e3);
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)8e-9, (T)12e-9, (T)250e3, (T)750e3, (T)100e3, (T)300e3);
                 break;
             }
-#if 0
-            toneStack->setNodalCoeffs(JUCE_LIVE_CONSTANT((T)2.5e-10),
-            JUCE_LIVE_CONSTANT((T)8e-9),
-            JUCE_LIVE_CONSTANT((T)12e-9),
-            JUCE_LIVE_CONSTANT((T)250e3),
-            JUCE_LIVE_CONSTANT((T)750e3),
-            JUCE_LIVE_CONSTANT((T)100e3),
-            JUCE_LIVE_CONSTANT((T)500e3));
-#endif
         }
 
         void setBias()
@@ -604,14 +567,6 @@ namespace Processors
                 triode[3].bias.first = 25.0;
                 break;
             }
-#if 0
-            triode[1].bias.first = 5.0;
-            triode[1].bias.second = 10.0;
-            triode[2].bias.first = 5.0;
-            triode[2].bias.second = 10.0;
-            triode[3].bias.first = 10.0;
-            triode[3].bias.second = 15.0;
-#endif
         }
 
         void setPreamp()
@@ -660,12 +615,10 @@ namespace Processors
             case Cobalt:
                 pentode.type = PentodeType::Nu;
                 pentode.bias.first = 0.7;
-                pentode.bias.second = 0.7;
                 break;
             case Emerald:
                 pentode.type = PentodeType::Nu;
                 pentode.bias.first = 0.8;
-                pentode.bias.second = 1.0;
                 break;
             case Quartz:
                 pentode.type = PentodeType::Classic;
@@ -700,11 +653,10 @@ namespace Processors
 
             triode[0].process(processBlock);
 
-            // processBlock.multiplyBy(gain_raw);
             strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
 
-            if (ampAutoGain_)
-                autoGain *= 1.0 / gain_raw;
+            // if (ampAutoGain_)
+            //     autoGain *= 1.0 / gain_raw;
 
             if (*hiGain)
             {
@@ -719,25 +671,18 @@ namespace Processors
                 setPoweramp();
                 ampChanged = false;
             }
-#if 0
-            setBias();
-#endif
             triode[2].shouldBypass = !*hiGain;
             triode[3].shouldBypass = !*hiGain;
             preamp.process(processBlock);
 
-            // processBlock.multiplyBy(out_raw);
             strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
 
-            if (ampAutoGain_)
-                autoGain *= 1.0 / out_raw;
+            // if (ampAutoGain_)
+            //     autoGain *= 1.0 / out_raw;
 
-            if (!*hiGain)
-                pentode.processBlockClassB(processBlock);
-            else
-                pentode.processBlockClassB(processBlock);
+            pentode.processBlockClassB(processBlock);
 
-            processBlock.multiplyBy(autoGain);
+            // processBlock.multiplyBy(autoGain);
 
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
