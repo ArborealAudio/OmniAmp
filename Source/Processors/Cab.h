@@ -335,7 +335,7 @@ public:
             hp.setResonance(1.0 * resoLo_);
             lp1.setCutoffFreq(7033.0 * mic_);
             lp1.setResonance(1.21 * resoHi_);
-            lp2.setCutoffFreq(4193.0 * mic_);
+            lp2.setCutoffFreq(6193.0 * mic_);
             lp2.setResonance(1.5 * resoHi_);
             lowshelf.setCutoffFreq(307.0);
             break;
@@ -374,10 +374,9 @@ public:
         for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
             apBuffer.copyFrom(ch, 0, block.getChannelPointer(ch), block.getNumSamples());
 
-        auto apBlock = Block(apBuffer);
+        auto apBlock = Block(apBuffer).getSubBlock(0, block.getNumSamples());
 
-        // PROBLEM: We need to call ap block-wise since that's how the built-in smoother works
-        ap.processBlock(apBlock.getSubBlock(0, block.getNumSamples()));
+        ap.processBlock(apBlock);
         apBlock *= 0.2;
         block += apBlock;
         block *= 0.65;
