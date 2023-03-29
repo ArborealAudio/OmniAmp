@@ -145,7 +145,7 @@ private:
     dsp::NoiseGate<double> gateProc;
 
     std::array<dsp::Oversampling<double>, 2> oversample{dsp::Oversampling<double>(2),
-                                                        dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR)};
+                                                        dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple)};
     size_t os_index = 0;
 
     AudioBuffer<double> doubleBuffer;

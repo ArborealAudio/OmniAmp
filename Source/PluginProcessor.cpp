@@ -442,8 +442,8 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbDecay", 1), "Reverb Decay", 0.5f, 2.f, 1.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbSize", 1), "Reverb Size", 0.f, 2.f, 1.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbPredelay", 1), "Reverb Predelay", 0.f, 200.f, 0.f));
-    params.emplace_back(std::make_unique<bParam>(ParameterID("hq", 1), "HQ On/Off", true));
-    params.emplace_back(std::make_unique<bParam>(ParameterID("renderHQ", 1), "Render HQ", false));
+    params.emplace_back(std::make_unique<bParam>(ParameterID("hq", 1), "HQ On/Off", false));
+    params.emplace_back(std::make_unique<bParam>(ParameterID("renderHQ", 1), "Render HQ", true));
     params.emplace_back(std::make_unique<bParam>(ParameterID("bypass", 1), "Bypass", false));
 
     return {params.begin(), params.end()};
