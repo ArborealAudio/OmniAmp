@@ -183,17 +183,17 @@ struct BassPreFilter : PreampProcessor
         {
         case Cobalt:
             for (auto &f : filter)
-                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 650.0, 0.7, 0.3);
+                *f.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 950.0, 0.7, 0.3);
             dynHP.setCutoffFreq(600.0);
             break;
         case Emerald:
             for (auto &f : filter)
-                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 1000.0, 0.7, 0.5);
+                *f.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 1000.0, 0.7, 0.5);
             dynHP.setCutoffFreq(900.0);
             break;
         case Quartz:
             for (auto &f : filter)
-                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 1500.0, 0.5, 1.2);
+                *f.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 1500.0, 0.5, 1.2);
             dynHP.setCutoffFreq(1200.0);
             break;
         }
