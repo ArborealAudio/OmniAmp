@@ -176,20 +176,19 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     if (!p.checkedUpdate)
     {
         lThread = std::make_unique<strix::LiteThread>(1);
-        if (!p.checkedUpdate)
-            lThread->addJob([&]
-                            { dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::projectName, ProjectInfo::versionString,
-                    SITE_URL
-                    "/versions/index.json",
-                    false,
-                    strix::readConfigFile(CONFIG_PATH, "beta_update"),
-                    strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
-                            p.checkedUpdate = true;
-                            dl.changes = dlResult.changes;
-                            strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
-                            MessageManager::callAsync([&]
-                                                      { dl.setVisible(dlResult.updateAvailable); });
-            });
+        lThread->addJob([&]
+                        { dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::projectName, ProjectInfo::versionString,
+                SITE_URL
+                "/versions/index.json",
+                false,
+                strix::readConfigFile(CONFIG_PATH, "beta_update"),
+                strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
+                        p.checkedUpdate = true;
+                        dl.changes = dlResult.changes;
+                        strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
+                        MessageManager::callAsync([&]
+                                                    { dl.setVisible(dlResult.updateAvailable); });
+        });
     }
 
     if (lThread)
@@ -282,7 +281,7 @@ void GammaAudioProcessorEditor::resized()
         }
         else if (auto *b = dynamic_cast<LightButton * >(c))
         {
-            topControlsFlex.items.add(FlexItem(50 * uiScale, 35, *c).withMargin(FlexItem::Margin(15.f, 0, 15.f, 0)));
+            topControlsFlex.items.add(FlexItem(50 * uiScale, 35 / uiScale, *c).withMargin(FlexItem::Margin(15.f, 0, 15.f, 0)));
             b->lnf.cornerRadius = 12.f;
             continue;
         }
@@ -321,6 +320,7 @@ void GammaAudioProcessorEditor::resized()
     splash.centreWithSize(250, 350);
     activation.centreWithSize(300, 200);
 
-    MessageManager::callAsync([&]
-                              { strix::writeConfigFile(CONFIG_PATH, "size", w > MAX_WIDTH ? MAX_WIDTH : w); });
+    assert(w <= 1200 && w >= 600);
+
+    strix::writeConfigFile(CONFIG_PATH, "size", w > MAX_WIDTH ? MAX_WIDTH : w);
 }
