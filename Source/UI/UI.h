@@ -16,7 +16,7 @@
 
 static const Typeface::Ptr getCustomFont()
 {
-    static auto typeface = Typeface::createSystemTypefaceFor(BinaryData::LiberationSansRegular_ttf, BinaryData::LiberationSansRegular_ttfSize);
+    static auto typeface = Typeface::createSystemTypefaceFor(BinaryData::SoraRegular_ttf, BinaryData::SoraRegular_ttfSize);
 
     return typeface;
 }
