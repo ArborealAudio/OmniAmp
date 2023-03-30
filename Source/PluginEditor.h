@@ -59,8 +59,8 @@ private:
     AmpControls ampControls;
 
     Knob::Flags knobFlags = 0;
-    Knob gate{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, width{knobFlags}, mix{knobFlags};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, gateAttach, widthAttach, mixAttach;
+    Knob inGain{knobFlags}, outGain{knobFlags}, width{knobFlags}, mix{knobFlags};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, widthAttach, mixAttach;
     LightButton bypass;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> bypassAttach;
 
@@ -69,7 +69,7 @@ private:
     std::vector<Component *> getTopComponents()
     {
         return {
-            &gate,
+            // &gate,
             &inGain,
             &link,
             &outGain,

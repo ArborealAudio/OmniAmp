@@ -130,7 +130,7 @@ public:
 private:
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
-    std::atomic<float> *inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
+    std::atomic<float> *inGain, *outGain, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     float lastInGain = 1.f, lastOutGain = 1.f, lastWidth = 1.f, lastEmph = 0.f;
 
@@ -142,7 +142,7 @@ private:
 
     strix::VolumeMeterSource meterSource;
 
-    dsp::NoiseGate<double> gateProc;
+    // dsp::NoiseGate<double> gateProc;
 
     std::array<dsp::Oversampling<double>, 2> oversample{dsp::Oversampling<double>(2),
                                                         dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple)};
@@ -215,8 +215,8 @@ private:
 
         bool shouldBypass = processBypassIn(block, isBypassed, numChannels);
 
-        if (*gate > -95.0)
-            gateProc.process(dsp::ProcessContextReplacing<double>(block));
+        // if (*gate > -95.0)
+        //     gateProc.process(dsp::ProcessContextReplacing<double>(block));
 
         /*apply input gain*/
         strix::SmoothGain<float>::applySmoothGain(block, inGain_raw, lastInGain);
