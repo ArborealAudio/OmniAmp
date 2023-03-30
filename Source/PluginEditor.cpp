@@ -281,7 +281,7 @@ void GammaAudioProcessorEditor::resized()
         }
         else if (auto *b = dynamic_cast<LightButton * >(c))
         {
-            topControlsFlex.items.add(FlexItem(50 * uiScale, 35 / uiScale, *c).withMargin(FlexItem::Margin(15.f, 0, 15.f, 0)));
+            topControlsFlex.items.add(FlexItem(50 * uiScale, 35, *c).withMargin(FlexItem::Margin(15.f * uiScale, 0, 15.f * uiScale, 0)));
             b->lnf.cornerRadius = 12.f;
             continue;
         }

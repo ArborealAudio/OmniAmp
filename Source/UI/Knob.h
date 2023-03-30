@@ -292,7 +292,7 @@ private:
 
             float textBoxHeight = slider.getHeight() / 6;
             // float fontHeight = jmin(14.f, textBoxHeight);
-            g.setFont(jlimit(13.f, 15.f, textBoxHeight * 0.8f));
+            g.setFont(jlimit(13.f, 16.f, textBoxHeight * 0.8f));
             g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(textBoxHeight).translated(textXOffset, textYOffset), Justification::centred, 2);
         }
     };
