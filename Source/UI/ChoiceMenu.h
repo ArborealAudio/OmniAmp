@@ -44,6 +44,7 @@ struct MenuLookAndFeel : LookAndFeel_V4
         Path rightArrow;
         drawArrow(box.removeFromRight(arrowSize).reduced(padding), rightArrow, false);
 
+        g.setFont(Font(jlimit(11.f, 15.f, comboBox.getHeight() * 0.6f)));
         g.drawText(comboBox.getItemText(comboBox.getSelectedItemIndex()), labelBounds, Justification::centred);
     }
 
