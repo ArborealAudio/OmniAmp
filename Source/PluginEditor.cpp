@@ -126,12 +126,12 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     outGain.setValueToStringFunction([](float val)
                                      { String str(val, 1); str += "dB"; return str; });
 
-    gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
-    gate.setLabel("Gate");
-    gate.setTooltip("Simple noise gate before the amp.");
-    gate.setValueToStringFunction([](float val)
-                                  { if (val < -95.f) return String("Off");
-                                    if (val >= -95.f) return String(val, 1); else return String(""); });
+    // gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
+    // gate.setLabel("Gate");
+    // gate.setTooltip("Simple noise gate before the amp.");
+    // gate.setValueToStringFunction([](float val)
+    //                               { if (val < -95.f) return String("Off");
+    //                                 if (val >= -95.f) return String(val, 1); else return String(""); });
 
     widthAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "width", width);
     width.setLabel("Width");

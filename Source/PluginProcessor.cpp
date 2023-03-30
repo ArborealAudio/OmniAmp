@@ -35,14 +35,14 @@ GammaAudioProcessor::GammaAudioProcessor()
 {
     inGain = apvts.getRawParameterValue("inputGain");
     outGain = apvts.getRawParameterValue("outputGain");
-    gate = apvts.getRawParameterValue("gate");
+    // gate = apvts.getRawParameterValue("gate");
     hiGain = apvts.getRawParameterValue("hiGain");
     autoGain = apvts.getRawParameterValue("autoGain");
     hfEnhance = apvts.getRawParameterValue("hfEnhance");
     lfEnhance = apvts.getRawParameterValue("lfEnhance");
 
     apvts.addParameterListener("gainLink", this);
-    apvts.addParameterListener("gate", this);
+    // apvts.addParameterListener("gate", this);
     apvts.addParameterListener("treble", this);
     apvts.addParameterListener("mid", this);
     apvts.addParameterListener("bass", this);
@@ -58,7 +58,7 @@ GammaAudioProcessor::GammaAudioProcessor()
 GammaAudioProcessor::~GammaAudioProcessor()
 {
     apvts.removeParameterListener("gainLink", this);
-    apvts.removeParameterListener("gate", this);
+    // apvts.removeParameterListener("gate", this);
     apvts.removeParameterListener("treble", this);
     apvts.removeParameterListener("mid", this);
     apvts.removeParameterListener("bass", this);
@@ -146,12 +146,6 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     dsp::ProcessSpec spec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()};
 
     currentMode = (Mode)apvts.getRawParameterValue("mode")->load();
-
-    gateProc.prepare(spec);
-    gateProc.setAttack(10.0);
-    gateProc.setRelease(180.0);
-    gateProc.setRatio(10.0);
-    gateProc.setThreshold(*gate);
 
     emphLow.prepare(spec);
     emphHigh.prepare(spec);
@@ -262,8 +256,8 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         bass.setDistParam(logval);
         channel.setDistParam(logval);
     }
-    else if (parameterID == "gate")
-        gateProc.setThreshold(*gate);
+    // else if (parameterID == "gate")
+        // gateProc.setThreshold(*gate);
     else if (parameterID == "gainLink")
     {
         if ((bool)newValue)
@@ -398,7 +392,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<fParam>(ParameterID("inputGain", 1), "Input Gain", -12.f, 12.f, 0.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("outputGain", 1), "Output Gain", -12.f, 12.f, 0.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("gainLink", 1), "Gain Link", false));
-    params.emplace_back(std::make_unique<fParam>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
+    // params.emplace_back(std::make_unique<fParam>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("m/s", 1), "Stereo/MS", false));
     params.emplace_back(std::make_unique<fParam>(ParameterID("width", 1), "Width", 0.f, 2.f, 1.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("stereoEmphasis", 1), "Stereo Emphasis", 0.f, 1.f, 0.5f));
