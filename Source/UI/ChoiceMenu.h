@@ -67,6 +67,7 @@ struct MenuLookAndFeel : LookAndFeel_V4
         }
 
         g.setColour(Colours::white);
+        g.setFont(jlimit(10.f, 18.f, area.getHeight() * 0.75f));
         g.drawFittedText(text, area, Justification::centred, 1);
     }
 
