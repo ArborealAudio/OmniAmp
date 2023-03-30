@@ -71,7 +71,7 @@ struct PresetComboBoxLNF : LookAndFeel_V4
 
         auto font = label.getLookAndFeel().getLabelFont (label);
 
-        g.setFont (font);
+        g.setFont (font.withHeight(jlimit(10.f, 18.f, box.getWidth() * 0.15f)));
 
         auto textArea = getLabelBorderSize (label).subtractedFrom (label.getLocalBounds());
 

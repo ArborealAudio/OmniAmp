@@ -8,7 +8,7 @@ struct MenuLookAndFeel : LookAndFeel_V4
     {
         Rectangle<float> box(0.f, 0.f, (float)width, (float)height);
         box.reduce(3, 3);
-        auto labelBounds = box.withSizeKeepingCentre(width * 0.66f, height);
+        auto labelBounds = box.withSizeKeepingCentre(width * 0.75f, height);
         g.setColour(backgroundColor);
         g.fillRoundedRectangle(box, box.getHeight() * 0.5f);
         g.setColour(outlineColor);
@@ -44,7 +44,7 @@ struct MenuLookAndFeel : LookAndFeel_V4
         Path rightArrow;
         drawArrow(box.removeFromRight(arrowSize).reduced(padding), rightArrow, false);
 
-        g.setFont(Font(jlimit(11.f, 15.f, comboBox.getHeight() * 0.6f)));
+        g.setFont(Font(jlimit(10.f, 18.f, comboBox.getWidth() * 0.15f)));
         g.drawText(comboBox.getItemText(comboBox.getSelectedItemIndex()), labelBounds, Justification::centred);
     }
 
