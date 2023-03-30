@@ -34,6 +34,7 @@ struct ButtonLookAndFeel : LookAndFeel_V4
         auto state = button.getToggleState() && shouldFillOnToggle;
         auto currentColor = state ? Colours::white : Colours::transparentBlack;
         g.setColour(currentColor.contrasting(0.8f));
+        g.setFont(jlimit(10.f, 18.f, button.getHeight() * 0.75f));
         g.drawText(text, button.getLocalBounds(), Justification::centred, false);
     }
 
