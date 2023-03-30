@@ -38,6 +38,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     if (lastWidth <= MIN_WIDTH)
         lastWidth = UI_WIDTH;
     setSize(lastWidth, lastWidth * 0.7625f);
+    getConstrainer()->setFixedAspectRatio((double)getWidth() / (double)getHeight());
 
     addAndMakeVisible(pluginTitle);
     String title = String(ProjectInfo::projectName).toUpperCase();
@@ -156,8 +157,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(enhancers);
 
     setResizable(true, true);
-    getConstrainer()->setMinimumSize(MIN_WIDTH, MIN_WIDTH);
-    getConstrainer()->setMaximumSize(MAX_WIDTH, MAX_WIDTH);
+    getConstrainer()->setMinimumWidth(MIN_WIDTH);
+    getConstrainer()->setMaximumWidth(MAX_WIDTH);
 
     /* extra components (download, activation, splash, thread initialization) */
     addChildComponent(dl);
@@ -215,11 +216,13 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     {
         auto delta = (preComponent.minimized ? -95 : 95); // 95px = (800-610) / 2
         setSize(getWidth(), getHeight() + delta);
+        getConstrainer()->setFixedAspectRatio((double)getWidth() / (double)getHeight());
     };
     enhancers.onResize = [&]
     {
         auto delta = (enhancers.minimized ? -95 : 95);
         setSize(getWidth(), getHeight() + delta);
+        getConstrainer()->setFixedAspectRatio((double)getWidth() / (double)getHeight());
     };
 
     addMouseListener(this, true);
@@ -238,6 +241,7 @@ void GammaAudioProcessorEditor::resetWindowSize()
     preComponent.toggleMinimized(true);
     enhancers.toggleMinimized(true);
     setSize(UI_WIDTH, 610);
+    getConstrainer()->setFixedAspectRatio((double)UI_WIDTH / (double)610);
     strix::writeConfigFile(CONFIG_PATH, "size", UI_WIDTH);
 }
 
