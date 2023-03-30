@@ -93,7 +93,7 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/Link/link_over_off.svg"
     "Resources/Link/link_over_on.svg"
     "Resources/logo.svg"
-    "Resources/LiberationSans-Regular.ttf"
+    "Resources/Sora-Regular.ttf"
     "Resources/Hamburger_icon.svg"
     "Resources/Presets/Default Bass.aap"
     "Resources/Presets/Default Guitar.aap"
