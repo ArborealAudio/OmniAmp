@@ -206,6 +206,7 @@ private:
         dsp::AudioBlock<double> block(buffer);
         const size_t numChannels = mono ? 1 : block.getNumChannels();
 
+        /* push dry samples to mixer */
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
             const auto *in = block.getChannelPointer(ch);
@@ -237,7 +238,10 @@ private:
         emphLow.processIn(block);
         emphHigh.processIn(block);
 
+        /* main processing */
         auto osBlock = oversample[os_index_].processSamplesUp(block);
+        if (mono)
+            osBlock = osBlock.getSingleChannelBlock(0);
 
         auto p_comp = apvts.getRawParameterValue("comp");
         auto linked = (bool)apvts.getRawParameterValue("compLink")->load();
@@ -287,6 +291,7 @@ private:
 #else
             auto &&processBlock = block;
 #endif
+            processBlock = processBlock.getSubsetChannelBlock(0, numChannels);
             cab.processBlock(processBlock);
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
@@ -300,6 +305,7 @@ private:
         if (ms && !mono)
             strix::MSMatrix::msDecode(block);
 
+        /* doubler */
         double dubAmt = *apvts.getRawParameterValue("doubler");
         if ((bool)dubAmt && !mono)
             doubler.process(block, dubAmt);
@@ -330,7 +336,7 @@ private:
         for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
             float mix = sm_mix.getNextValue();
-            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+            for (size_t ch = 0; ch < numChannels; ++ch)
             {
                 auto out = block.getChannelPointer(ch);
                 out[i] = ((1.f - mix) * mixDelay.popSample(ch)) + mix * out[i];
