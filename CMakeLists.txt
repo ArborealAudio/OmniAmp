@@ -37,7 +37,7 @@ juce_add_plugin(Gamma
     COMPANY_COPYRIGHT "(c) 2023 Arboreal Audio, LLC"
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Arau
-    PLUGIN_CODE Gamm
+    PLUGIN_CODE Oamp
     FORMATS ${JUCE_FORMATS}
     VST2_CATEGORY kPlugCategEffect
     VST3_CATEGORY Fx Distortion
