@@ -167,7 +167,8 @@ private:
             max = strix::fast_tanh(max);
 
             auto gr = computeGR(0, max);
-            grBuf[0][i] = grBuf[1][i] = lastGR[0];
+            for (size_t ch = 0; ch < grData.getNumChannels(); ++ch)
+                grBuf[ch][i] = lastGR[0];
 
             postComp(inL[i], 0, gr, lastComp, last_c);
             postComp(inR[i], 1, gr, lastComp, last_c);
