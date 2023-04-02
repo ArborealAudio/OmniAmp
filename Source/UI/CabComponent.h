@@ -233,7 +233,7 @@ public:
         auto resoBounds = bounds.removeFromRight(bounds.getWidth() * 0.25f);
         resoLo.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
         resoHi.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
-        menu.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.3f).removeFromLeft(getWidth() * 0.5f).reduced(20, 5));
+        menu.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.3f).removeFromLeft(getWidth() * 0.5f).reduced(20, 0));
         cabBounds = bounds.reduced(5).toFloat();
     }
 };

@@ -81,6 +81,6 @@ public:
         reverbDecay.setBounds(decayBounds);
         predelay.setBounds(predelayBounds);
 
-        reverb.setBounds(b.reduced(30 , 15));
+        reverb.setBounds(b.withSizeKeepingCentre(b.getWidth() * 0.75f, b.getHeight() * 0.66f));
     }
 };
