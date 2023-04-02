@@ -290,9 +290,8 @@ private:
             else if (label)
                 text = *label;
 
-            float textBoxHeight = slider.getHeight() / 6;
-            // float fontHeight = jmin(14.f, textBoxHeight);
-            g.setFont(jlimit(13.f, 16.f, textBoxHeight * 0.8f));
+            float textBoxHeight = slider.getHeight() / 6.f;
+            g.setFont(jlimit(14.f, 17.f, textBoxHeight));
             g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(textBoxHeight).translated(textXOffset, textYOffset), Justification::centred, 2);
         }
     };
