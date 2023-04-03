@@ -192,7 +192,6 @@ private:
 
     void setOversampleIndex();
 
-    // expects stereo in and out
     void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)
     {
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
@@ -291,7 +290,6 @@ private:
 #else
             auto &&processBlock = block;
 #endif
-            processBlock = processBlock.getSubsetChannelBlock(0, numChannels);
             cab.processBlock(processBlock);
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
