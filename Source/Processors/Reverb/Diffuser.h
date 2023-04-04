@@ -38,7 +38,7 @@ struct Diffuser
             double minDelay = delayRangeSamples * i / channels;
             double maxDelay = delayRangeSamples * (i + 1) / channels;
             d.prepare(spec);
-            d.setMaximumDelayInSamples(44100);
+            d.setMaximumDelayInSamples(SR);
             d.setDelay((minDelay + maxDelay) / 2.0); // just use the average!
             invert.push_back(rand.nextInt() % 2 == 0);
             ++i;
