@@ -107,11 +107,11 @@ struct Knob : Slider
 
     float getDefaultValue() { return defaultValue; }
 
-    void mouseDrag(const MouseEvent &e) override
-    {
-        e.source.enableUnboundedMouseMovement(true);
-        Slider::mouseDrag(e);
-    }
+    // void mouseDrag(const MouseEvent &e) override
+    // {
+    //     e.source.enableUnboundedMouseMovement(true, true);
+    //     Slider::mouseDrag(e);
+    // }
 
     double proportionOfLengthToValue(double proportion) override
     {
