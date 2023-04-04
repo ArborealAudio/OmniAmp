@@ -145,7 +145,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
                         in[i] = out;
                     }
                 }
-                block.multiplyBy(1.0 / (f_order * 2.0));
+                // block.multiplyBy(1.0 / (f_order * 2.0));
                 return;
             }
 
@@ -180,7 +180,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
                     in[i] = out;
                 }
             }
-            block.multiplyBy(1.0 / (f_order * 2.0));
+            // block.multiplyBy(1.0 / f_order);
         }
 
     private:
