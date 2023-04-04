@@ -138,7 +138,7 @@ struct OptoComp
             processUnlinked(block.getChannelPointer(0), 0, comp, block.getNumSamples());
             
         // copy data to GR meter
-        grSource.copyBuffer(grData);
+        grSource.copyBuffer(grData.getArrayOfWritePointers(), block.getNumChannels(), block.getNumSamples());
     }
 
     strix::VolumeMeterSource &getGRSource() { return grSource; }
