@@ -827,9 +827,9 @@ namespace Processors
             case 0:
                 lowGain = newValue;
                 if (currentType == Modern)
-                    *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
+                    *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
                 else
-                    *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 300.0, 0.66, gain);
+                    *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 300.0, 0.66, gain);
                 break;
             case 1:
             {
@@ -837,17 +837,21 @@ namespace Processors
                 double Q = 0.707;
                 Q *= 1.0 / gain;
                 if (currentType == Modern)
-                    *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
+                    *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
                 else
-                    *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 800.0, Q, gain);
+                    *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 800.0, Q, gain);
             }
             break;
             case 2:
                 trebGain = newValue;
                 if (currentType == Modern)
-                    *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
-                else
-                    *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 6500.0, 0.5, gain);
+                    *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
+                else {
+                    auto freq = 6500.0;
+                    if (freq > SR * 0.5)
+                        freq = SR * 0.5;
+                    *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq, 0.5, gain);
+                }
                 break;
             }
         }
