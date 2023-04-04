@@ -73,22 +73,26 @@ struct Enhancer
     {
         SR = spec.sampleRate;
 
-        double freq = 0.0;
+        double lFreq = 0.0;
         switch (mode)
         {
         case Processors::ProcessorType::Guitar:
-            freq = 300.0;
+            lFreq = 300.0;
             break;
         case Processors::ProcessorType::Bass:
-            freq = 175.0;
+            lFreq = 175.0;
             break;
         case Processors::ProcessorType::Channel:
-            freq = 200.0;
+            lFreq = 200.0;
             break;
         }
 
-        auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(freq, spec.sampleRate, 1);
-        auto hp_c = dsp::FilterDesign<double>::designIIRHighpassHighOrderButterworthMethod(7500.0, spec.sampleRate, 1);
+        double hFreq = 7500.0;
+        if (hFreq >= SR * 0.5)
+            hFreq = SR * 0.5;
+
+        auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(lFreq, spec.sampleRate, 1);
+        auto hp_c = dsp::FilterDesign<double>::designIIRHighpassHighOrderButterworthMethod(hFreq, spec.sampleRate, 1);
 
         for (size_t i = 0; i < 2; ++i)
         {
@@ -282,17 +286,29 @@ struct CutFilters : AudioProcessorValueTreeState::Listener
         if (paramID == "lfCut")
             lfCut.setCutoffFreq(newValue);
         else if (paramID == "hfCut")
+        {
+            if (newValue >= SR * 0.5)
+                newValue = SR * 0.5;
             hfCut.setCutoffFreq(newValue);
+        }
     }
 
     void prepare(const dsp::ProcessSpec &spec)
     {
+        SR = spec.sampleRate;
+        
         lfCut.setCutoffFreq(apvts.getRawParameterValue("lfCut")->load());
         hfCut.setCutoffFreq(apvts.getRawParameterValue("hfCut")->load());
         lfCut.prepare(spec);
         hfCut.prepare(spec);
         lfCut.setType(strix::FilterType::highpass);
         hfCut.setType(strix::FilterType::lowpass);
+
+        lfCut.setCutoffFreq(apvts.getRawParameterValue("lfCut")->load());
+        auto hfCutFreq = apvts.getRawParameterValue("hfCut")->load();
+        if (hfCutFreq >= SR * 0.5)
+            hfCutFreq = SR * 0.5;
+        hfCut.setCutoffFreq(hfCutFreq);
     }
 
     void reset()
@@ -312,4 +328,5 @@ struct CutFilters : AudioProcessorValueTreeState::Listener
 private:
     strix::SVTFilter<double, true> lfCut, hfCut;
     AudioProcessorValueTreeState &apvts;
+    double SR = 44100.0;
 };

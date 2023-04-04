@@ -39,19 +39,19 @@ struct GuitarPreFilter : PreampProcessor
         case GammaRay:
             bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(SR, 350.f);
             hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 350.f, 0.7f, 4.f);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 6200.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 6200.f > SR * 0.5 ? SR * 0.5 : 6200.f);
             dynHP.setCutoffFreq(350.0);
             break;
         case Sunbeam:
             bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(SR, 350.f); /*unused*/
             hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 750.f, 0.7f, 2.f);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(SR, 7200.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(SR, 7200.f > SR * 0.5 ? SR * 0.5 : 7200.f);
             dynHP.setCutoffFreq(1200.0);
             break;
         case Moonbeam:
             bp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(SR, 150.f);
             hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 175.f, 0.666f, 4.f);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 7500.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 7500.f > SR * 0.5 ? SR * 0.5 : 7500.f);
             dynHP.setCutoffFreq(350.0);
             break;
         case XRay:
