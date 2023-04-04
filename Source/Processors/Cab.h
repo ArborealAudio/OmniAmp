@@ -49,7 +49,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
             for (size_t i = 0; i < delay.size(); ++i)
             {
                 delay[i].prepare(monoSpec);
-                delay[i].setMaximumDelayInSamples(100 * ratio);
+                delay[i].setMaximumDelayInSamples(dtime[i] * ratio + 1);
                 delay[i].setDelay(dtime[i] * ratio);
             }
 
@@ -126,7 +126,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
 
                         for (size_t n = 0; n < f_order; ++n)
                         {
-                            auto d = delay[n].popSample(ch, dtime[n]);
+                            auto d = delay[n].popSample(ch);
 
                             out += d;
                             if (n % 2 == 0)
@@ -161,7 +161,7 @@ class FDNCab : AudioProcessorValueTreeState::Listener
 
                     for (size_t n = 0; n < f_order; ++n)
                     {
-                        auto d = delay[n].popSample(ch, dtime[n]);
+                        auto d = delay[n].popSample(ch);
 
                         out += d;
                         if (n % 2 == 0)
