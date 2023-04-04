@@ -111,10 +111,7 @@ target_link_libraries(Gamma
         gin
         gin_graphics
         Arbor_modules
-    PUBLIC
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_lto_flags
-        juce::juce_recommended_warning_flags)
+)
 
 if (NOT APPLE)
 target_link_libraries(Gamma
