@@ -253,7 +253,10 @@ private:
             if (!compPos)
                 guitar.comp.processBlock(osBlock, *p_comp, linked);
             if (ampOn)
+            {
                 guitar.processBlock(osBlock);
+                osBlock.multiplyBy(Decibels::decibelsToGain(-18.0));
+            }
             if (compPos)
                 guitar.comp.processBlock(osBlock, *p_comp, linked);
             break;
@@ -261,7 +264,10 @@ private:
             if (!compPos)
                 bass.comp.processBlock(osBlock, *p_comp, linked);
             if (ampOn)
+            {
                 bass.processBlock(osBlock);
+                osBlock.multiplyBy(Decibels::decibelsToGain(-10.0));
+            }
             if (compPos)
                 bass.comp.processBlock(osBlock, *p_comp, linked);
             break;
