@@ -23,8 +23,6 @@ class FDNCab : AudioProcessorValueTreeState::Listener
             micDepth = static_cast<strix::FloatParameter *>(apvts.getParameter("cabMicPosZ"));
             apvts.addParameterListener("cabMicPosZ", this);
             micPos = static_cast<strix::FloatParameter *>(apvts.getParameter("cabMicPosX"));
-
-            changeDelay();
         }
 
         ~FDN()
@@ -51,9 +49,10 @@ class FDNCab : AudioProcessorValueTreeState::Listener
             for (size_t i = 0; i < delay.size(); ++i)
             {
                 delay[i].prepare(monoSpec);
-                delay[i].setMaximumDelayInSamples(dtime[i] * ratio + 1);
-                delay[i].setDelay(dtime[i] * ratio);
+                delay[i].setMaximumDelayInSamples(100 * ratio);
             }
+
+            changeDelay();
 
             for (auto i = 0; i < f_order; ++i)
             {
