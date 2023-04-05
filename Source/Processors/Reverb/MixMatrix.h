@@ -9,21 +9,12 @@ struct MixMatrix
     MixMatrix() = default;
 
     // Expects an array of N channels worth of samples
-    static inline void processHadamardMatrix(double *ch)
+    template <typename T>
+    static inline void processHadamardMatrix(T *ch)
     {
         recursive(ch);
 
         auto scale = std::sqrt(1.0 / (double)size);
-
-        for (int i = 0; i < size; ++i)
-            ch[i] *= scale;
-    }
-
-    static inline void processHadamardMatrix(vec *ch)
-    {
-        recursive(ch);
-
-        auto scale = xsimd::sqrt(1.0 / (vec)size);
 
         for (int i = 0; i < size; ++i)
             ch[i] *= scale;

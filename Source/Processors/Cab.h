@@ -44,7 +44,9 @@ class FDNCab : AudioProcessorValueTreeState::Listener
             monoSpec.numChannels = 1;
 #endif
 
-            auto ratio = spec.sampleRate / 44100.0; // make delay times relative to sample-rate
+            SR = spec.sampleRate;
+
+            ratio = SR / 44100.0; // make delay times relative to sample-rate
 
             for (size_t i = 0; i < delay.size(); ++i)
             {
@@ -93,6 +95,9 @@ class FDNCab : AudioProcessorValueTreeState::Listener
                 dtime[3] = (5.f);
                 break;
             }
+
+            for (size_t i = 0; i < delay.size(); ++i)
+                delay[i].setDelay(dtime[i] * ratio);
         }
 
         void changeAllpass(float newValue)
@@ -185,6 +190,8 @@ class FDNCab : AudioProcessorValueTreeState::Listener
 
     private:
         static constexpr size_t f_order = 4;
+        double SR = 44100.0;
+        double ratio = 1.0; // ratio of actual sample rate to 44.1 kHz, for accuracy of delay times
 
         std::array<strix::Delay<T>, f_order> delay;
         std::array<double, f_order> dtime;
