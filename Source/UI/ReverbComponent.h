@@ -69,7 +69,7 @@ public:
     {
         auto b = getLocalBounds().reduced(10);
         title.setBounds(b.removeFromTop(b.getHeight() * 0.15f));
-        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
+        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.2f));
         auto bottom = b.removeFromBottom(b.getHeight() / 2);
         auto chunk = b.getWidth() / 4;
         auto amountBounds = bottom.removeFromRight(chunk);
