@@ -81,7 +81,7 @@ struct GuitarPreFilter : PreampProcessor
     }
 
 #if USE_SIMD
-    void process(strix::AudioBlock<vec> &block) override
+    void process(strix::AudioBlock<vec> &block)
     {
         auto dynHPGain = 1.f / jmax(inGain, 1.f);
         if (*hiGain)
@@ -111,7 +111,7 @@ struct GuitarPreFilter : PreampProcessor
         }
     }
 #else
-    void process(dsp::AudioBlock<double> &block) override
+    void process(dsp::AudioBlock<double> &block)
     {
         auto dynHPGain = 1.f / jmax(inGain, 1.f);
         if (*hiGain)

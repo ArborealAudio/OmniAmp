@@ -271,7 +271,7 @@ struct AVTriode : PreampProcessor
     }
 
 #if USE_SIMD
-    void process(strix::AudioBlock<vec> &block) override
+    void process(strix::AudioBlock<vec> &block)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
@@ -292,7 +292,7 @@ struct AVTriode : PreampProcessor
         }
     }
 #else
-    void process(dsp::AudioBlock<double> &block) override
+    void process(dsp::AudioBlock<double> &block)
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
