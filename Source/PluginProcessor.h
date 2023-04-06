@@ -133,6 +133,9 @@ private:
     std::atomic<float> *inGain, *outGain, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     float lastInGain = 1.f, lastOutGain = 1.f, lastWidth = 1.f, lastEmph = 0.f;
+    bool lastAmpOn = true;
+    AudioBuffer<double> preAmpBuf;
+    strix::Crossfade preAmpCrossfade;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -237,51 +240,66 @@ private:
         emphLow.processIn(block);
         emphHigh.processIn(block);
 
+        const auto p_comp = apvts.getRawParameterValue("comp")->load();
+        const auto linked = (bool)apvts.getRawParameterValue("compLink")->load();
+        const auto compPos = (bool)apvts.getRawParameterValue("compPos")->load();
+        const auto ampOn = (bool)apvts.getRawParameterValue("ampOn")->load();
+
+        if (ampOn != lastAmpOn)
+            preAmpCrossfade.reset();
+        if (!preAmpCrossfade.complete)
+        {
+            for (size_t ch = 0; ch < numChannels; ++ch)
+                preAmpBuf.copyFrom(ch, 0, block.getChannelPointer(ch), block.getNumSamples());
+        }
+
         /* main processing */
         auto osBlock = oversample[os_index_].processSamplesUp(block);
         if (mono)
             osBlock = osBlock.getSingleChannelBlock(0);
 
-        auto p_comp = apvts.getRawParameterValue("comp");
-        auto linked = (bool)apvts.getRawParameterValue("compLink")->load();
-        auto compPos = (bool)apvts.getRawParameterValue("compPos")->load();
-        auto ampOn = (bool)apvts.getRawParameterValue("ampOn")->load();
-
         switch (currentMode)
         {
         case Guitar:
             if (!compPos)
-                guitar.comp.processBlock(osBlock, *p_comp, linked);
+                guitar.comp.processBlock(osBlock, p_comp, linked);
             if (ampOn)
             {
                 guitar.processBlock(osBlock);
                 osBlock.multiplyBy(Decibels::decibelsToGain(-18.0));
             }
             if (compPos)
-                guitar.comp.processBlock(osBlock, *p_comp, linked);
+                guitar.comp.processBlock(osBlock, p_comp, linked);
             break;
         case Bass:
             if (!compPos)
-                bass.comp.processBlock(osBlock, *p_comp, linked);
+                bass.comp.processBlock(osBlock, p_comp, linked);
             if (ampOn)
             {
                 bass.processBlock(osBlock);
                 osBlock.multiplyBy(Decibels::decibelsToGain(-10.0));
             }
             if (compPos)
-                bass.comp.processBlock(osBlock, *p_comp, linked);
+                bass.comp.processBlock(osBlock, p_comp, linked);
             break;
         case Channel:
             if (!compPos)
-                channel.comp.processBlock(osBlock, *p_comp, linked);
+                channel.comp.processBlock(osBlock, p_comp, linked);
             if (ampOn)
                 channel.processBlock(osBlock);
             if (compPos)
-                channel.comp.processBlock(osBlock, *p_comp, linked);
+                channel.comp.processBlock(osBlock, p_comp, linked);
             break;
         }
 
         oversample[os_index_].processSamplesDown(block);
+
+        if (!preAmpCrossfade.complete)
+        {
+            preAmpCrossfade.processWithState(dsp::AudioBlock<double>(preAmpBuf), block, block.getNumSamples());
+        }
+
+        lastAmpOn = ampOn;
 
         auto latency = oversample[os_index].getLatencyInSamples();
         setLatencySamples((int)latency);
