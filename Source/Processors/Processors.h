@@ -545,10 +545,10 @@ namespace Processors
             case Cobalt:
                 for (auto &t : triode)
                     t.type = TriodeType::VintageTube;
-                triode[1].bias.first = 5.0;
-                triode[1].bias.second = 10.0;
-                triode[2].bias.first = 5.0;
-                triode[2].bias.second = 10.0;
+                triode[1].bias.first = 4.0;
+                triode[1].bias.second = 4.0;
+                triode[2].bias.first = 2.0;
+                triode[2].bias.second = 2.0;
                 triode[3].bias.first = 10.0;
                 triode[3].bias.second = 15.0;
                 break;
@@ -905,10 +905,10 @@ namespace Processors
             if (ampAutoGain_)
                 autoGain *= 1.0 / out_raw;
 
+            strix::SmoothGain<T>::applySmoothGain(processBlock, autoGain, lastAutoGain);
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
 #endif
-            block.multiplyBy(autoGain);
         }
 
     private:
@@ -919,7 +919,7 @@ namespace Processors
 
         std::atomic<bool> updateFilters = false;
 
-        double autoGain_m = 1.0;
+        double autoGain_m = 1.0, lastAutoGain = 1.0;
 
         template <class Block>
         void processFilters(Block &block)
