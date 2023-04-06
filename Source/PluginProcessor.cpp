@@ -232,19 +232,19 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         auto adjVal = calcBassParam(newValue);
         guitar.setToneControl(0, adjVal);
         bass.setToneControl(0, adjVal);
-        channel.setFilters(0, newValue);
+        channel.sm_low.setTargetValue(newValue);
     }
     else if (parameterID == "mid")
     {
         guitar.setToneControl(1, newValue);
         bass.setToneControl(1, newValue);
-        channel.setFilters(1, newValue);
+        channel.sm_mid.setTargetValue(newValue);
     }
     else if (parameterID == "treble")
     {
         guitar.setToneControl(2, newValue);
         bass.setToneControl(2, newValue);
-        channel.setFilters(2, newValue);
+        channel.sm_hi.setTargetValue(newValue);
     }
     else if (parameterID == "dist")
     {

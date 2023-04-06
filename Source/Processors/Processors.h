@@ -737,7 +737,7 @@ namespace Processors
             defaultPrepare(spec);
 
             setPreamp(*inGain);
-            setPoweramp(/* *outGain */);
+            setPoweramp();
 
             low.prepare(spec);
             setFilters(0);
@@ -747,6 +747,13 @@ namespace Processors
 
             hi.prepare(spec);
             setFilters(2);
+
+            sm_low.reset(SR, 0.01f);
+            sm_low.setCurrentAndTargetValue(lowGain);
+            sm_mid.reset(SR, 0.01f);
+            sm_mid.setCurrentAndTargetValue(midGain);
+            sm_hi.reset(SR, 0.01f);
+            sm_hi.setCurrentAndTargetValue(trebGain);
         }
 
         inline void setBias(size_t id, float newFirst, float newSecond)
@@ -911,6 +918,8 @@ namespace Processors
 #endif
         }
 
+        SmoothedValue<float> sm_low, sm_mid, sm_hi;
+
     private:
         strix::ChoiceParameter *channelMode;
         ChannelMode currentType;
@@ -924,12 +933,47 @@ namespace Processors
         template <class Block>
         void processFilters(Block &block)
         {
-            if (updateFilters)
+            if (updateFilters) // if channel mode changed
             {
                 setFilters(0, lowGain);
                 setFilters(1, midGain);
                 setFilters(2, trebGain);
                 updateFilters = false;
+            }
+
+            SmoothedValue<float> *smoothers [3] { &sm_low, &sm_mid, &sm_hi };
+            uint8 bitmask = 0;
+            for (size_t i = 0; i < 3; ++i)
+            {
+                if (smoothers[i]->isSmoothing())
+                    bitmask |= 1 << i;
+            }
+
+            if (bitmask > 0)
+            {
+                for (size_t i = 0; i < block.getNumSamples(); ++i)
+                {
+                    // set all filters that need update
+                    int bit = 1;
+                    for (int n = 0; n < 3; ++n)
+                    {
+                        if (bit & bitmask)
+                            setFilters(n, smoothers[n]->getNextValue());
+
+                        bit <<= 1;
+                    }
+
+                    for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+                    {
+                        auto in = block.getChannelPointer(ch);
+
+                        in[i] = low.processSample(in[i]);
+                        in[i] = mid.processSample(in[i]);
+                        in[i] = hi.processSample(in[i]);
+                    }
+                }
+                setEQAutoGain();
+                return;
             }
 
             for (auto ch = 0; ch < block.getNumChannels(); ++ch)
