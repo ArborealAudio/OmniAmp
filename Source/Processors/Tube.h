@@ -193,9 +193,7 @@ enum TriodeType
     ModernTube,
     ChannelTube
 };
-/**
- * A different tube emultaor for triodes, with parameterized bias levels & Stateful saturation
- */
+
 template <typename T>
 struct AVTriode : PreampProcessor
 {
@@ -271,7 +269,7 @@ struct AVTriode : PreampProcessor
     }
 
 #if USE_SIMD
-    void process(strix::AudioBlock<vec> &block)
+    void process(strix::AudioBlock<vec> &block) override
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
@@ -292,7 +290,7 @@ struct AVTriode : PreampProcessor
         }
     }
 #else
-    void process(dsp::AudioBlock<double> &block)
+    void process(dsp::AudioBlock<double> &block) override
     {
         for (size_t ch = 0; ch < block.getNumChannels(); ch++)
         {
