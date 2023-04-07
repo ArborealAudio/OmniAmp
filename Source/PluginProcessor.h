@@ -134,7 +134,7 @@ private:
 
     float lastInGain = 1.f, lastOutGain = 1.f, lastWidth = 1.f, lastEmph = 0.f;
     bool lastAmpOn = true;
-    AudioBuffer<double> preAmpBuf;
+    AudioBuffer<double> preAmpBuf, postAmpBuf;
     strix::Crossfade preAmpCrossfade;
 
     /*std::array<ToneStackNodal, 3> toneStack
@@ -245,12 +245,12 @@ private:
         const auto compPos = (bool)apvts.getRawParameterValue("compPos")->load();
         const auto ampOn = (bool)apvts.getRawParameterValue("ampOn")->load();
 
+        // load buffers for crossfade if needed
         if (ampOn != lastAmpOn)
             preAmpCrossfade.reset();
         if (!preAmpCrossfade.complete)
         {
-            for (size_t ch = 0; ch < numChannels; ++ch)
-                preAmpBuf.copyFrom(ch, 0, block.getChannelPointer(ch), block.getNumSamples());
+            preAmpBuf.makeCopyOf(buffer, true);
         }
 
         /* main processing */
@@ -263,7 +263,7 @@ private:
         case Guitar:
             if (!compPos)
                 guitar.comp.processBlock(osBlock, p_comp, linked);
-            if (ampOn)
+            if (ampOn || !preAmpCrossfade.complete)
             {
                 guitar.processBlock(osBlock);
                 osBlock.multiplyBy(Decibels::decibelsToGain(-18.0));
@@ -274,7 +274,7 @@ private:
         case Bass:
             if (!compPos)
                 bass.comp.processBlock(osBlock, p_comp, linked);
-            if (ampOn)
+            if (ampOn || !preAmpCrossfade.complete)
             {
                 bass.processBlock(osBlock);
                 osBlock.multiplyBy(Decibels::decibelsToGain(-10.0));
@@ -285,7 +285,7 @@ private:
         case Channel:
             if (!compPos)
                 channel.comp.processBlock(osBlock, p_comp, linked);
-            if (ampOn)
+            if (ampOn || !preAmpCrossfade.complete)
                 channel.processBlock(osBlock);
             if (compPos)
                 channel.comp.processBlock(osBlock, p_comp, linked);
@@ -294,14 +294,21 @@ private:
 
         oversample[os_index_].processSamplesDown(block);
 
+        // perform crossfade if needed
         if (!preAmpCrossfade.complete)
         {
-            preAmpCrossfade.processWithState(dsp::AudioBlock<double>(preAmpBuf), block, block.getNumSamples());
+            if (ampOn) // fade to processed block
+                preAmpCrossfade.processWithState(preAmpBuf, buffer, buffer.getNumSamples());
+            else // fade to pre-amp block
+            {
+                preAmpCrossfade.processWithState(buffer, preAmpBuf, buffer.getNumSamples());
+                buffer.makeCopyOf(preAmpBuf, true);
+            }
         }
 
         lastAmpOn = ampOn;
 
-        auto latency = oversample[os_index].getLatencyInSamples();
+        auto latency = oversample[os_index_].getLatencyInSamples();
         setLatencySamples((int)latency);
 
         emphLow.processOut(block);
