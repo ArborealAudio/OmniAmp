@@ -344,7 +344,6 @@ class ReverbManager
 {
     AudioProcessorValueTreeState &apvts;
     std::unique_ptr<Room<8, double>> currentRev, newRev;
-    dsp::ProcessSpec memSpec;
 
     enum reverb_flags
     {
@@ -353,11 +352,10 @@ class ReverbManager
         SIZE,
         PREDELAY,
     };
-    std::queue<reverb_flags> msgs;
-    std::mutex mutex;
-    std::atomic<bool> reverbReady = false, processingAudio = false;
+    std::atomic<bool> reverbReady = false;
+    bool processingAudio = false;
 
-    AudioBuffer<double> tmp1, tmp2;
+    AudioBuffer<double> tmp;
     strix::Crossfade fade;
 
     strix::ChoiceParameter *type;
@@ -393,7 +391,6 @@ public:
 
         currentRev = std::make_unique<Room<8, double>>(params);
         newRev = std::make_unique<Room<8, double>>(params);
-
     }
 
     void setDownsampleRatio(int dsRatio)
@@ -408,13 +405,11 @@ public:
         auto hSpec = spec;
         hSpec.sampleRate /= ratio;
         hSpec.maximumBlockSize /= ratio;
-        memSpec = hSpec;
         currentRev->prepare(hSpec);
         newRev->prepare(hSpec);
         SR = hSpec.sampleRate;
 
-        tmp1.setSize(spec.numChannels, spec.maximumBlockSize);
-        tmp2.setSize(spec.numChannels, spec.maximumBlockSize);
+        tmp.setSize(spec.numChannels, spec.maximumBlockSize);
     }
 
     void reset()
@@ -452,9 +447,8 @@ public:
             case ReverbType::Off:
                 break;
             }
-            lastType = type->getIndex();
             // fade incoming, set fade time & flag
-            fade.setFadeTime(SR * ratio, 0.5f);
+            fade.setFadeTime(SR * ratio, 0.25f);
             reverbReady = true;
             break;
         }
@@ -467,36 +461,57 @@ public:
 
     void process(AudioBuffer<double> &buffer, float amt)
     {
-        if (!processingAudio)
+        auto t = type->getIndex();
+        
+        if (!processingAudio && !(!t && !lastType)) // check for param changes if no crossfade
         {
             if (lastDecay != *decay)
                 manageUpdate(DECAY);
             if (lastSize != *size)
                 manageUpdate(SIZE);
-            if (lastType != type->getIndex())
+            if (lastType != t)
                 manageUpdate(TYPE);
             if (lastPredelay != *predelay)
                 manageUpdate(PREDELAY);
         }
 
-        if (*type && !reverbReady)
+        if (!t && fade.complete) // if reverb is off and no fade needed, exit
+        {
+            lastType = t;
+            return;
+        }
+
+        if (t && !reverbReady) // process w/ current reverb if no new reverb ready
         {
             currentRev->process(buffer, amt);
+            lastType = t;
         }
-        else if (*type && reverbReady && !fade.complete)
+        else if (t && reverbReady && !fade.complete) // process crossfade btw current & new reverb if it's available
         {
             processingAudio = true;
-            tmp1.makeCopyOf(buffer, true);
-            tmp2.makeCopyOf(buffer, true);
-            currentRev->process(tmp1, amt);
-            newRev->process(tmp2, amt);
-            fade.processWithState(tmp1, tmp2, jmin(jmin(buffer.getNumSamples(), tmp1.getNumSamples()), tmp2.getNumSamples()));
-            buffer.makeCopyOf(tmp2, true);
+            tmp.makeCopyOf(buffer, true);
+            if (lastType) // if we're fading between reverb types
+                currentRev->process(tmp, amt);
+            newRev->process(buffer, amt);
+            fade.processWithState(tmp, buffer, jmin(buffer.getNumSamples(), tmp.getNumSamples()));
             if (fade.complete)
             {
+                processingAudio = false;
                 currentRev.swap(newRev);
-                processingAudio = false; // don't allow param changes to dispatch until crossfade from last change is done
                 reverbReady = false;
+                lastType = t;
+            }
+        }
+        else if (!t && !fade.complete)
+        {
+            processingAudio = true;
+            tmp.makeCopyOf(buffer, true);
+            currentRev->process(tmp, amt);
+            fade.processWithState(tmp, buffer, jmin(buffer.getNumSamples(), tmp.getNumSamples()));
+            if (fade.complete)
+            {
+                processingAudio = false;
+                lastType = t;
             }
         }
     }
