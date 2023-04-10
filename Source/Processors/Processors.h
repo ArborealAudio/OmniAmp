@@ -754,6 +754,10 @@ namespace Processors
             sm_mid.setCurrentAndTargetValue(midGain);
             sm_hi.reset(SR, 0.01f);
             sm_hi.setCurrentAndTargetValue(trebGain);
+
+            tmp = (T**)malloc(sizeof(T*) * spec.numChannels);
+            for (size_t ch = 0; ch < spec.numChannels; ++ch)
+                tmp[ch] = (T*)malloc(sizeof(T) * spec.maximumBlockSize);
         }
 
         inline void setBias(size_t id, float newFirst, float newSecond)
@@ -866,10 +870,30 @@ namespace Processors
         template <typename FloatType>
         void processBlock(dsp::AudioBlock<FloatType> &block)
         {
-            FloatType gain_raw = jmap(inGain->get(), 1.f, 4.f);
-            FloatType out_raw = jmap(outGain->get(), 1.f, 4.f);
+            auto inGain_ = inGain->get();
+            auto outGain_ = outGain->get();
+            FloatType gain_raw = jmap(inGain_, 1.f, 4.f);
+            FloatType out_raw = jmap(outGain_, 1.f, 4.f);
 
-            pentode.inGain = *outGain;
+            if (inGain_ > 0.f && lastInGain> 1.f)
+                preampTubeState = ProcessNormal;
+            else if (inGain_ <= 0.f && lastInGain <= 1.f)
+                preampTubeState = Bypassed;
+            else if (inGain_ <= 0.f && lastInGain >= 1.f)
+                preampTubeState = ProcessRampOff;
+            else if (inGain_ >= 0.f && lastInGain <= 1.f)
+                preampTubeState = ProcessRampOn;
+
+            if (outGain_ > 0.f && lastOutGain> 1.f)
+                powerampTubeState = ProcessNormal;
+            else if (outGain_ <= 0.f && lastOutGain <= 1.f)
+                powerampTubeState = Bypassed;
+            else if (outGain_ <= 0.f && lastOutGain >= 1.f)
+                powerampTubeState = ProcessRampOff;
+            else if (outGain_ >= 0.f && lastOutGain <= 1.f)
+                powerampTubeState = ProcessRampOn;
+
+            pentode.inGain = outGain_;
 
             FloatType autoGain = 1.0;
             bool ampAutoGain_ = *ampAutoGain;
@@ -885,13 +909,49 @@ namespace Processors
             else
                 mxr.setInit(true);
 
-            if (*inGain > 0.f)
+            switch (preampTubeState)
             {
-                setPreamp(*inGain);
+            case Bypassed:
+                break;
+            case ProcessNormal:
+                setPreamp(inGain_);
                 strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
                 triode[0].process(processBlock);
                 if (*hiGain)
                     triode[1].process(processBlock);
+                break;
+            case ProcessRampOn:
+            {
+                for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
+                {
+                    auto in = processBlock.getChannelPointer(ch);
+                    for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
+                        tmp[ch][i] = in[i];
+                }
+                auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                setPreamp(inGain_);
+                strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
+                triode[0].process(processBlock);
+                if (*hiGain)
+                    triode[1].process(processBlock);
+                strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
+                } break;
+            case ProcessRampOff:
+            {
+                for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
+                {
+                    auto in = processBlock.getChannelPointer(ch);
+                    for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
+                        tmp[ch][i] = in[i];
+                }
+                auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                setPreamp(inGain_);
+                strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
+                triode[0].process(tmpBlock);
+                if (*hiGain)
+                    triode[1].process(tmpBlock);
+                strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
+                } break;
             }
 
             if (ampAutoGain_)
@@ -902,11 +962,49 @@ namespace Processors
             if (ampAutoGain_)
                 autoGain *= autoGain_m;
 
-            if (*outGain > 0.f)
+            // if (outGain_ > 0.f)
+            // {
+            //     setPoweramp();
+            //     strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
+            //     pentode.processBlockClassB(processBlock);
+            // }
+            switch (powerampTubeState)
             {
-                setPoweramp(/* *outGain */);
+            case Bypassed:
+                break;
+            case ProcessNormal:
+                setPoweramp();
                 strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
                 pentode.processBlockClassB(processBlock);
+                break;
+            case ProcessRampOn:
+            {
+                for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
+                {
+                    auto in = processBlock.getChannelPointer(ch);
+                    for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
+                        tmp[ch][i] = in[i];
+                }
+                auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                setPoweramp();
+                strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
+                pentode.processBlockClassB(processBlock);
+                strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
+                } break;
+            case ProcessRampOff:
+            {
+                for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
+                {
+                    auto in = processBlock.getChannelPointer(ch);
+                    for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
+                        tmp[ch][i] = in[i];
+                }
+                auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                setPoweramp();
+                strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
+                pentode.processBlockClassB(tmpBlock);
+                strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
+                } break;
             }
 
             if (ampAutoGain_)
@@ -929,6 +1027,16 @@ namespace Processors
         std::atomic<bool> updateFilters = false;
 
         double autoGain_m = 1.0, lastAutoGain = 1.0;
+        T **tmp;
+
+        enum TubeState
+        {
+            Bypassed,
+            ProcessNormal,
+            ProcessRampOn,
+            ProcessRampOff
+        };
+        TubeState preampTubeState, powerampTubeState;
 
         template <class Block>
         void processFilters(Block &block)
