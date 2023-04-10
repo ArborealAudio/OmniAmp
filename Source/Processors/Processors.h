@@ -808,8 +808,8 @@ namespace Processors
             else
             {
                 pentode.setType(PentodeType::Classic);
-                pentode.bias.first = 10.0;
-                pentode.bias.second = 10.0;
+                pentode.bias.first = 12.0;
+                pentode.bias.second = 12.0;
             }
 #if 0
             pentode.bias.first = JUCE_LIVE_CONSTANT(bias);
@@ -905,7 +905,11 @@ namespace Processors
 #endif
 
             if (*dist > 0.f)
+            {
                 mxr.processBlock(processBlock);
+                if (ampAutoGain_)
+                    autoGain *= 1.f / jmap(dist->get(), 1.f, 6.f);
+            }
             else
                 mxr.setInit(true);
 
@@ -957,17 +961,12 @@ namespace Processors
             if (ampAutoGain_)
                 autoGain *= 1.0 / std::sqrt(std::sqrt(gain_raw * gain_raw * gain_raw));
 
-            processFilters(processBlock);
+            FloatType autoGain_m = 1.0;
+            processFilters(processBlock, autoGain_m);
 
             if (ampAutoGain_)
                 autoGain *= autoGain_m;
 
-            // if (outGain_ > 0.f)
-            // {
-            //     setPoweramp();
-            //     strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
-            //     pentode.processBlockClassB(processBlock);
-            // }
             switch (powerampTubeState)
             {
             case Bypassed:
@@ -1026,7 +1025,7 @@ namespace Processors
 
         std::atomic<bool> updateFilters = false;
 
-        double autoGain_m = 1.0, lastAutoGain = 1.0;
+        double lastAutoGain = 1.0;
         T **tmp;
 
         enum TubeState
@@ -1039,7 +1038,7 @@ namespace Processors
         TubeState preampTubeState, powerampTubeState;
 
         template <class Block>
-        void processFilters(Block &block)
+        void processFilters(Block &block, double &autoGain_m)
         {
             if (updateFilters) // if channel mode changed
             {
@@ -1080,7 +1079,7 @@ namespace Processors
                         in[i] = hi.processSample(in[i]);
                     }
                 }
-                setEQAutoGain();
+                setEQAutoGain(autoGain_m);
                 return;
             }
 
@@ -1095,11 +1094,11 @@ namespace Processors
                     in[i] = hi.processSample(in[i]);
                 }
             }
-            setEQAutoGain();
+            setEQAutoGain(autoGain_m);
         }
 
         // get magnitude at some specific frequencies and take the reciprocal
-        void setEQAutoGain()
+        void setEQAutoGain(double &autoGain_m)
         {
             autoGain_m = 1.0;
 
