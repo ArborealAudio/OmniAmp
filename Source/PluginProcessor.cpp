@@ -277,7 +277,8 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     {
         setOversampleIndex();
         auto ovs_fac = oversample[os_index].getOversamplingFactor();
-        dsp::ProcessSpec osSpec{SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
+        lastSampleRate = SR * ovs_fac;
+        dsp::ProcessSpec osSpec{lastSampleRate, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
         suspendProcessing(true);
         guitar.prepare(osSpec);
         bass.prepare(osSpec);
