@@ -104,7 +104,7 @@ struct Pentode
 private:
     void processSamplesNu(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
-        float bpPreGain = -inGain;
+        float bpPreGain = -inGain * 0.5f;
         float bpPostGain = -bpPreGain;
         for (size_t i = 0; i < numSamples; ++i)
         {
