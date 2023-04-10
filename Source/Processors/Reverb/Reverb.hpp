@@ -345,15 +345,15 @@ class ReverbManager
     AudioProcessorValueTreeState &apvts;
     std::unique_ptr<Room<8, double>> currentRev, newRev;
 
-    enum reverb_flags
+    enum ReverbState
     {
-        TYPE,
-        DECAY,
-        SIZE,
-        PREDELAY,
+        Bypassed,
+        ProcessCurrentReverb,
+        ProcessFadeToWet,
+        ProcessFadeToDry,
+        ProcessFadeBetween
     };
-    std::atomic<bool> reverbReady = false;
-    bool processingAudio = false;
+    ReverbState state;
 
     AudioBuffer<double> tmp;
     strix::Crossfade fade;
@@ -409,6 +409,8 @@ public:
         newRev->prepare(hSpec);
         SR = hSpec.sampleRate;
 
+        state = type->getIndex() ? ProcessCurrentReverb : Bypassed;
+
         tmp.setSize(spec.numChannels, spec.maximumBlockSize);
     }
 
@@ -418,7 +420,7 @@ public:
         newRev->reset();
     }
 
-    void manageUpdate(reverb_flags flag)
+    void manageUpdate(bool changingPredelay)
     {
         float d = *decay;
         float s = *size;
@@ -429,33 +431,37 @@ public:
         s = jmax(0.05f, s);
         float p = *predelay * 0.001f * SR;
 
-        switch (flag)
+        if (!changingPredelay)
         {
-        case DECAY:
-        case SIZE:
-        case TYPE:
-        {
-            reverbReady = false;
             switch ((ReverbType)type->getIndex())
             {
             case ReverbType::Room:
+                newRev->reset();
                 newRev->setReverbParams(ReverbParams{30.f * s, 0.65f * s, 1.f * (1.f - ref_mod), 0.3f, 3.f, p}, false);
+                if (state == Bypassed)
+                    state = ProcessFadeToWet;
+                else // switching types/params
+                    state = ProcessFadeBetween;
                 break;
             case ReverbType::Hall:
+                newRev->reset();
                 newRev->setReverbParams(ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p}, false);
+                if (state == Bypassed) // previously bypassed
+                    state = ProcessFadeToWet;
+                else // switching types/params
+                    state = ProcessFadeBetween;
                 break;
             case ReverbType::Off:
+                state = ProcessFadeToDry;
                 break;
             }
             // fade incoming, set fade time & flag
-            fade.setFadeTime(SR * ratio, 0.25f);
-            reverbReady = true;
-            break;
+            fade.setFadeTime(SR, 0.5f);
         }
-        case PREDELAY:
+        else
+        {
             currentRev->setPredelay(p);
             lastPredelay = p;
-            break;
         }
     }
 
@@ -463,56 +469,61 @@ public:
     {
         auto t = type->getIndex();
         
-        if (!processingAudio && !(!t && !lastType)) // check for param changes if no crossfade
+        if (state == Bypassed || state == ProcessCurrentReverb) // check for param changes if no crossfade
         {
-            if (lastDecay != *decay)
-                manageUpdate(DECAY);
-            if (lastSize != *size)
-                manageUpdate(SIZE);
+            if (lastDecay != *decay && state != Bypassed)
+                manageUpdate(false);
+            if (lastSize != *size && state != Bypassed)
+                manageUpdate(false);
             if (lastType != t)
-                manageUpdate(TYPE);
+                manageUpdate(false);
             if (lastPredelay != *predelay)
-                manageUpdate(PREDELAY);
+                manageUpdate(true);
         }
 
-        if (!t && fade.complete) // if reverb is off and no fade needed, exit
+        switch (state)
         {
+        case Bypassed:
             lastType = t;
             return;
-        }
-
-        if (t && !reverbReady) // process w/ current reverb if no new reverb ready
-        {
+            break;
+        case ProcessCurrentReverb:
             currentRev->process(buffer, amt);
             lastType = t;
-        }
-        else if (t && reverbReady && !fade.complete) // process crossfade btw current & new reverb if it's available
-        {
-            processingAudio = true;
+            break;
+        case ProcessFadeToWet:
             tmp.makeCopyOf(buffer, true);
-            if (lastType) // if we're fading between reverb types
-                currentRev->process(tmp, amt);
             newRev->process(buffer, amt);
-            fade.processWithState(tmp, buffer, jmin(buffer.getNumSamples(), tmp.getNumSamples()));
+            fade.processWithState(tmp, buffer, buffer.getNumSamples());
             if (fade.complete)
             {
-                processingAudio = false;
-                currentRev.swap(newRev);
-                reverbReady = false;
+                newRev.swap(currentRev);
                 lastType = t;
+                state = ProcessCurrentReverb;
             }
-        }
-        else if (!t && !fade.complete)
-        {
-            processingAudio = true;
+            break;
+        case ProcessFadeToDry:
             tmp.makeCopyOf(buffer, true);
             currentRev->process(tmp, amt);
-            fade.processWithState(tmp, buffer, jmin(buffer.getNumSamples(), tmp.getNumSamples()));
+            fade.processWithState(tmp, buffer, buffer.getNumSamples());
             if (fade.complete)
             {
-                processingAudio = false;
                 lastType = t;
+                state = Bypassed;
             }
+            break;
+        case ProcessFadeBetween:
+            tmp.makeCopyOf(buffer, true);
+            currentRev->process(tmp, amt);
+            newRev->process(buffer, amt);
+            fade.processWithState(tmp, buffer, buffer.getNumSamples());
+            if (fade.complete)
+            {
+                currentRev.swap(newRev);
+                lastType = t;
+                state = ProcessCurrentReverb;
+            }
+            break;
         }
     }
 };
