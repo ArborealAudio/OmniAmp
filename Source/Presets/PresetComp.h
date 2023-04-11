@@ -91,6 +91,7 @@ struct PresetComp : Component, private Timer
         box.setLookAndFeel(&boxLNF);
         box.setJustificationType(Justification::centredLeft);
         box.setTextWhenNothingSelected("Presets");
+        box.setInterceptsMouseClicks(false, false);
 
         loadPresets();
 
@@ -115,6 +116,10 @@ struct PresetComp : Component, private Timer
     {
         PopupMenu::Item save{ "save" }, saveAs{ "save as" }, copy{ "copy preset" }, paste{"paste preset"}, presetDir{"open preset folder"};
 
+        // Factory presets start at 0
+        // User presets start after factory
+        // Functional menu items start at 1000
+        
         auto menu = box.getRootMenu();
         menu->clear();
         save.setID(1001);
@@ -158,10 +163,11 @@ struct PresetComp : Component, private Timer
         factoryPresetSize = presets.size();
 
         auto user = manager.loadUserPresetList();
+        userPresetSize = user.size();
         userPresets.clear();
-        for (int i = 0; i < user.size(); ++i)
+        for (int i = 1; i < userPresetSize; ++i)
         {
-            userPresets.addItem(factoryPresetSize + i + 1, user[i]);
+            userPresets.addItem(factoryPresetSize + i, user[i]);
         }
 
         menu->addSeparator();
@@ -259,19 +265,23 @@ struct PresetComp : Component, private Timer
     void leftArrowClicked()
     {
         const auto currentIndex = box.getSelectedItemIndex();
+        DBG("index " << currentIndex);
         if (currentIndex != 0)
             box.setSelectedItemIndex(currentIndex - 1);
         else
-            box.setSelectedItemIndex(currentIndex + 1);
+            box.setSelectedItemIndex(userPresetSize + factoryPresetSize);
+        DBG("new index " << box.getSelectedItemIndex());
     }
     
     void rightArrowClicked()
     {
         const auto currentIndex = box.getSelectedItemIndex();
-        if (currentIndex < box.getNumItems())
+        DBG("index " << currentIndex);
+        if (currentIndex < factoryPresetSize + userPresetSize)
             box.setSelectedItemIndex(currentIndex + 1);
         else
             box.setSelectedItemIndex(0);
+        DBG("new index " << box.getSelectedItemIndex());
     }
 
     void mouseDown(const MouseEvent &event) override
@@ -287,7 +297,8 @@ struct PresetComp : Component, private Timer
             return;
         }
 
-        Component::mouseDown(event);
+        box.mouseDown(event);
+        // Component::mouseDown(event);
     }
 
     void timerCallback() override
@@ -314,7 +325,7 @@ private:
 
     PopupMenu userPresets;
 
-    int factoryPresetSize = 0;
+    int factoryPresetSize = 0, userPresetSize = 0;
 
     TextEditor editor;
 
