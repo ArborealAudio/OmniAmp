@@ -932,7 +932,11 @@ namespace Processors
                     for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
                         tmp[ch][i] = in[i];
                 }
+#if USE_SIMD
                 auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+#else
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+#endif
                 setPreamp(inGain_);
                 strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
                 triode[0].process(processBlock);
@@ -948,7 +952,11 @@ namespace Processors
                     for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
                         tmp[ch][i] = in[i];
                 }
+#if USE_SIMD
                 auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+#else
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+#endif
                 setPreamp(inGain_);
                 strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
                 triode[0].process(tmpBlock);
@@ -984,7 +992,11 @@ namespace Processors
                     for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
                         tmp[ch][i] = in[i];
                 }
+#if USE_SIMD
                 auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+#else
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+#endif
                 setPoweramp();
                 strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
                 pentode.processBlockClassB(processBlock);
@@ -998,7 +1010,11 @@ namespace Processors
                     for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
                         tmp[ch][i] = in[i];
                 }
+#if USE_SIMD
                 auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+#else
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+#endif
                 setPoweramp();
                 strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
                 pentode.processBlockClassB(tmpBlock);
