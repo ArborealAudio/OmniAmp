@@ -1,5 +1,5 @@
 #set page(
-	fill: rgb("303543")
+	fill: rgb("283238")
 )
 #set text(
 	fill: white,
@@ -20,15 +20,19 @@ Arboreal Audio presents:
 #set align(left)
 = OmniAmp
 == The all-in-one amplifier
+#linebreak()
 #align(center)[
 	#image(
 		"UI_full.png",
-		width: 66%
+		width: 70%
 	)
 ]
+#linebreak()
 OmniAmp is a robust audio tool meant to be used on any type of sound source. With its full feature set, this can be the only plugin in your signal chain.
 
 OmniAmp was designed to take the layout of a guitar amplifier and port it to a universal context, with some added features to keep you contained in one interface for the bulk of your mixing.
+
+#pagebreak()
 
 == Modes
 
@@ -218,6 +222,7 @@ Enables auto-gain compensation for the enhancer filter, which will reduce the am
 
 A pair of 6db/octave high-pass and low-pass filters, processed after the enhancer filters
 
+#pagebreak()
 == Top Controls
 
 1. *Gate:* A simple noise gate before everything else (including the input gain). Threshold ranges from -95dB to -20dB
