@@ -28,12 +28,12 @@ struct MixMatrix
 
         T sum = 0.0;
         for (int j = 0; j < size; ++j)
-            sum += ch[j];
+            sum += ch[j]; // add together all samples from array
 
         sum *= h_mult;
 
         for (int j = 0; j < size; ++j)
-            ch[j] += sum;
+            ch[j] += sum; // add the sum to each sample in the array
     }
 
     template <typename T>
