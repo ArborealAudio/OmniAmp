@@ -117,6 +117,8 @@ public:
     CabsComponent(AudioProcessorValueTreeState &a) : menu(a.getParameter("cabType")->getAllValueStrings()), micComp(a), apvts(a)
     {
         apvts.addParameterListener("cabType", this);
+        apvts.addParameterListener("cabMicPosX", this);
+        apvts.addParameterListener("cabMicPosZ", this);
 
         cabType = static_cast<strix::ChoiceParameter *>(apvts.getParameter("cabType"));
 
@@ -155,6 +157,8 @@ public:
     ~CabsComponent() override
     {
         apvts.removeParameterListener("cabType", this);
+        apvts.removeParameterListener("cabMicPosX", this);
+        apvts.removeParameterListener("cabMicPosZ", this);
         stopTimer();
         cabType = nullptr;
     }
@@ -162,9 +166,11 @@ public:
     void parameterChanged(const String &paramID, float) override
     {
         if (paramID == "cabType")
-        {
             needUpdate = true;
-        }
+        else if (paramID == "cabMicPosX")
+            repaint();
+        else if (paramID == "cabMicPosZ")
+            repaint();
     }
 
     void timerCallback() override
