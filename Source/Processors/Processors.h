@@ -755,9 +755,10 @@ namespace Processors
             sm_hi.reset(SR, 0.01f);
             sm_hi.setCurrentAndTargetValue(trebGain);
 
-            tmp = (T**)malloc(sizeof(T*) * spec.numChannels);
-            for (size_t ch = 0; ch < spec.numChannels; ++ch)
-                tmp[ch] = (T*)malloc(sizeof(T) * spec.maximumBlockSize);
+            // tmp = (T**)malloc(sizeof(T*) * spec.numChannels);
+            // for (size_t ch = 0; ch < spec.numChannels; ++ch)
+            //     tmp[ch] = (T*)malloc(sizeof(T) * spec.maximumBlockSize);
+            tmp.setSize(spec.numChannels, spec.maximumBlockSize);
         }
 
         inline void setBias(size_t id, float newFirst, float newSecond)
@@ -827,6 +828,8 @@ namespace Processors
             this->midGain = midGain;
             this->trebGain = trebleGain;
             updateFilters = true;
+            
+            tmp.setSize(spec.numChannels, spec.maximumBlockSize);
         }
 
         void setFilters(int index, float newValue = 0.5f)
@@ -927,15 +930,11 @@ namespace Processors
             case ProcessRampOn:
             {
                 for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
-                {
-                    auto in = processBlock.getChannelPointer(ch);
-                    for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
-                        tmp[ch][i] = in[i];
-                }
+                    tmp.copyFrom(ch, 0, processBlock.getChannelPointer(ch), processBlock.getNumSamples());
 #if USE_SIMD
-                auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                auto tmpBlock = strix::AudioBlock<vec> (tmp);
 #else
-                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp);
 #endif
                 setPreamp(inGain_);
                 strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
@@ -943,19 +942,15 @@ namespace Processors
                 if (*hiGain)
                     triode[1].process(processBlock);
                 strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
-                } break;
+            } break;
             case ProcessRampOff:
             {
                 for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
-                {
-                    auto in = processBlock.getChannelPointer(ch);
-                    for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
-                        tmp[ch][i] = in[i];
-                }
+                    tmp.copyFrom(ch, 0, processBlock.getChannelPointer(ch), processBlock.getNumSamples());
 #if USE_SIMD
-                auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                auto tmpBlock = strix::AudioBlock<vec> (tmp);
 #else
-                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp);
 #endif
                 setPreamp(inGain_);
                 strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
@@ -963,7 +958,7 @@ namespace Processors
                 if (*hiGain)
                     triode[1].process(tmpBlock);
                 strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
-                } break;
+            } break;
             }
 
             if (ampAutoGain_)
@@ -987,39 +982,31 @@ namespace Processors
             case ProcessRampOn:
             {
                 for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
-                {
-                    auto in = processBlock.getChannelPointer(ch);
-                    for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
-                        tmp[ch][i] = in[i];
-                }
+                    tmp.copyFrom(ch, 0, processBlock.getChannelPointer(ch), processBlock.getNumSamples());
 #if USE_SIMD
-                auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                auto tmpBlock = strix::AudioBlock<vec> (tmp);
 #else
-                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp);
 #endif
                 setPoweramp();
                 strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
                 pentode.processBlockClassB(processBlock);
                 strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
-                } break;
+            } break;
             case ProcessRampOff:
             {
                 for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
-                {
-                    auto in = processBlock.getChannelPointer(ch);
-                    for (size_t i = 0; i < processBlock.getNumSamples(); ++i)
-                        tmp[ch][i] = in[i];
-                }
+                    tmp.copyFrom(ch, 0, processBlock.getChannelPointer(ch), processBlock.getNumSamples());
 #if USE_SIMD
-                auto tmpBlock = strix::AudioBlock<vec> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                auto tmpBlock = strix::AudioBlock<vec> (tmp);
 #else
-                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp, processBlock.getNumChannels(), processBlock.getNumSamples());
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp);
 #endif
                 setPoweramp();
                 strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
                 pentode.processBlockClassB(tmpBlock);
                 strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
-                } break;
+            } break;
             }
 
             if (ampAutoGain_)
@@ -1042,7 +1029,11 @@ namespace Processors
         std::atomic<bool> updateFilters = false;
 
         double lastAutoGain = 1.0;
-        T **tmp;
+        #if USE_SIMD
+        strix::Buffer<T> tmp;
+        #else
+        AudioBuffer<T> tmp;
+        #endif
 
         enum TubeState
         {
