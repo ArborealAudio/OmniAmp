@@ -200,7 +200,7 @@ private:
             auto *in = block.getChannelPointer(ch);
             for (int i = 0; i < numSamples; ++i)
                 in[i] = hp1[ch]->processSample(in[i]);
-            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, (bool)ch);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, ch + 1 == block.getNumChannels());
         }
 
         EnhancerSaturation::process(block, 1.0, 1.0);
@@ -214,7 +214,7 @@ private:
             auto *in = block.getChannelPointer(ch);
             for (size_t i = 0; i < numSamples; ++i)
                 in[i] = hp2[ch]->processSample(in[i]);
-            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, (bool)ch);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, ch + 1 == block.getNumChannels());
         }
     }
 
@@ -231,7 +231,7 @@ private:
             auto in = block.getChannelPointer(ch);
             for (int i = 0; i < numSamples; ++i)
                 in[i] = lp1[ch]->processSample(in[i]);
-            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, (bool)ch);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, ch + 1 == block.getNumChannels());
         }
 
         EnhancerSaturation::process(block, 1.0, 2.0);
@@ -244,7 +244,7 @@ private:
             auto *in = block.getChannelPointer(ch);
             for (int i = 0; i < numSamples; ++i)
                 in[i] = lp2[ch]->processSample(in[i]);
-            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, (bool)ch);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, ch + 1 == block.getNumChannels());
         }
     }
 
