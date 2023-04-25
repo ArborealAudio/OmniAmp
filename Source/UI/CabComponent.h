@@ -106,7 +106,7 @@ private:
     Label title;
 
     strix::ChoiceParameter *cabType;
-    std::atomic<bool> needUpdate = false;
+    std::atomic<bool> needUpdateState = false, needUpdatePos = false;
 
     AudioProcessorValueTreeState &apvts;
 
@@ -166,20 +166,25 @@ public:
     void parameterChanged(const String &paramID, float) override
     {
         if (paramID == "cabType")
-            needUpdate = true;
+            needUpdateState = true;
         else if (paramID == "cabMicPosX")
-            repaint();
+            needUpdatePos = true;
         else if (paramID == "cabMicPosZ")
-            repaint();
+            needUpdatePos = true;
     }
 
     void timerCallback() override
     {
-        if (needUpdate)
+        if (needUpdateState)
         {
             setState();
             repaint();
-            needUpdate = false;
+            needUpdateState = false;
+        }
+        else if (needUpdatePos)
+        {
+            repaint();
+            needUpdatePos = false;
         }
     }
 
