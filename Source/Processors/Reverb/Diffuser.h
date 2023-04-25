@@ -3,6 +3,12 @@
  * Class for processing multi-channel diffusion
  */
 
+#pragma once
+
+#include <stdint.h>
+#include <JuceHeader.h>
+#include "MixMatrix.h"
+
 template <typename T, int channels>
 struct Diffuser
 {
