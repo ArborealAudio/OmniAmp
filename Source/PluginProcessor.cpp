@@ -174,7 +174,6 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
     cab.prepare(spec);
 
-    reverb.setDownsampleRatio(2);
     reverb.prepare(spec);
 
     mixDelay.prepare(spec);

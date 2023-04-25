@@ -197,6 +197,8 @@ private:
 
     void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)
     {
+        if (buffer.getNumSamples() < 1) // WHY would you ever send 0 samples?
+            return;
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
         const size_t os_index_ = os_index;
