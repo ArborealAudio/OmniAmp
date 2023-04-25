@@ -3,6 +3,9 @@
  * Helper functions for using Hadamard or Householder matrices
 */
 
+#pragma once
+
+#include <cmath>
 template <int size>
 struct MixMatrix
 {

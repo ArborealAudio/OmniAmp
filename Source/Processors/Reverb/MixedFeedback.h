@@ -99,12 +99,6 @@ struct MixedFeedback
     template <typename Block>
     void process(Block &block)
     {
-        // if (needUpdate)
-        // {
-        //     processSmoothed(block);
-        //     needUpdate = false;
-        //     return;
-        // }
         for (int i = 0; i < block.getNumSamples(); ++i)
         {
             for (int ch = 0; ch < channels; ++ch)
