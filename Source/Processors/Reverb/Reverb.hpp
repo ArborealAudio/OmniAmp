@@ -30,6 +30,8 @@ struct ReverbParams
 #include "MixedFeedback.h"
 #include "StereoMultiMixer.h"
 
+#define REVERB_SAMPLERATE 44100.0
+
 enum class ReverbType
 {
     Off,
@@ -112,10 +114,6 @@ public:
             preDelay.setDelay(newPredelay);
     }
 
-    /** PROBLEM: We're not accounting for samplerates higher than 44.1kHz! We need to refactor it to hardcode a SR of 22kHz
-     *  call this before Prepare! sets a ratio to downsample the internal processing, defaults to 1 */
-    void setDownsampleRatio(int dsRatio) { ratio = dsRatio; }
-
     /* pass in the down-sampled specs */
     void prepare(const dsp::ProcessSpec &spec)
     {
@@ -134,7 +132,7 @@ public:
 
         feedback.prepare(spec);
 
-        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(spec.sampleRate / ratio, spec.sampleRate * (double)ratio, 8);
+        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(11025.0, REVERB_SAMPLERATE * ratio, 8);
 
         dsLP[0].clear();
         dsLP[1].clear();
@@ -149,8 +147,6 @@ public:
             usLP[0].emplace_back(dsp::IIR::Filter<double>(c));
             usLP[1].emplace_back(dsp::IIR::Filter<double>(c));
         }
-
-        // ratio *= spec.sampleRate / 44100.0;
 
         auto filterSpec = spec;
         filterSpec.sampleRate *= (double)ratio;
@@ -197,7 +193,7 @@ public:
     void process(AudioBuffer<double> &buf, float amt)
     {
         auto numSamples = buf.getNumSamples();
-        auto hNumSamples = numSamples / ratio;
+        const auto hNumSamples = numSamples / ratio;
 
         if (numChannels > 1)
             mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSubBlock(0, numSamples));
@@ -223,9 +219,7 @@ public:
         upMix.stereoToMulti(dsBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), hNumSamples);
 
         dsp::AudioBlock<double> block(splitBuf);
-
-        if (splitBuf.getNumSamples() > hNumSamples)
-            block = block.getSubBlock(0, hNumSamples);
+        block = block.getSubBlock(0, hNumSamples);
 
         erBuf.clear();
 
@@ -234,7 +228,7 @@ public:
             diff[i].process(block);
             auto r = i * 1.0 / diff.size();
             for (auto ch = 0; ch < channels; ++ch)
-                erBuf.addFrom(ch, 0, block.getChannelPointer(ch), block.getNumSamples(), erLevel / std::pow(2.0, r));
+                erBuf.addFrom(ch, 0, block.getChannelPointer(ch), hNumSamples, erLevel / std::pow(2.0, r));
         }
 
         feedback.process(block);
@@ -253,8 +247,10 @@ public:
         else
             mix.mixWetSamples(dsp::AudioBlock<double>(usBuf).getSingleChannelBlock(0).getSubBlock(0, numSamples));
 
-        buf.makeCopyOf(usBuf, true);
+        for (size_t ch = 0; ch < buf.getNumChannels(); ++ch)
+            FloatVectorOperations::copy(buf.getWritePointer(ch), usBuf.getReadPointer(ch), numSamples);
     }
+    int ratio = 1;
 private:
     ReverbParams params;
     std::array<Diffuser<Type, channels>, 4> diff {Diffuser<Type, channels>(0), Diffuser<Type, channels>(1), Diffuser<Type, channels>(2), Diffuser<Type, channels>(3)};
@@ -264,7 +260,6 @@ private:
     dsp::DelayLine<double, dsp::DelayLineInterpolationTypes::Thiran> preDelay{44100};
     SmoothedValue<float> sm_predelay;
     double erLevel = 1.0;
-    int ratio = 1;
     int numChannels = 0;
     std::vector<dsp::IIR::Filter<Type>> dsLP[2], usLP[2];
     dsp::DryWetMixer<double> mix;
@@ -290,6 +285,7 @@ private:
     {
         auto in = buf.getArrayOfReadPointers();
         auto out = dsBuf.getArrayOfWritePointers();
+        assert(numSamples % ratio == 0);
 
         for (auto ch = 0; ch < buf.getNumChannels(); ++ch)
         {
@@ -315,6 +311,7 @@ private:
     {
         auto out = outBuf.getArrayOfWritePointers();
         auto in = dsBuf.getArrayOfReadPointers();
+        assert(numSamples % ratio == 0);
 
         for (auto ch = 0; ch < outBuf.getNumChannels(); ++ch)
         {
@@ -323,7 +320,7 @@ private:
                 auto n = i * ratio;
                 out[ch][n] = in[ch][i]; // copy every even sample
                 for (int j = n + 1; j < n + ratio; ++j)
-                    out[ch][j] = 0.0;
+                    out[ch][j] = 0.0; // zero-pad odd samples
             }
 
             for (auto i = 0; i < numSamples; ++i)
@@ -333,9 +330,9 @@ private:
             }
         }
 
-        FloatVectorOperations::multiply(out[0], 2.0, outBuf.getNumSamples());
+        FloatVectorOperations::multiply(out[0], 2.0, numSamples);
         if (outBuf.getNumChannels() > 1)
-            FloatVectorOperations::multiply(out[1], 2.0, outBuf.getNumSamples());
+            FloatVectorOperations::multiply(out[1], 2.0, numSamples);
     }
 
 };
@@ -363,8 +360,7 @@ class ReverbManager
     strix::FloatParameter *decay, *size, *predelay;
     float lastDecay, lastSize, lastPredelay;
 
-    double SR = 44100.0;
-    int ratio = 1;
+    double SR = REVERB_SAMPLERATE;
 
 public:
     ReverbManager(AudioProcessorValueTreeState &v) : apvts(v)
@@ -393,25 +389,21 @@ public:
         newRev = std::make_unique<Room<8, double>>(params);
     }
 
-    void setDownsampleRatio(int dsRatio)
-    {
-        currentRev->setDownsampleRatio(dsRatio);
-        newRev->setDownsampleRatio(dsRatio);
-        ratio = dsRatio;
-    }
-
     void prepare(const dsp::ProcessSpec &spec)
     {
+        auto ratio = spec.sampleRate / REVERB_SAMPLERATE;
+        currentRev->ratio = ratio;
+        newRev->ratio = ratio;
         auto hSpec = spec;
-        hSpec.sampleRate /= ratio;
-        hSpec.maximumBlockSize /= ratio;
+        hSpec.sampleRate = REVERB_SAMPLERATE;
+        hSpec.maximumBlockSize = spec.maximumBlockSize / ratio;
         currentRev->prepare(hSpec);
         newRev->prepare(hSpec);
         SR = hSpec.sampleRate;
 
         state = type->getIndex() ? ProcessCurrentReverb : Bypassed;
 
-        tmp.setSize(spec.numChannels, spec.maximumBlockSize);
+        tmp.setSize(spec.numChannels, spec.maximumBlockSize, false, true, false);
     }
 
     void reset()
@@ -445,7 +437,7 @@ public:
                 break;
             case ReverbType::Hall:
                 newRev->reset();
-                newRev->setReverbParams(ReverbParams{75.0f * s, 2.0f * s, 1.f * (1.f - ref_mod), 1.0f, 5.0f, p}, false);
+                newRev->setReverbParams(ReverbParams{75.f * s, 2.f * s, 1.f * (1.f - ref_mod), 1.f, 5.f, p}, false);
                 if (state == Bypassed) // previously bypassed
                     state = ProcessFadeToWet;
                 else // switching types/params
