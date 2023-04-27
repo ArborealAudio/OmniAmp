@@ -203,7 +203,11 @@ public:
         dsBuf.clear();
         splitBuf.clear();
 
-        downsampleBuffer(buf, numSamples);
+        if (ratio > 1)
+            downsampleBuffer(buf, numSamples);
+        else
+            for (size_t ch = 0; ch < buf.getNumChannels(); ++ch)
+                dsBuf.copyFrom(ch, 0, buf, ch, 0, numSamples);
 
         dsp::AudioBlock<double> dsBlock (dsBuf);
         if (numChannels > 1)
@@ -237,7 +241,12 @@ public:
 
         upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), dsBuf.getArrayOfWritePointers(), hNumSamples);
 
-        upsampleBuffer(usBuf, numSamples);
+        // NOTE: Is usBuf even needed?
+        if (ratio > 1)
+            upsampleBuffer(usBuf, numSamples);
+        else
+            for (size_t ch = 0; ch < buf.getNumChannels(); ++ch)
+                usBuf.copyFrom(ch, 0, dsBuf, ch, 0, numSamples);
 
         usBuf.applyGain(upMix.scalingFactor1());
 
