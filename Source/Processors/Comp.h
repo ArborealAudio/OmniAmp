@@ -224,9 +224,9 @@ private:
         auto env = jmax(0.0, 8.685889638 * std::log10(x / threshold.load()));
 
         T att_time = jlimit(0.005, 0.05, (1.0 / x) * 0.015);
-
+        T rel_time = jlimit(0.05, 1.5, 0.5 * (0.5 * lastGR[ch]));
         T att = std::exp(-1.0 / (att_time * lastSR));
-        T rel = std::exp(-1.0 / (0.5 * (0.5 * lastGR[ch]) * lastSR));
+        T rel = std::exp(-1.0 / (rel_time * lastSR));
 
         if (env > lastEnv[ch])
         {
