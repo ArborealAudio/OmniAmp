@@ -7,6 +7,7 @@
 */
 
 #pragma once
+#include <JuceHeader.h>
 
 struct PresetManager : private AudioProcessorValueTreeState::Listener
 {
@@ -39,30 +40,28 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
             stateChanged = true;
     }
 
-    StringArray loadFactoryPresetList()
+    Array<File> loadFactorySubdirs()
     {
-        StringArray names;
+        return factoryDir.findChildFiles(File::TypesOfFileToFind::findDirectories, false);
+    }
 
-        for (int i = 0; i < BinaryData::namedResourceListSize; ++i)
-        {
-            if (String(BinaryData::originalFilenames[i]).endsWith(".aap"))
-                names.set(i, String(BinaryData::originalFilenames[i]).upToFirstOccurrenceOf(".", false, false));
-        }
-
-        return names;
+    // get array of file names of a factory subdirectory
+    StringArray loadFactoryPresets(File subdir)
+    {
+        assert(subdir.isDirectory());
+        auto presets = subdir.findChildFiles(File::TypesOfFileToFind::findFiles, true, "*.aap");
+        StringArray result;
+        for (auto &p : presets)
+            result.add(p.getFileNameWithoutExtension());
+        return result;
     }
 
     StringArray loadUserPresetList()
     {
-        userPresets = userDir.findChildFiles(2, true, "*.aap");
-
+        userPresets = userDir.findChildFiles(File::TypesOfFileToFind::findFiles, true, "*.aap");
         StringArray names;
-
-        for (int i = 0; i < userPresets.size(); ++i)
-        {
-            names.set(i, userPresets[i].getFileNameWithoutExtension());
-        }
-
+        for (auto &p : userPresets)
+            names.add(p.getFileNameWithoutExtension());
         return names;
     }
 
@@ -83,29 +82,19 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
         return xml->writeTo(file);
     }
 
-    bool loadPreset(const String& filename, bool factoryPreset)
+    bool loadPreset(const String& filename, bool factoryPreset, const String &subdir = "")
     {
         ValueTree newstate;
-        if (factoryPreset) {
-            int size;
-            auto str = String(filename).replace(" ", "_");
-            str.append("_aap", 4);
-            auto data = BinaryData::getNamedResource(str.toRawUTF8(), size);
-            auto xml = parseXML(String::createStringFromData(data, size));
-            newstate = ValueTree::fromXml(*xml);
-        }
-        else {
-            auto file = userDir.getChildFile(File::createLegalFileName(filename)).withFileExtension("aap");
-            if (!file.exists())
-                return false;
+        File &dirToUse = factoryPreset ? factoryDir : userDir;
+        auto file = dirToUse.getChildFile(subdir + filename + ".aap");
+        if (!file.exists())
+            return false;
 
-            auto xml = parseXML(file);
-            DBG(xml->toString());
-            if (!xml->hasTagName(filename.removeCharacters("\"#@,;:<>*^|!?\\/ ")))
-                return false;
+        auto xml = parseXML(file);
+        if (!xml->hasTagName(filename.removeCharacters("\"#@,;:<>*^|!?\\/ ")))
+            return false;
 
-            newstate = ValueTree::fromXml(*xml);
-        }
+        newstate = ValueTree::fromXml(*xml);
 
         auto hq = apvts.state.getChildWithProperty("id", "hq");
         auto renderHQ = apvts.state.getChildWithProperty("id", "renderHQ");
@@ -150,12 +139,13 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
         apvts.replaceState(newstate);
     }
 
+    File factoryDir { File::getSpecialLocation(File::userApplicationDataDirectory)
+        .getFullPathName() + "/Arboreal Audio/OmniAmp/Presets/Factory" };
     File userDir{ File::getSpecialLocation(File::userApplicationDataDirectory)
         .getFullPathName() + "/Arboreal Audio/OmniAmp/Presets/User" };
 
 private:
     AudioProcessorValueTreeState& apvts;
-
 
     Array<File> factoryPresets;
     Array<File> userPresets;
