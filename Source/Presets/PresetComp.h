@@ -161,28 +161,68 @@ struct PresetComp : Component, private Timer
 
         factoryPresetSize = 0;
         auto factorySubdirs = manager.loadFactorySubdirs();
-        for (auto &dir : factorySubdirs)
+        if (!factorySubdirs.isEmpty())
         {
-            auto presets = manager.loadFactoryPresets(dir);
-            PopupMenu factorySubMenu;
-            for (int i = 0; i < presets.size(); ++i)
+            for (auto &dir : factorySubdirs)
             {
-                factorySubMenu.addItem(factoryPresetSize + i + 1, presets[i]);
-                factoryPaths.emplace_back(dir.getFileName() + "/" + presets[i]);
+                auto presets = manager.loadFactoryPresets(dir);
+                PopupMenu factorySubMenu;
+                for (int i = 0; i < presets.size(); ++i)
+                {
+                    factorySubMenu.addItem(factoryPresetSize + i + 1, presets[i]);
+                    factoryPaths.emplace_back(dir.getFileName() + "/" + presets[i]);
+                }
+                menu->addSubMenu(dir.getFileName(), factorySubMenu);
+                factoryPresetSize += presets.size();
             }
-            menu->addSubMenu(dir.getFileName(), factorySubMenu);
-            factoryPresetSize += presets.size();
         }
-
-        auto user = manager.loadUserPresetList();
-        userPresetSize = user.size();
-        userPresets.clear();
-        for (int i = 0; i < userPresetSize; ++i)
+    
         {
-            userPresets.addItem(factoryPresetSize + i + 1, user[i]);
+            auto presets = manager.loadFactoryPresets(manager.factoryDir);
+            if (!presets.isEmpty())
+            {
+                for (int i = 0; i < presets.size(); ++i)
+                {
+                    menu->addItem(factoryPresetSize + i + 1, presets[i]);
+                    factoryPaths.emplace_back("");
+                }
+                factoryPresetSize += presets.size();
+            }
         }
 
         menu->addSeparator();
+        PopupMenu userPresets;
+        
+        userPresetSize = 0;
+        auto userSubdirs = manager.loadUserSubdirs();
+        if (!userSubdirs.isEmpty()) // PROBLEM: we're loading files at user base dir when we have a subdir
+        {
+            for (auto &dir : userSubdirs)
+            {
+                auto presets = manager.loadUserPresets(dir);
+                PopupMenu userSubMenu;
+                for (int i = 0; i < presets.size(); ++i)
+                {
+                    userSubMenu.addItem(factoryPresetSize + i + 1, presets[i]);
+                    userPaths.emplace_back(dir.getFileName() + "/" + presets[i]);
+                }
+                userPresets.addSubMenu(dir.getFileName(), userSubMenu);
+                userPresetSize += presets.size();
+            }
+        }
+        {
+            auto presets = manager.loadUserPresets(manager.userDir);
+            if (!presets.isEmpty())
+            {
+                for (int i = 0; i < presets.size(); ++i)
+                {
+                    userPresets.addItem(factoryPresetSize + userPresetSize + i + 1, presets[i]);
+                    userPaths.emplace_back("");
+                }
+                userPresetSize += presets.size();
+            }
+        }
+
         menu->addSubMenu("User Presets", userPresets);
     }
 
@@ -259,14 +299,24 @@ struct PresetComp : Component, private Timer
         {
             if (id <= factoryPresetSize)
             {
-                if (manager.loadPreset(preset, true, factoryPaths[id-1].upToFirstOccurrenceOf("/", true, false)))
+                if (!factoryPaths[id-1].isEmpty())
+                {
+                    if (manager.loadPreset(preset, true, factoryPaths[id-1].upToFirstOccurrenceOf("/", true, false)))
+                        box.setText(preset, NotificationType::sendNotificationSync);
+                }
+                else if (manager.loadPreset(preset, true))
                     box.setText(preset, NotificationType::sendNotificationSync);
                 else
                     box.setText("preset not found", NotificationType::dontSendNotification);
             }
             else
             {
-                if (manager.loadPreset(preset, false))
+                if (!userPaths[id-factoryPresetSize-1].isEmpty())
+                {
+                    if (manager.loadPreset(preset, false, userPaths[id-1].upToFirstOccurrenceOf("/", true, false)))
+                        box.setText(preset, NotificationType::sendNotificationSync);
+                }
+                else if (manager.loadPreset(preset, false))
                     box.setText(preset, NotificationType::sendNotificationSync);
                 else
                     box.setText("preset not found", NotificationType::dontSendNotification);
@@ -339,10 +389,8 @@ struct PresetComp : Component, private Timer
 private:
     PresetComboBoxLNF boxLNF;
 
-    PopupMenu userPresets;
-
     int factoryPresetSize = 0, userPresetSize = 0;
-    std::vector<String> factoryPaths; // paths to factory presets including subdir names
+    std::vector<String> factoryPaths, userPaths; // paths to factory presets including subdir names
 
     TextEditor editor;
 
