@@ -44,23 +44,35 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
     {
         return factoryDir.findChildFiles(File::TypesOfFileToFind::findDirectories, false);
     }
+    
+    Array<File> loadUserSubdirs()
+    {
+        return userDir.findChildFiles(File::TypesOfFileToFind::findDirectories, false);
+    }
 
     // get array of file names of a factory subdirectory
-    StringArray loadFactoryPresets(File subdir)
+    StringArray loadFactoryPresets(const File &subdir)
     {
+        if (!subdir.exists())
+            return StringArray{};
+        
         assert(subdir.isDirectory());
-        auto presets = subdir.findChildFiles(File::TypesOfFileToFind::findFiles, true, "*.aap");
+        auto presets = subdir.findChildFiles(File::TypesOfFileToFind::findFiles, false, "*.aap");
         StringArray result;
         for (auto &p : presets)
             result.add(p.getFileNameWithoutExtension());
         return result;
     }
 
-    StringArray loadUserPresetList()
+    StringArray loadUserPresets(const File &subdir)
     {
-        userPresets = userDir.findChildFiles(File::TypesOfFileToFind::findFiles, true, "*.aap");
+        if (!subdir.exists())
+            return StringArray{};
+        
+        assert(subdir.isDirectory());
+        auto presets = subdir.findChildFiles(File::TypesOfFileToFind::findFiles, false, "*.aap");
         StringArray names;
-        for (auto &p : userPresets)
+        for (auto &p : presets)
             names.add(p.getFileNameWithoutExtension());
         return names;
     }
@@ -146,7 +158,4 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
 
 private:
     AudioProcessorValueTreeState& apvts;
-
-    Array<File> factoryPresets;
-    Array<File> userPresets;
 };
