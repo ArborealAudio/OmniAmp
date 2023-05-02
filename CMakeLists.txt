@@ -66,7 +66,6 @@ target_sources(Gamma
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
-add_subdirectory(Source/Presets)
 target_include_directories(Gamma PRIVATE "modules/chowdsp_wdf/include")
 
 juce_add_modules(
@@ -95,9 +94,7 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/logo.svg"
     "Resources/Sora-Regular.ttf"
     "Resources/Hamburger_icon.svg"
-    "Resources/Presets/Default Bass.aap"
-    "Resources/Presets/Default Guitar.aap"
-    "Resources/Presets/Default Channel.aap")
+)
 
 # -fPIC flag mainly for Linux
 set_target_properties(BinaryData PROPERTIES

@@ -8,6 +8,7 @@
 
 #pragma once
 #include <JuceHeader.h>
+#include "PresetManager.h"
 
 // Custom ComboBox because this is a great codebase
 struct PresetComboBoxLNF : LookAndFeel_V4
@@ -116,7 +117,7 @@ struct PresetComp : Component, private Timer
     {
         PopupMenu::Item save{ "save" }, saveAs{ "save as" }, copy{ "copy preset" }, paste{"paste preset"}, presetDir{"open preset folder"};
 
-        // Factory presets start at 0
+        // Factory presets start at 1
         // User presets start after factory
         // Functional menu items start at 1000
         
@@ -158,16 +159,27 @@ struct PresetComp : Component, private Timer
 
         menu->addSeparator();
 
-        auto presets = manager.loadFactoryPresetList();
-        box.addItemList(presets, 1);
-        factoryPresetSize = presets.size();
+        factoryPresetSize = 0;
+        auto factorySubdirs = manager.loadFactorySubdirs();
+        for (auto &dir : factorySubdirs)
+        {
+            auto presets = manager.loadFactoryPresets(dir);
+            PopupMenu factorySubMenu;
+            for (int i = 0; i < presets.size(); ++i)
+            {
+                factorySubMenu.addItem(factoryPresetSize + i + 1, presets[i]);
+                factoryPaths.emplace_back(dir.getFileName() + "/" + presets[i]);
+            }
+            menu->addSubMenu(dir.getFileName(), factorySubMenu);
+            factoryPresetSize += presets.size();
+        }
 
         auto user = manager.loadUserPresetList();
         userPresetSize = user.size();
         userPresets.clear();
-        for (int i = 1; i < userPresetSize; ++i)
+        for (int i = 0; i < userPresetSize; ++i)
         {
-            userPresets.addItem(factoryPresetSize + i, user[i]);
+            userPresets.addItem(factoryPresetSize + i + 1, user[i]);
         }
 
         menu->addSeparator();
@@ -237,19 +249,23 @@ struct PresetComp : Component, private Timer
 
     void valueChanged()
     {
+        // PROBLEM: We need to figure out if we clicked on an item or a submenu
+        // if submenu, get submenu name AND preset name and pass name as: submenu/preset
         auto id = box.getSelectedId();
         auto idx = box.getSelectedItemIndex();
         auto preset = box.getItemText(idx);
 
-        if (id < 1000 && id > 0) {
-
-            if (id <= factoryPresetSize) {
-                if (manager.loadPreset(preset, true))
+        if (id < 1000 && id > 0)
+        {
+            if (id <= factoryPresetSize)
+            {
+                if (manager.loadPreset(preset, true, factoryPaths[id-1].upToFirstOccurrenceOf("/", true, false)))
                     box.setText(preset, NotificationType::sendNotificationSync);
                 else
                     box.setText("preset not found", NotificationType::dontSendNotification);
             }
-            else {
+            else
+            {
                 if (manager.loadPreset(preset, false))
                     box.setText(preset, NotificationType::sendNotificationSync);
                 else
@@ -326,6 +342,7 @@ private:
     PopupMenu userPresets;
 
     int factoryPresetSize = 0, userPresetSize = 0;
+    std::vector<String> factoryPaths; // paths to factory presets including subdir names
 
     TextEditor editor;
 
