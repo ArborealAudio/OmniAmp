@@ -195,7 +195,7 @@ struct PresetComp : Component, private Timer
         
         userPresetSize = 0;
         auto userSubdirs = manager.loadUserSubdirs();
-        if (!userSubdirs.isEmpty()) // PROBLEM: we're loading files at user base dir when we have a subdir
+        if (!userSubdirs.isEmpty())
         {
             for (auto &dir : userSubdirs)
             {
@@ -313,7 +313,7 @@ struct PresetComp : Component, private Timer
             {
                 if (!userPaths[id-factoryPresetSize-1].isEmpty())
                 {
-                    if (manager.loadPreset(preset, false, userPaths[id-1].upToFirstOccurrenceOf("/", true, false)))
+                    if (manager.loadPreset(preset, false, userPaths[id-factoryPresetSize-1].upToFirstOccurrenceOf("/", true, false)))
                         box.setText(preset, NotificationType::sendNotificationSync);
                 }
                 else if (manager.loadPreset(preset, false))
