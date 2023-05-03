@@ -289,8 +289,6 @@ struct PresetComp : Component, private Timer
 
     void valueChanged()
     {
-        // PROBLEM: We need to figure out if we clicked on an item or a submenu
-        // if submenu, get submenu name AND preset name and pass name as: submenu/preset
         auto id = box.getSelectedId();
         auto idx = box.getSelectedItemIndex();
         auto preset = box.getItemText(idx);

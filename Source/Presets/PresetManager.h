@@ -12,6 +12,8 @@
     #define PRESET_PATH "/Library/Application Support/Arboreal Audio/OmniAmp/Presets"
 #elif JUCE_WINDOWS
     #define PRESET_PATH File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/Presets"
+#elif JUCE_LINUX
+    #define PRESET_PATH "~/.config/Arboreal Audio/OmniAmp/Presets"
 #endif
 
 #include <JuceHeader.h>
