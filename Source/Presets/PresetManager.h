@@ -7,6 +7,13 @@
 */
 
 #pragma once
+
+#if JUCE_MAC
+    #define PRESET_PATH "/Library/Application Support/Arboreal Audio/OmniAmp/Presets"
+#elif JUCE_WINDOWS
+    #define PRESET_PATH File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/Presets"
+#endif
+
 #include <JuceHeader.h>
 
 struct PresetManager : private AudioProcessorValueTreeState::Listener
@@ -151,10 +158,12 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
         apvts.replaceState(newstate);
     }
 
-    File factoryDir { File::getSpecialLocation(File::userApplicationDataDirectory)
-        .getFullPathName() + "/Arboreal Audio/OmniAmp/Presets/Factory" };
-    File userDir{ File::getSpecialLocation(File::userApplicationDataDirectory)
-        .getFullPathName() + "/Arboreal Audio/OmniAmp/Presets/User" };
+    File factoryDir {
+        PRESET_PATH
+        "/Factory" };
+    File userDir{ 
+        PRESET_PATH
+        "/User" };
 
 private:
     AudioProcessorValueTreeState& apvts;

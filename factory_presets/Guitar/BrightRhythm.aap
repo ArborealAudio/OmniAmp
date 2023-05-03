@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<BrightRhythm>
+  <PARAM id="ampOn" value="1.0"/>
+  <PARAM id="bass" value="0.7099999785423279"/>
+  <PARAM id="cabType" value="1.0"/>
+  <PARAM id="comp" value="0.4699999988079071"/>
+  <PARAM id="compLink" value="1.0"/>
+  <PARAM id="compPos" value="0.0"/>
+  <PARAM id="dist" value="0.0"/>
+  <PARAM id="eqAutoGain" value="0.0"/>
+  <PARAM id="hfEnhance" value="0.2800000011920929"/>
+  <PARAM id="hfEnhanceAuto" value="0.0"/>
+  <PARAM id="hfEnhanceInvert" value="0.0"/>
+  <PARAM id="hiGain" value="1.0"/>
+  <PARAM id="hq" value="0.0"/>
+  <PARAM id="inputGain" value="0.0"/>
+  <PARAM id="lfEnhance" value="0.0"/>
+  <PARAM id="lfEnhanceAuto" value="0.0"/>
+  <PARAM id="lfEnhanceInvert" value="0.0"/>
+  <PARAM id="mid" value="0.7099999785423279"/>
+  <PARAM id="mode" value="0.0"/>
+  <PARAM id="outputGain" value="0.0"/>
+  <PARAM id="powerampGain" value="1.0"/>
+  <PARAM id="preampGain" value="0.5899999737739563"/>
+  <PARAM id="renderHQ" value="1.0"/>
+  <PARAM id="reverbType" value="1.0"/>
+  <PARAM id="roomAmt" value="0.0"/>
+  <PARAM id="treble" value="0.5"/>
+  <PARAM id="m/s"/>
+  <PARAM id="width"/>
+  <PARAM id="ampAutoGain"/>
+  <PARAM id="bassMode"/>
+  <PARAM id="bypass"/>
+  <PARAM id="cabMicPosX" value="1.0"/>
+  <PARAM id="cabMicPosZ" value="0.3700000047683716"/>
+  <PARAM id="cabResoHi"/>
+  <PARAM id="cabResoLo"/>
+  <PARAM id="channelMode"/>
+  <PARAM id="doubler"/>
+  <PARAM id="gainLink"/>
+  <PARAM id="guitarMode" value="1.0"/>
+  <PARAM id="hfCut"/>
+  <PARAM id="hfEmphasis"/>
+  <PARAM id="hfEmphasisFreq"/>
+  <PARAM id="lfCut"/>
+  <PARAM id="lfEmphasis"/>
+  <PARAM id="lfEmphasisFreq"/>
+  <PARAM id="mix"/>
+  <PARAM id="reverbAmt" value="0.3199999928474426"/>
+  <PARAM id="reverbDecay" value="1.0"/>
+  <PARAM id="reverbPredelay" value="15.69999980926514"/>
+  <PARAM id="reverbSize" value="0.6499999761581421"/>
+  <PARAM id="stereoEmphasis"/>
+</BrightRhythm>
