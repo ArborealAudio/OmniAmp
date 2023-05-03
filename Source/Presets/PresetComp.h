@@ -102,13 +102,10 @@ struct PresetComp : Component, private Timer
         startTimerHz(2);
 
         setInterceptsMouseClicks(true, false);
-
-        addMouseListener(this, true);
     }
 
     ~PresetComp()
     {
-        removeMouseListener(this);
         box.setLookAndFeel(nullptr);
         stopTimer();
     }
@@ -328,24 +325,24 @@ struct PresetComp : Component, private Timer
 
     void leftArrowClicked()
     {
-        const auto currentIndex = box.getSelectedItemIndex();
-        DBG("index " << currentIndex);
-        if (currentIndex != 0)
-            box.setSelectedItemIndex(currentIndex - 1);
+        const auto currentID = box.getSelectedId();
+        DBG("index " << currentID);
+        if (currentID != 0)
+            box.setSelectedId(currentID - 1);
         else
-            box.setSelectedItemIndex(userPresetSize + factoryPresetSize);
-        DBG("new index " << box.getSelectedItemIndex());
+            box.setSelectedId(userPresetSize + factoryPresetSize);
+        DBG("new index " << box.getSelectedId());
     }
     
     void rightArrowClicked()
     {
-        const auto currentIndex = box.getSelectedItemIndex();
-        DBG("index " << currentIndex);
-        if (currentIndex < factoryPresetSize + userPresetSize)
-            box.setSelectedItemIndex(currentIndex + 1);
+        const auto currentID = box.getSelectedId();
+        DBG("index " << currentID);
+        if (currentID < factoryPresetSize + userPresetSize)
+            box.setSelectedId(currentID + 1);
         else
-            box.setSelectedItemIndex(0);
-        DBG("new index " << box.getSelectedItemIndex());
+            box.setSelectedId(1);
+        DBG("new index " << box.getSelectedId());
     }
 
     void mouseDown(const MouseEvent &event) override
