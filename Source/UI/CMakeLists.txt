@@ -1,4 +1,4 @@
-target_sources(Gamma
+target_sources(OmniAmp
 PRIVATE
     UI.h
     Knob.h
