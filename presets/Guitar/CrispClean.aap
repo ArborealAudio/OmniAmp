@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<CrispClean>
+  <PARAM id="ampOn" value="1.0"/>
+  <PARAM id="bass" value="0.3299999833106995"/>
+  <PARAM id="cabType" value="1.0"/>
+  <PARAM id="comp" value="0.6899999976158142"/>
+  <PARAM id="compLink" value="1.0"/>
+  <PARAM id="compPos" value="0.0"/>
+  <PARAM id="dist" value="0.0"/>
+  <PARAM id="eqAutoGain" value="0.0"/>
+  <PARAM id="hfEnhance" value="0.6499999761581421"/>
+  <PARAM id="hfEnhanceAuto" value="0.0"/>
+  <PARAM id="hfEnhanceInvert" value="0.0"/>
+  <PARAM id="hiGain" value="0.0"/>
+  <PARAM id="hq" value="0.0"/>
+  <PARAM id="inputGain" value="0.0"/>
+  <PARAM id="lfEnhance" value="0.0"/>
+  <PARAM id="lfEnhanceAuto" value="0.0"/>
+  <PARAM id="lfEnhanceInvert" value="0.0"/>
+  <PARAM id="mid" value="0.1599999964237213"/>
+  <PARAM id="mode" value="0.0"/>
+  <PARAM id="outputGain" value="0.0"/>
+  <PARAM id="powerampGain" value="0.6100000143051147"/>
+  <PARAM id="preampGain" value="0.2800000011920929"/>
+  <PARAM id="renderHQ" value="1.0"/>
+  <PARAM id="reverbType" value="1.0"/>
+  <PARAM id="roomAmt" value="0.0"/>
+  <PARAM id="treble" value="0.8799999952316284"/>
+  <PARAM id="m/s"/>
+  <PARAM id="width" value="1.0"/>
+  <PARAM id="ampAutoGain"/>
+  <PARAM id="bassMode"/>
+  <PARAM id="bypass"/>
+  <PARAM id="cabMicPosX" value="1.0"/>
+  <PARAM id="cabMicPosZ" value="0.0"/>
+  <PARAM id="cabResoHi" value="1.0"/>
+  <PARAM id="cabResoLo" value="1.0"/>
+  <PARAM id="channelMode"/>
+  <PARAM id="doubler"/>
+  <PARAM id="gainLink" value="0.0"/>
+  <PARAM id="guitarMode" value="1.0"/>
+  <PARAM id="hfCut"/>
+  <PARAM id="hfEmphasis" value="0.0"/>
+  <PARAM id="hfEmphasisFreq" value="5000.0"/>
+  <PARAM id="lfCut"/>
+  <PARAM id="lfEmphasis" value="0.0"/>
+  <PARAM id="lfEmphasisFreq" value="200.0"/>
+  <PARAM id="mix"/>
+  <PARAM id="reverbAmt" value="0.3100000023841858"/>
+  <PARAM id="reverbDecay" value="1.490000009536743"/>
+  <PARAM id="reverbPredelay"/>
+  <PARAM id="reverbSize" value="1.0"/>
+  <PARAM id="stereoEmphasis"/>
+</CrispClean>
