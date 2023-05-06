@@ -10,17 +10,19 @@
 #align(center + top)[
 	#image(
 		"../Resources/logo.svg",
-		width: 15%,
-		fit: "contain"
+		width: 13%,
+		fit: "cover"
 	)
 ]
+
 #set align(center)
 Arboreal Audio presents:
 
-#set align(left)
 = OmniAmp
 == The all-in-one amplifier
+ 
 #linebreak()
+
 #align(center)[
 	#image(
 		"UI_full.png",
@@ -28,6 +30,7 @@ Arboreal Audio presents:
 	)
 ]
 #linebreak()
+#set align(left)
 OmniAmp is a robust audio tool meant to be used on any type of sound source. With its full feature set, this can be the only plugin in your signal chain.
 
 OmniAmp was designed to take the layout of a guitar amplifier and port it to a universal context, with some added features to keep you contained in one interface for the bulk of your mixing.
@@ -94,13 +97,11 @@ In Channel mode, this is bypassed at 0.
 
 === Auto Gain
 
-Automatic gain compensation for Preamp and Poweramp gain stages. When in Channel mode, the EQ section will also be gain compensated.
+Automatic gain compensation for Preamp and Poweramp gain stages, as well as the EQ section, where you'll get frequency-weighted gain compensation.
 
 === Tone Controls
 
 A mostly self-explanitory set of controls if you've ever used or even thought about using a guitar amp. However, in Channel mode they behave more like a channel strip's EQ section with fixed frequency bands. The filters also have a variable Q depending on the gain.
-
-By Alt/Option-clicking, you can enable frequency-dependent automatic gain compensation for the whole tone section.
 
 === Power Amp
 
@@ -108,6 +109,7 @@ An additional gain stage at the end of the amp/channel strip. In the Guitar and 
 
 In Channel mode, this is bypassed at 0.
 
+#pagebreak()
 == Pre Section
 
 #image("Pre.png")
@@ -148,8 +150,9 @@ Sets whether the compressor is before or after the amp. Yes, while this is techn
 
 ==== Link
 
-Enables or disables stereo linking for the compression. Linking is on by default and you will usually want to leave it on, but for wildly asymmetric stereo images, or if you want unlinked M/S compresison, here you go!
+Enables or disables stereo linking for the compression. Linking is on by default and suitable for most stereo content--but for wildly asymmetric stereo images, or if you want unlinked M/S compression, here you go!
 
+#pagebreak()
 == Cabs and Reverb
 
 #image("./Bottom.png")
@@ -160,11 +163,11 @@ What amp plugin would be complete without cab simulation? And you're going to ne
 
 There are three cabs to choose from:
 
-- *2x12:* A small two-speaker cabinet with a tight, bright, and punchy sound, good for clean guitar or more moderate tones
+- *2x12:* A small two-speaker cabinet with a tight, bright, and punchy sound, good for clean guitar or more moderate tones.
 
-- *4x12:* A four-speaker cabinet designed for roaring rock tones, with a beefy low-end and a scooped midrange
+- *4x12:* A four-speaker cabinet designed for roaring rock tones, with a beefy low-end and a scooped midrange.
 
-- *6x12:* Intended to be used as a bass cabinet, this has a huge low-end and a top-end voicing that sounds great on bass guitar
+- *6x12:* Intended to be used as a bass cabinet, this has a huge low-end and a top-end voicing that sounds great on bass guitar.
 
 ==== Reso Filters
 
@@ -178,14 +181,13 @@ An emulated mic position in front of one of the cab's speakers. You can adjust t
 
 There are two algorithmic reverbs:
 
-- *Room:* A medium-sized, dampened room with short reflections, great for adding a touch of ambience or space to a sound without it getting overwhelming.
+- *Room:* A medium-sized, dampened room with short reflections, great for adding a touch of ambience or space to a sound without getting overwhelming.
 
-- *Hall:* A longer, richer reverb, perfect for creating a grander scope for your sound
+- *Hall:* A longer, richer reverb, perfect for adding a grander scope to your sound.
 
-You also have *Predelay, Decay,* and *Size* controls for customizing the response more finely. Increasing the size changes the frequency response and early reflection level of the reverb, so you can use it in conjunction with the decay control
+You also have *Predelay, Decay,* and *Size* controls for customizing the response more finely. Increasing the size changes the frequency response and early reflection level of the reverb, making things a bit darker and tending towards late reflections, so you can use it in conjunction with the decay control to fine-tune how the space feels.
 
-Each of these algorithms are downsampled and therefore a bit lo-fi sounding!
-
+#linebreak()
 == Post Section
 
 #image("./Post.png")
@@ -225,19 +227,17 @@ A pair of 6db/octave high-pass and low-pass filters, processed after the enhance
 #pagebreak()
 == Top Controls
 
-1. *Gate:* A simple noise gate before everything else (including the input gain). Threshold ranges from -95dB to -20dB
+1. *Input:* An input gain before all processing, between -12dB and +12dB, useful for adding or decresing distortion or compression.
 
-2. *Input:* An input gain before all processing, between -12dB and +12dB, useful for adding or decresing distortion or compression.
+2. *Link:* Link the input gain to the output gain, with the ability to still adjust the output gain. If you turn link off it will automatically adjust the output gain so you don't get a huge jump in volume.
 
-3. *Link:* Link the input gain to the output gain, with the ability to still adjust the output gain. If you turn link off it will automatically adjust the output gain so you don't get a huge jump in volume.
+3. *Output:* An output gain after all processing, between -12dB and +12dB, for fine-tuning the final level.
 
-4. *Output:* An output gain after all processing, between -12dB and +12dB, for fine-tuning the final level.
+4. *Width:* Add or subtract stereo width. Since this is applied _after_ all the nonlinear processing, you can use this in conjunction with Stereo Emphasis for interesting manipulations of the stereo field.
 
-5. *Width:* Add or subtract stereo width. Use this in conjunction with Stereo Emphasis for interesting manipulations of the stereo field.
+5. *Mix:* A simple dry/wet mixer for global parallel processing. Keep in mind that many of OmniAmp's processes are non-linear phase, so you may encounter phase cancellation if using this (not necessarily a bad thing!)
 
-6. *Mix:* A simple dry/wet mixer for global parallel processing. Keep in mind that many of OmniAmp's processes are non-linear phase, so you may encounter phase cancellation if using this.
-
-7. *Byp:* A global latency-compensated bypass control
+6. *Byp:* A global latency-compensated bypass control
 
 == Menu
 
@@ -245,7 +245,7 @@ In the upper right is a popup menu for maintaining some of OmniAmp's more advanc
 
 - *OpenGL On/Off:* On Windows and Linux, this controls whether hardware-accelerated graphics rendering is done via OpenGL or software rendering. If you've got a decent graphics card in your computer, this may make the UI snappier. Otherwise, if you don't have a graphics card or OpenGL installed on your system, enabling this will either do nothing or cause issues.
 
-- *HQ:* Enables 4x oversampling with minimum-phase filters. On by default
+- *HQ:* Enables 4x oversampling with linear-phase filters. Off by default to save CPU.
 
 - *Render HQ:* This will enable 4x oversampling when rendering. If HQ is too CPU-intensive for your computer, you could use this to keep aliasing out of your final mix, while getting better performance when mixing in real-time.
 
@@ -263,11 +263,11 @@ Programming, DSP, and design: Alex Riccio
 
 This plugin would not have been possible without the research and open-source contributions of the following:
 
-- Jatin Chowdhury | https://github.com/Chowdhury-DSP/chowdsp_wdf (c) 2022, Chowdhury-DSP #super[1] | https://chowdsp.com/
+#show link: underline
+
+- Jatin Chowdhury | https://github.com/Chowdhury-DSP/chowdsp_wdf (c) 2022, Chowdhury-DSP #super[1] | #link("https://chowdsp.com/")[chowdsp.com]
 
 - Sam Schachter | https://github.com/schachtersam32/WaveDigitalFilters_Sharc
-
-- Aleksey Vaneev | For his informative KVR posts about tube simulation
 
 - xsimd | https://github.com/xtensor-stack/xsimd (c) 2016, Johan Mabille, Sylvain Corlay, Wolf Vollprecht and Martin Renou
   (c) 2016, QuantStack
@@ -275,14 +275,18 @@ This plugin would not have been possible without the research and open-source co
 
 - Roland Rabien | https://github.com/FigBug/Gin (c) 2018, Roland Rabien #super[1]
 
-- JUCE | https://github.com/juce-framework/JUCE | [juce.com](https://juce.com)
+- JUCE | https://github.com/juce-framework/JUCE | #link("https://juce.com")[juce.com]
 
-- Alexandre Bique and Paul Walker | [Free Audio/CLAP](https://github.com/free-audio) (c) 2021 Alexandre BIQUE
+- Alexandre Bique and Paul Walker | #link("https://github.com/free-audio")[Free Audio/CLAP] | (c) 2021 Alexandre BIQUE
   (c) 2019-2020, Paul Walker #super[2]
-  
-  And a huge thank-you to all beta testers:
-  
-  Jatin Chowdhury, Florian Mrugalla, James Ure
+
+*And a huge thank-you to the beta testers:*
+
+Jatin Chowdhury
+
+Florian Mrugalla
+
+James Ure 
 
 === #super[1] BSD-3-Clause License
 
