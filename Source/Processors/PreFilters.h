@@ -39,19 +39,19 @@ struct GuitarPreFilter : PreampProcessor
         case GammaRay:
             bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(SR, 350.f);
             hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 350.f, 0.7f, 4.f);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 6200.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 6200.f > SR * 0.5 ? SR * 0.5 : 6200.f);
             dynHP.setCutoffFreq(350.0);
             break;
         case Sunbeam:
             bp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(SR, 350.f); /*unused*/
             hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 750.f, 0.7f, 2.f);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(SR, 7200.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(SR, 7200.f > SR * 0.5 ? SR * 0.5 : 7200.f);
             dynHP.setCutoffFreq(1200.0);
             break;
         case Moonbeam:
             bp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(SR, 150.f);
             hs_coeffs = dsp::IIR::Coefficients<double>::makeHighShelf(SR, 175.f, 0.666f, 4.f);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 7500.f);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(SR, 7500.f > SR * 0.5 ? SR * 0.5 : 7500.f);
             dynHP.setCutoffFreq(350.0);
             break;
         case XRay:
@@ -81,7 +81,7 @@ struct GuitarPreFilter : PreampProcessor
     }
 
 #if USE_SIMD
-    void process(strix::AudioBlock<vec> &block) override
+    void process(strix::AudioBlock<vec> &block)
     {
         auto dynHPGain = 1.f / jmax(inGain, 1.f);
         if (*hiGain)
@@ -111,7 +111,7 @@ struct GuitarPreFilter : PreampProcessor
         }
     }
 #else
-    void process(dsp::AudioBlock<double> &block) override
+    void process(dsp::AudioBlock<double> &block)
     {
         auto dynHPGain = 1.f / jmax(inGain, 1.f);
         if (*hiGain)
@@ -183,17 +183,17 @@ struct BassPreFilter : PreampProcessor
         {
         case Cobalt:
             for (auto &f : filter)
-                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 650.0, 0.7, 0.3);
+                *f.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 950.0, 0.7, 0.3);
             dynHP.setCutoffFreq(600.0);
             break;
         case Emerald:
             for (auto &f : filter)
-                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 1000.0, 0.7, 0.5);
+                *f.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 1000.0, 0.7, 0.5);
             dynHP.setCutoffFreq(900.0);
             break;
         case Quartz:
             for (auto &f : filter)
-                f.coefficients = dsp::IIR::Coefficients<double>::makePeakFilter(SR, 1500.0, 0.5, 1.2);
+                *f.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 1500.0, 0.5, 1.2);
             dynHP.setCutoffFreq(1200.0);
             break;
         }

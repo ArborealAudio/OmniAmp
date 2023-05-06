@@ -33,7 +33,7 @@ struct Pentode
     /**
      * @param type Pentode Type. Use widely asymmetric values in Classic mode to get the intended effect
      */
-    Pentode(PentodeType type) : type(type)
+    Pentode(PentodeType _type) : type(_type)
     {
     }
 
@@ -104,7 +104,7 @@ struct Pentode
 private:
     void processSamplesNu(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
-        float bpPreGain = -inGain;
+        float bpPreGain = -inGain * 0.5f;
         float bpPostGain = -bpPreGain;
         for (size_t i = 0; i < numSamples; ++i)
         {
@@ -193,9 +193,7 @@ enum TriodeType
     ModernTube,
     ChannelTube
 };
-/**
- * A different tube emultaor for triodes, with parameterized bias levels & Stateful saturation
- */
+
 template <typename T>
 struct AVTriode : PreampProcessor
 {

@@ -15,7 +15,7 @@ if (PRODUCTION_BUILD)
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "")
 endif()
 
-project(Gamma VERSION 1.0)
+project(OmniAmp VERSION 1.0)
 
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
@@ -32,12 +32,12 @@ if(BUILD_VST2)
     list(APPEND JUCE_FORMATS VST)
 endif()
 
-juce_add_plugin(Gamma
+juce_add_plugin(OmniAmp
     COMPANY_NAME "Arboreal Audio"
     COMPANY_COPYRIGHT "(c) 2023 Arboreal Audio, LLC"
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Arau
-    PLUGIN_CODE Gamm
+    PLUGIN_CODE Oamp
     FORMATS ${JUCE_FORMATS}
     VST2_CATEGORY kPlugCategEffect
     VST3_CATEGORY Fx Distortion
@@ -46,19 +46,19 @@ juce_add_plugin(Gamma
     NEEDS_CURL TRUE
     HARDENED_RUNTIME_ENABLE TRUE)
 
-clap_juce_extensions_plugin(TARGET Gamma
-    CLAP_ID "com.ArborealAudio.Gamma.clap"
+clap_juce_extensions_plugin(TARGET OmniAmp
+    CLAP_ID "com.ArborealAudio.OmniAmp.clap"
     CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 32
     CLAP_FEATURES audio-effect distortion reverb EQ)
 
 if (BETA_BUILD)
     message("Setting BETA_BUILD")
-    target_compile_definitions(Gamma PUBLIC BETA_BUILD=1)
+    target_compile_definitions(OmniAmp PUBLIC BETA_BUILD=1)
 endif()
 
-juce_generate_juce_header(Gamma)
+juce_generate_juce_header(OmniAmp)
 
-target_sources(Gamma
+target_sources(OmniAmp
     PRIVATE
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
@@ -66,15 +66,14 @@ target_sources(Gamma
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
-add_subdirectory(Source/Presets)
-target_include_directories(Gamma PRIVATE "modules/chowdsp_wdf/include")
+target_include_directories(OmniAmp PRIVATE "modules/chowdsp_wdf/include")
 
 juce_add_modules(
     "modules/gin/modules/gin"
     "modules/gin/modules/gin_graphics"
     "modules/Arbor_modules")
 
-target_compile_definitions(Gamma
+target_compile_definitions(OmniAmp
     PUBLIC
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=1
@@ -93,17 +92,15 @@ juce_add_binary_data(BinaryData SOURCES
     "Resources/Link/link_over_off.svg"
     "Resources/Link/link_over_on.svg"
     "Resources/logo.svg"
-    "Resources/LiberationSans-Regular.ttf"
+    "Resources/Sora-Regular.ttf"
     "Resources/Hamburger_icon.svg"
-    "Resources/Presets/Default Bass.aap"
-    "Resources/Presets/Default Guitar.aap"
-    "Resources/Presets/Default Channel.aap")
+)
 
 # -fPIC flag mainly for Linux
 set_target_properties(BinaryData PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE)
 
-target_link_libraries(Gamma
+target_link_libraries(OmniAmp
     PRIVATE
         BinaryData
         juce::juce_audio_utils
@@ -111,13 +108,10 @@ target_link_libraries(Gamma
         gin
         gin_graphics
         Arbor_modules
-    PUBLIC
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_lto_flags
-        juce::juce_recommended_warning_flags)
+)
 
 if (NOT APPLE)
-target_link_libraries(Gamma
+target_link_libraries(OmniAmp
     PRIVATE
     juce::juce_opengl)
 endif()

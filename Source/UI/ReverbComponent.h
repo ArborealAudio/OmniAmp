@@ -69,7 +69,7 @@ public:
     {
         auto b = getLocalBounds().reduced(10);
         title.setBounds(b.removeFromTop(b.getHeight() * 0.15f));
-        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
+        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.2f));
         auto bottom = b.removeFromBottom(b.getHeight() / 2);
         auto chunk = b.getWidth() / 4;
         auto amountBounds = bottom.removeFromRight(chunk);
@@ -81,6 +81,6 @@ public:
         reverbDecay.setBounds(decayBounds);
         predelay.setBounds(predelayBounds);
 
-        reverb.setBounds(b.reduced(30 , 15));
+        reverb.setBounds(b.withSizeKeepingCentre(b.getWidth() * 0.75f, b.getHeight() * 0.66f));
     }
 };

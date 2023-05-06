@@ -106,7 +106,7 @@ private:
     Label title;
 
     strix::ChoiceParameter *cabType;
-    std::atomic<bool> needUpdate = false;
+    std::atomic<bool> needUpdateState = false, needUpdatePos = false;
 
     AudioProcessorValueTreeState &apvts;
 
@@ -117,6 +117,8 @@ public:
     CabsComponent(AudioProcessorValueTreeState &a) : menu(a.getParameter("cabType")->getAllValueStrings()), micComp(a), apvts(a)
     {
         apvts.addParameterListener("cabType", this);
+        apvts.addParameterListener("cabMicPosX", this);
+        apvts.addParameterListener("cabMicPosZ", this);
 
         cabType = static_cast<strix::ChoiceParameter *>(apvts.getParameter("cabType"));
 
@@ -155,6 +157,8 @@ public:
     ~CabsComponent() override
     {
         apvts.removeParameterListener("cabType", this);
+        apvts.removeParameterListener("cabMicPosX", this);
+        apvts.removeParameterListener("cabMicPosZ", this);
         stopTimer();
         cabType = nullptr;
     }
@@ -162,18 +166,25 @@ public:
     void parameterChanged(const String &paramID, float) override
     {
         if (paramID == "cabType")
-        {
-            needUpdate = true;
-        }
+            needUpdateState = true;
+        else if (paramID == "cabMicPosX")
+            needUpdatePos = true;
+        else if (paramID == "cabMicPosZ")
+            needUpdatePos = true;
     }
 
     void timerCallback() override
     {
-        if (needUpdate)
+        if (needUpdateState)
         {
             setState();
             repaint();
-            needUpdate = false;
+            needUpdateState = false;
+        }
+        else if (needUpdatePos)
+        {
+            repaint();
+            needUpdatePos = false;
         }
     }
 
@@ -227,13 +238,13 @@ public:
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(5);
-        title.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.15f));
-        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.5f));
         micComp.setBounds(bounds.removeFromRight(bounds.getHeight()).reduced(2));
         auto resoBounds = bounds.removeFromRight(bounds.getWidth() * 0.25f);
         resoLo.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
         resoHi.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
-        menu.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.3f).removeFromLeft(getWidth() * 0.5f).reduced(20, 5));
+        title.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.15f));
+        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.2f));
+        menu.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.3f).reduced(20, 0));
         cabBounds = bounds.reduced(5).toFloat();
     }
 };

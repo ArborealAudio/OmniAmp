@@ -42,7 +42,7 @@ struct EmphasisFilter : AudioProcessorValueTreeState::Listener
         SR = spec.sampleRate;
         float freq_ = *freq;
         if (freq_ >= SR * 0.5)
-            freq_ = SR * 0.49;
+            freq_ = SR * 0.5;
         lastFreq = freq_;
         float amount_ = Decibels::decibelsToGain(amount->get());
         float namount_ = Decibels::decibelsToGain(-amount->get());
@@ -65,8 +65,8 @@ struct EmphasisFilter : AudioProcessorValueTreeState::Listener
 
         sm_amt.reset(spec.sampleRate, 0.01f);
         sm_freq.reset(spec.sampleRate, 0.01f);
-        sm_amt.setCurrentAndTargetValue(*amount);
-        sm_freq.setCurrentAndTargetValue(*freq);
+        sm_amt.setCurrentAndTargetValue(amount_);
+        sm_freq.setCurrentAndTargetValue(freq_);
     }
 
     // inOut: 0 = input filter, 1 = output filter
@@ -74,6 +74,8 @@ struct EmphasisFilter : AudioProcessorValueTreeState::Listener
     void updateFilters(int inOut)
     {
         float freq_ = inOut ? sm_freq.getNextValue() : sm_freq.getCurrentValue();
+        if (freq_ > SR * 0.5)
+            freq_ = SR * 0.5;
         float amt = inOut ? sm_amt.getNextValue() : sm_amt.getCurrentValue();
         float amount_ = Decibels::decibelsToGain(amt);
         float namount_ = Decibels::decibelsToGain(-amt);
@@ -82,13 +84,13 @@ struct EmphasisFilter : AudioProcessorValueTreeState::Listener
         {
             if (type == Low)
             {
-                fIn[i].coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, freq_, 0.707, amount_);
-                fOut[i].coefficients = dsp::IIR::Coefficients<double>::makeLowShelf(SR, freq_, 0.707, namount_);
+                *fIn[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, freq_, 0.707, amount_);
+                *fOut[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, freq_, 0.707, namount_);
             }
             else
             {
-                fIn[i].coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, freq_, 0.707, amount_);
-                fOut[i].coefficients = dsp::IIR::Coefficients<double>::makeHighShelf(SR, freq_, 0.707, namount_);
+                *fIn[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq_, 0.707, amount_);
+                *fOut[i].coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq_, 0.707, namount_);
             }
         }
     }

@@ -4,6 +4,10 @@
 #pragma once
 #include <JuceHeader.h>
 
+#define UI_WIDTH 800
+#define MIN_WIDTH 600
+#define MAX_WIDTH 1200
+
 #define BACKGROUND_COLOR 0xff293236
 #define DEEP_BLUE 0xff194545
 #define LIGHT_BLUE 0xff4b626c
@@ -12,7 +16,7 @@
 
 static const Typeface::Ptr getCustomFont()
 {
-    static auto typeface = Typeface::createSystemTypefaceFor(BinaryData::LiberationSansRegular_ttf, BinaryData::LiberationSansRegular_ttfSize);
+    static auto typeface = Typeface::createSystemTypefaceFor(BinaryData::SoraRegular_ttf, BinaryData::SoraRegular_ttfSize);
 
     return typeface;
 }

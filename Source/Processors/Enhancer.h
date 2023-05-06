@@ -73,22 +73,26 @@ struct Enhancer
     {
         SR = spec.sampleRate;
 
-        double freq = 0.0;
+        double lFreq = 0.0;
         switch (mode)
         {
         case Processors::ProcessorType::Guitar:
-            freq = 300.0;
+            lFreq = 300.0;
             break;
         case Processors::ProcessorType::Bass:
-            freq = 175.0;
+            lFreq = 175.0;
             break;
         case Processors::ProcessorType::Channel:
-            freq = 200.0;
+            lFreq = 200.0;
             break;
         }
 
-        auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(freq, spec.sampleRate, 1);
-        auto hp_c = dsp::FilterDesign<double>::designIIRHighpassHighOrderButterworthMethod(7500.0, spec.sampleRate, 1);
+        double hFreq = 7500.0;
+        if (hFreq >= SR * 0.5)
+            hFreq = SR * 0.5;
+
+        auto lp_c = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(lFreq, spec.sampleRate, 1);
+        auto hp_c = dsp::FilterDesign<double>::designIIRHighpassHighOrderButterworthMethod(hFreq, spec.sampleRate, 1);
 
         for (size_t i = 0; i < 2; ++i)
         {
@@ -196,7 +200,7 @@ private:
             auto *in = block.getChannelPointer(ch);
             for (int i = 0; i < numSamples; ++i)
                 in[i] = hp1[ch]->processSample(in[i]);
-            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, (bool)ch);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, ch + 1 == block.getNumChannels());
         }
 
         EnhancerSaturation::process(block, 1.0, 1.0);
@@ -210,7 +214,7 @@ private:
             auto *in = block.getChannelPointer(ch);
             for (size_t i = 0; i < numSamples; ++i)
                 in[i] = hp2[ch]->processSample(in[i]);
-            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, (bool)ch);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, ch + 1 == block.getNumChannels());
         }
     }
 
@@ -227,7 +231,7 @@ private:
             auto in = block.getChannelPointer(ch);
             for (int i = 0; i < numSamples; ++i)
                 in[i] = lp1[ch]->processSample(in[i]);
-            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, (bool)ch);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, gain, lastGain, ch + 1 == block.getNumChannels());
         }
 
         EnhancerSaturation::process(block, 1.0, 2.0);
@@ -240,7 +244,7 @@ private:
             auto *in = block.getChannelPointer(ch);
             for (int i = 0; i < numSamples; ++i)
                 in[i] = lp2[ch]->processSample(in[i]);
-            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, (bool)ch);
+            strix::SmoothGain<T>::applySmoothGain(in, numSamples, enhance * autoGain, lastAutoGain, ch + 1 == block.getNumChannels());
         }
     }
 
@@ -261,27 +265,50 @@ private:
 //sticking this here bc i don't want to make a new file
 
 /**
- * a wrapper for low- and high-cut filters w/ param smoothing
+ * a wrapper for low- and high-cut filters
 */
-struct CutFilters
+struct CutFilters : AudioProcessorValueTreeState::Listener
 {
     CutFilters(AudioProcessorValueTreeState &a) : apvts(a)
     {
-        lfParam = static_cast<strix::FloatParameter*>(apvts.getParameter("lfCut"));
-        hfParam = static_cast<strix::FloatParameter*>(apvts.getParameter("hfCut"));
+        apvts.addParameterListener("lfCut", this);
+        apvts.addParameterListener("hfCut", this);
+    }
+
+    ~CutFilters()
+    {
+        apvts.removeParameterListener("lfCut", this);
+        apvts.removeParameterListener("hfCut", this);
+    }
+
+    void parameterChanged(const String &paramID, float newValue) override
+    {
+        if (paramID == "lfCut")
+            lfCut.setCutoffFreq(newValue);
+        else if (paramID == "hfCut")
+        {
+            if (newValue >= SR * 0.5)
+                newValue = SR * 0.5;
+            hfCut.setCutoffFreq(newValue);
+        }
     }
 
     void prepare(const dsp::ProcessSpec &spec)
     {
+        SR = spec.sampleRate;
+        
+        lfCut.setCutoffFreq(apvts.getRawParameterValue("lfCut")->load());
+        hfCut.setCutoffFreq(apvts.getRawParameterValue("hfCut")->load());
         lfCut.prepare(spec);
         hfCut.prepare(spec);
         lfCut.setType(strix::FilterType::highpass);
         hfCut.setType(strix::FilterType::lowpass);
-        lfCut.setCutoffFreq(apvts.getRawParameterValue("lfCut")->load());
-        hfCut.setCutoffFreq(apvts.getRawParameterValue("hfCut")->load());
 
-        cutoffLo.reset(spec.maximumBlockSize);
-        cutoffHi.reset(spec.maximumBlockSize);
+        lfCut.setCutoffFreq(apvts.getRawParameterValue("lfCut")->load());
+        auto hfCutFreq = apvts.getRawParameterValue("hfCut")->load();
+        if (hfCutFreq >= SR * 0.5)
+            hfCutFreq = SR * 0.5;
+        hfCut.setCutoffFreq(hfCutFreq);
     }
 
     void reset()
@@ -292,52 +319,14 @@ struct CutFilters
 
     void process(dsp::AudioBlock<double> &block)
     {
-        float lfParam_ = *lfParam;
-        float hfParam_ = *hfParam;
-        cutoffLo.setTargetValue(lfParam_);
-        cutoffHi.setTargetValue(hfParam_);
-
-        if (cutoffLo.isSmoothing())
-        {
-            for (size_t i = 0; i < block.getNumSamples(); ++i)
-            {
-                lfCut.setCutoffFreq(cutoffLo.getNextValue());
-                for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
-                {
-                    auto &in = block.getChannelPointer(ch)[i];
-                    in = lfCut.processSample(ch, in);
-                }
-            }
-        }
-        else
-        {
-            lfCut.setCutoffFreq(cutoffLo.getNextValue());
-            if (lfParam_ > 5.f)
-                lfCut.processBlock(block);
-        }
-        if (cutoffHi.isSmoothing())
-        {
-            for (size_t i = 0; i < block.getNumSamples(); ++i)
-            {
-                hfCut.setCutoffFreq(cutoffHi.getNextValue());
-                for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
-                {
-                    auto &in = block.getChannelPointer(ch)[i];
-                    in = hfCut.processSample(ch, in);
-                }
-            }
-        }
-        else
-        {
-            hfCut.setCutoffFreq(cutoffHi.getNextValue());
-            if (hfParam_ < 22000.f)
-                hfCut.processBlock(block);
-        }
+        if (lfCut.getCutoffFreq() > 5.f)
+            lfCut.processBlock(block);
+        if (hfCut.getCutoffFreq() < 22000.f)
+            hfCut.processBlock(block);
     }
 
 private:
-    strix::SVTFilter<double> lfCut, hfCut;
+    strix::SVTFilter<double, true> lfCut, hfCut;
     AudioProcessorValueTreeState &apvts;
-    SmoothedValue<float> cutoffLo, cutoffHi;
-    strix::FloatParameter *lfParam, *hfParam;
+    double SR = 44100.0;
 };

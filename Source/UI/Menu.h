@@ -88,7 +88,7 @@ public:
         windowSize.setClickingTogglesState(false);
 
         checkUpdate.setButtonText("Check update");
-        checkUpdate.setTooltip("Check for new versions of Gamma");
+        checkUpdate.setTooltip("Check for new versions of OmniAmp");
         checkUpdate.setClickingTogglesState(false);
 
         showTooltips.setButtonText("Show tooltips");
@@ -167,7 +167,6 @@ public:
 
     void resized() override
     {
-        auto w = getLocalBounds().getWidth();
-        menuButton.setBounds(getLocalBounds().removeFromTop(20).removeFromRight(w / 2));
+        menuButton.setBounds(getLocalBounds());
     }
 };

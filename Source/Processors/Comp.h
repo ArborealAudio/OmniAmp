@@ -17,13 +17,6 @@ struct OptoComp
     {
     }
 
-    ~OptoComp()
-    {
-        for (size_t ch = 0; ch < nChannels; ++ch)
-            free(GRdata[ch]);
-        free(GRdata);
-    }
-
     void prepare(const dsp::ProcessSpec &spec)
     {
         lastSR = spec.sampleRate;
@@ -31,9 +24,7 @@ struct OptoComp
 
         grSource.prepare(spec, 0.01f);
 
-        GRdata = (float **)malloc(sizeof(float *) * nChannels);
-        for (size_t i = 0; i < nChannels; ++i)
-            GRdata[i] = (float *)malloc(spec.maximumBlockSize * sizeof(float));
+        grData.setSize(spec.numChannels, spec.maximumBlockSize);
 
         switch (type)
         {
@@ -147,7 +138,7 @@ struct OptoComp
             processUnlinked(block.getChannelPointer(0), 0, comp, block.getNumSamples());
             
         // copy data to GR meter
-        grSource.copyBuffer(GRdata, block.getNumChannels(), block.getNumSamples());
+        grSource.copyBuffer(grData.getArrayOfWritePointers(), block.getNumChannels(), block.getNumSamples());
     }
 
     strix::VolumeMeterSource &getGRSource() { return grSource; }
@@ -162,6 +153,8 @@ private:
         auto inc = (comp - lastComp) / numSamples;
         auto c_inc = (c_comp - last_c) / numSamples;
 
+        auto grBuf = grData.getArrayOfWritePointers();
+
         for (int i = 0; i < numSamples; ++i)
         {
             auto abs0 = std::abs(xm[0]);
@@ -174,7 +167,8 @@ private:
             max = strix::fast_tanh(max);
 
             auto gr = computeGR(0, max);
-            GRdata[0][i] = GRdata[1][i] = lastGR[0];
+            for (size_t ch = 0; ch < grData.getNumChannels(); ++ch)
+                grBuf[ch][i] = lastGR[0];
 
             postComp(inL[i], 0, gr, lastComp, last_c);
             postComp(inR[i], 1, gr, lastComp, last_c);
@@ -196,6 +190,8 @@ private:
         auto inc = (comp - lastComp) / numSamples;
         auto c_inc = (c_comp - last_c) / numSamples;
 
+        auto grBuf = grData.getWritePointer(ch);
+
         for (int i = 0; i < numSamples; ++i)
         {
             auto x = std::abs(xm[ch]);
@@ -207,7 +203,7 @@ private:
 
             auto gr = computeGR(ch, x);
 
-            GRdata[ch][i] = lastGR[ch];
+            grBuf[i] = lastGR[ch];
 
             postComp(in[i], ch, gr, lastComp, last_c);
 
@@ -228,9 +224,9 @@ private:
         auto env = jmax(0.0, 8.685889638 * std::log10(x / threshold.load()));
 
         T att_time = jlimit(0.005, 0.05, (1.0 / x) * 0.015);
-
+        T rel_time = jlimit(0.05, 1.5, 0.5 * (0.5 * lastGR[ch]));
         T att = std::exp(-1.0 / (att_time * lastSR));
-        T rel = std::exp(-1.0 / (0.5 * (0.5 * lastGR[ch]) * lastSR));
+        T rel = std::exp(-1.0 / (rel_time * lastSR));
 
         if (env > lastEnv[ch])
         {
@@ -299,7 +295,7 @@ private:
 
     T lastEnv[2]{0.0}, lastGR[2]{0.0}, xm[2]{0.0};
 
-    float **GRdata; // memory of GR to be passed to GR meter. Floats bc that's what the meter uses
+    AudioBuffer<float> grData;
     size_t nChannels = 0;
 
     dsp::IIR::Filter<T> sc_hp[2], sc_lp[2], lp[2], hp[2];

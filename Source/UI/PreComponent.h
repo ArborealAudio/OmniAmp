@@ -75,7 +75,7 @@ struct PreComponent : Component
                                       { auto str = String(int(val * 100.0));
                                         str.append("%", 1);
                                         return str; });
-        comp.setTooltip("An opto-style compressor, with program-dependent attack and release. Increasing values give more compression and sustain, and can also boost the volume going into the amp.");
+        comp.setTooltip("An opto-style compressor, with signal-dependent attack and release. Increasing gives more compression and sustain, and can also boost the volume going into the amp.");
 
         compLinkAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(vts, "compLink", compLink);
         compLink.setButtonText("Link");
