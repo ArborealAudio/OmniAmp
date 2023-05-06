@@ -206,7 +206,7 @@ struct AmpControls : Component, private Timer
             secondaryColor = Colour(BACKGROUND_COLOR).contrasting(1.f);
             for (auto &k : getKnobs())
             {
-                k->setColor(Colours::antiquewhite, secondaryColor);
+                k->setColor(Colours::antiquewhite, secondaryColor, Colours::white);
                 k->repaint();
             }
         }
@@ -227,7 +227,7 @@ struct AmpControls : Component, private Timer
             secondaryColor = Colours::lightgrey;
             for (auto &k : getKnobs())
             {
-                k->setColor(Colours::black, secondaryColor);
+                k->setColor(Colours::black, secondaryColor, Colours::white);
                 k->repaint();
             }
             break;
@@ -239,9 +239,9 @@ struct AmpControls : Component, private Timer
                 for (auto &k : getKnobs())
                 {
                     if (k == &bass || k == &mid || k == &treble)
-                        k->setColor(Colour(0.f, 0.f, 0.1f, 1.f), secondaryColor);
+                        k->setColor(Colour(0.f, 0.f, 0.1f, 1.f), secondaryColor, Colours::white);
                      else
-                        k->setColor(Colour(LIGHT_BLUE), secondaryColor);
+                        k->setColor(Colour(LIGHT_BLUE), secondaryColor, Colours::white);
 
                     k->repaint();
                 }
@@ -251,9 +251,9 @@ struct AmpControls : Component, private Timer
                 for (auto &k : getKnobs())
                 {
                     if (k == &inGain || k == &outGain || k == &dist)
-                        k->setColor(Colour(LIGHT_GREEN), secondaryColor);
+                        k->setColor(Colour(LIGHT_GREEN), secondaryColor, Colours::white);
                     else
-                        k->setColor(Colour(225.f/360.f, 0.f, 0.5f, 1.f), secondaryColor);
+                        k->setColor(Colour(225.f/360.f, 0.f, 0.5f, 1.f), secondaryColor, Colours::white);
                     k->repaint();
                 }
             }
