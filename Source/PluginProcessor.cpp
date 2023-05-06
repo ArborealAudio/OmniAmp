@@ -35,14 +35,14 @@ GammaAudioProcessor::GammaAudioProcessor()
 {
     inGain = apvts.getRawParameterValue("inputGain");
     outGain = apvts.getRawParameterValue("outputGain");
-    gate = apvts.getRawParameterValue("gate");
+    // gate = apvts.getRawParameterValue("gate");
     hiGain = apvts.getRawParameterValue("hiGain");
     autoGain = apvts.getRawParameterValue("autoGain");
     hfEnhance = apvts.getRawParameterValue("hfEnhance");
     lfEnhance = apvts.getRawParameterValue("lfEnhance");
 
     apvts.addParameterListener("gainLink", this);
-    apvts.addParameterListener("gate", this);
+    // apvts.addParameterListener("gate", this);
     apvts.addParameterListener("treble", this);
     apvts.addParameterListener("mid", this);
     apvts.addParameterListener("bass", this);
@@ -58,7 +58,7 @@ GammaAudioProcessor::GammaAudioProcessor()
 GammaAudioProcessor::~GammaAudioProcessor()
 {
     apvts.removeParameterListener("gainLink", this);
-    apvts.removeParameterListener("gate", this);
+    // apvts.removeParameterListener("gate", this);
     apvts.removeParameterListener("treble", this);
     apvts.removeParameterListener("mid", this);
     apvts.removeParameterListener("bass", this);
@@ -142,16 +142,10 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     SR = sampleRate;
     lastSampleRate = sampleRate * ovs_fac;
 
-    dsp::ProcessSpec osSpec{lastSampleRate, static_cast<uint32>(samplesPerBlock * ovs_fac), (uint32)getTotalNumInputChannels()};
-    dsp::ProcessSpec spec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumInputChannels()};
+    dsp::ProcessSpec osSpec{lastSampleRate, static_cast<uint32>(samplesPerBlock * ovs_fac), (uint32)getTotalNumOutputChannels()};
+    dsp::ProcessSpec spec{sampleRate, (uint32)samplesPerBlock, (uint32)getTotalNumOutputChannels()};
 
     currentMode = (Mode)apvts.getRawParameterValue("mode")->load();
-
-    gateProc.prepare(spec);
-    gateProc.setAttack(10.0);
-    gateProc.setRelease(180.0);
-    gateProc.setRatio(10.0);
-    gateProc.setThreshold(*gate);
 
     emphLow.prepare(spec);
     emphHigh.prepare(spec);
@@ -180,7 +174,6 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
     cab.prepare(spec);
 
-    reverb.setDownsampleRatio(2);
     reverb.prepare(spec);
 
     mixDelay.prepare(spec);
@@ -193,6 +186,8 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     doubler.setDelayTime(18);
 
     doubleBuffer.setSize(2, samplesPerBlock);
+    preAmpBuf.setSize(spec.numChannels, samplesPerBlock);
+    preAmpCrossfade.setFadeTime(spec.sampleRate, 0.1f);
 
     simd.setInterleavedBlockSize(spec.numChannels, samplesPerBlock);
 }
@@ -238,19 +233,19 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         auto adjVal = calcBassParam(newValue);
         guitar.setToneControl(0, adjVal);
         bass.setToneControl(0, adjVal);
-        channel.setFilters(0, newValue);
+        channel.sm_low.setTargetValue(newValue);
     }
     else if (parameterID == "mid")
     {
         guitar.setToneControl(1, newValue);
         bass.setToneControl(1, newValue);
-        channel.setFilters(1, newValue);
+        channel.sm_mid.setTargetValue(newValue);
     }
     else if (parameterID == "treble")
     {
         guitar.setToneControl(2, newValue);
         bass.setToneControl(2, newValue);
-        channel.setFilters(2, newValue);
+        channel.sm_hi.setTargetValue(newValue);
     }
     else if (parameterID == "dist")
     {
@@ -262,8 +257,8 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         bass.setDistParam(logval);
         channel.setDistParam(logval);
     }
-    else if (parameterID == "gate")
-        gateProc.setThreshold(*gate);
+    // else if (parameterID == "gate")
+        // gateProc.setThreshold(*gate);
     else if (parameterID == "gainLink")
     {
         if ((bool)newValue)
@@ -281,7 +276,8 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
     {
         setOversampleIndex();
         auto ovs_fac = oversample[os_index].getOversamplingFactor();
-        dsp::ProcessSpec osSpec{SR * ovs_fac, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
+        lastSampleRate = SR * ovs_fac;
+        dsp::ProcessSpec osSpec{lastSampleRate, uint32(maxBlockSize * ovs_fac), (uint32)getTotalNumInputChannels()};
         suspendProcessing(true);
         guitar.prepare(osSpec);
         bass.prepare(osSpec);
@@ -298,7 +294,7 @@ void GammaAudioProcessor::setOversampleIndex()
         os_index = 0;
 }
 
-void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
+void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &)
 {
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
@@ -309,7 +305,10 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
 
     doubleBuffer.makeCopyOf(buffer, true);
 
-    processDoubleBuffer(doubleBuffer, totalNumInputChannels < 2);
+    if (totalNumInputChannels < totalNumOutputChannels)
+        doubleBuffer.copyFrom(1, 0, doubleBuffer.getReadPointer(0), doubleBuffer.getNumSamples());
+
+    processDoubleBuffer(doubleBuffer, totalNumOutputChannels < 2);
 
     auto L = doubleBuffer.getReadPointer(0);
     auto outL = buffer.getWritePointer(0);
@@ -320,16 +319,8 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::M
     {
         auto R = doubleBuffer.getReadPointer(1);
         auto outR = buffer.getWritePointer(1);
-        if (totalNumInputChannels < totalNumOutputChannels)
-        {
-            for (auto i = 0; i < buffer.getNumSamples(); ++i)
-                outR[i] = static_cast<float>(L[i]);
-        }
-        else
-        {
-            for (auto i = 0; i < buffer.getNumSamples(); ++i)
-                outR[i] = static_cast<float>(R[i]);
-        }
+        for (auto i = 0; i < buffer.getNumSamples(); ++i)
+            outR[i] = static_cast<float>(R[i]);
     }
 }
 
@@ -342,10 +333,10 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    processDoubleBuffer(buffer, buffer.getNumChannels() < 2);
-
     if (totalNumInputChannels < totalNumOutputChannels)
         buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
+
+    processDoubleBuffer(buffer, totalNumOutputChannels < 2);
 }
 
 //==============================================================================
@@ -398,7 +389,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<fParam>(ParameterID("inputGain", 1), "Input Gain", -12.f, 12.f, 0.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("outputGain", 1), "Output Gain", -12.f, 12.f, 0.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("gainLink", 1), "Gain Link", false));
-    params.emplace_back(std::make_unique<fParam>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
+    // params.emplace_back(std::make_unique<fParam>(ParameterID("gate", 1), "Gate Thresh", -96.f, -20.f, -96.f));
     params.emplace_back(std::make_unique<bParam>(ParameterID("m/s", 1), "Stereo/MS", false));
     params.emplace_back(std::make_unique<fParam>(ParameterID("width", 1), "Width", 0.f, 2.f, 1.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("stereoEmphasis", 1), "Stereo Emphasis", 0.f, 1.f, 0.5f));
@@ -442,8 +433,8 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbDecay", 1), "Reverb Decay", 0.5f, 2.f, 1.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbSize", 1), "Reverb Size", 0.f, 2.f, 1.f));
     params.emplace_back(std::make_unique<fParam>(ParameterID("reverbPredelay", 1), "Reverb Predelay", 0.f, 200.f, 0.f));
-    params.emplace_back(std::make_unique<bParam>(ParameterID("hq", 1), "HQ On/Off", true));
-    params.emplace_back(std::make_unique<bParam>(ParameterID("renderHQ", 1), "Render HQ", false));
+    params.emplace_back(std::make_unique<bParam>(ParameterID("hq", 1), "HQ On/Off", false));
+    params.emplace_back(std::make_unique<bParam>(ParameterID("renderHQ", 1), "Render HQ", true));
     params.emplace_back(std::make_unique<bParam>(ParameterID("bypass", 1), "Bypass", false));
 
     return {params.begin(), params.end()};

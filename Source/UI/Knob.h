@@ -107,11 +107,11 @@ struct Knob : Slider
 
     float getDefaultValue() { return defaultValue; }
 
-    void mouseDrag(const MouseEvent &e) override
-    {
-        e.source.enableUnboundedMouseMovement(true);
-        Slider::mouseDrag(e);
-    }
+    // void mouseDrag(const MouseEvent &e) override
+    // {
+    //     e.source.enableUnboundedMouseMovement(true, true);
+    //     Slider::mouseDrag(e);
+    // }
 
     double proportionOfLengthToValue(double proportion) override
     {
@@ -148,6 +148,7 @@ struct Knob : Slider
         lnf.textColor = newTextColor;
     }
 
+    // positional offset for knob within its bounds
     void setOffset(int xOffset, int yOffset)
     {
         lnf.xOffset = xOffset;
@@ -289,9 +290,8 @@ private:
             else if (label)
                 text = *label;
 
-            float textBoxHeight = slider.getHeight() / 6;
-            // float fontHeight = jmin(14.f, textBoxHeight);
-            g.setFont(jlimit(13.f, 15.f, textBoxHeight * 0.8f));
+            float textBoxHeight = slider.getHeight() / 6.f;
+            g.setFont(jlimit(14.f, 17.f, textBoxHeight));
             g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(textBoxHeight).translated(textXOffset, textYOffset), Justification::centred, 2);
         }
     };

@@ -8,6 +8,7 @@
 
 #pragma once
 #include <JuceHeader.h>
+#include "PresetManager.h"
 
 // Custom ComboBox because this is a great codebase
 struct PresetComboBoxLNF : LookAndFeel_V4
@@ -71,7 +72,7 @@ struct PresetComboBoxLNF : LookAndFeel_V4
 
         auto font = label.getLookAndFeel().getLabelFont (label);
 
-        g.setFont (font);
+        g.setFont (font.withHeight(jlimit(10.f, 18.f, box.getWidth() * 0.15f)));
 
         auto textArea = getLabelBorderSize (label).subtractedFrom (label.getLocalBounds());
 
@@ -91,6 +92,7 @@ struct PresetComp : Component, private Timer
         box.setLookAndFeel(&boxLNF);
         box.setJustificationType(Justification::centredLeft);
         box.setTextWhenNothingSelected("Presets");
+        box.setInterceptsMouseClicks(false, false);
 
         loadPresets();
 
@@ -100,13 +102,10 @@ struct PresetComp : Component, private Timer
         startTimerHz(2);
 
         setInterceptsMouseClicks(true, false);
-
-        addMouseListener(this, true);
     }
 
     ~PresetComp()
     {
-        removeMouseListener(this);
         box.setLookAndFeel(nullptr);
         stopTimer();
     }
@@ -115,6 +114,10 @@ struct PresetComp : Component, private Timer
     {
         PopupMenu::Item save{ "save" }, saveAs{ "save as" }, copy{ "copy preset" }, paste{"paste preset"}, presetDir{"open preset folder"};
 
+        // Factory presets start at 1
+        // User presets start after factory
+        // Functional menu items start at 1000
+        
         auto menu = box.getRootMenu();
         menu->clear();
         save.setID(1001);
@@ -153,18 +156,70 @@ struct PresetComp : Component, private Timer
 
         menu->addSeparator();
 
-        auto presets = manager.loadFactoryPresetList();
-        box.addItemList(presets, 1);
-        factoryPresetSize = presets.size();
-
-        auto user = manager.loadUserPresetList();
-        userPresets.clear();
-        for (int i = 0; i < user.size(); ++i)
+        factoryPresetSize = 0;
+        auto factorySubdirs = manager.loadFactorySubdirs();
+        if (!factorySubdirs.isEmpty())
         {
-            userPresets.addItem(factoryPresetSize + i + 1, user[i]);
+            for (auto &dir : factorySubdirs)
+            {
+                auto presets = manager.loadFactoryPresets(dir);
+                PopupMenu factorySubMenu;
+                for (int i = 0; i < presets.size(); ++i)
+                {
+                    factorySubMenu.addItem(factoryPresetSize + i + 1, presets[i]);
+                    factoryPaths.emplace_back(dir.getFileName() + "/" + presets[i]);
+                }
+                menu->addSubMenu(dir.getFileName(), factorySubMenu);
+                factoryPresetSize += presets.size();
+            }
+        }
+    
+        {
+            auto presets = manager.loadFactoryPresets(manager.factoryDir);
+            if (!presets.isEmpty())
+            {
+                for (int i = 0; i < presets.size(); ++i)
+                {
+                    menu->addItem(factoryPresetSize + i + 1, presets[i]);
+                    factoryPaths.emplace_back("");
+                }
+                factoryPresetSize += presets.size();
+            }
         }
 
         menu->addSeparator();
+        PopupMenu userPresets;
+        
+        userPresetSize = 0;
+        auto userSubdirs = manager.loadUserSubdirs();
+        if (!userSubdirs.isEmpty())
+        {
+            for (auto &dir : userSubdirs)
+            {
+                auto presets = manager.loadUserPresets(dir);
+                PopupMenu userSubMenu;
+                for (int i = 0; i < presets.size(); ++i)
+                {
+                    userSubMenu.addItem(factoryPresetSize + i + 1, presets[i]);
+                    userPaths.emplace_back(dir.getFileName() + "/" + presets[i]);
+                }
+                userPresets.addSubMenu(dir.getFileName(), userSubMenu);
+                userPresetSize += presets.size();
+            }
+        }
+        {
+            auto presets = manager.loadUserPresets(manager.userDir);
+            if (!presets.isEmpty())
+            {
+                for (int i = 0; i < presets.size(); ++i)
+                {
+                    userPresets.addItem(factoryPresetSize + userPresetSize + i + 1, presets[i]);
+                    userPaths.emplace_back("");
+                }
+                userPresetSize += presets.size();
+            }
+        }
+
         menu->addSubMenu("User Presets", userPresets);
     }
 
@@ -235,16 +290,28 @@ struct PresetComp : Component, private Timer
         auto idx = box.getSelectedItemIndex();
         auto preset = box.getItemText(idx);
 
-        if (id < 1000 && id > 0) {
-
-            if (id <= factoryPresetSize) {
-                if (manager.loadPreset(preset, true))
+        if (id < 1000 && id > 0)
+        {
+            if (id <= factoryPresetSize)
+            {
+                if (!factoryPaths[id-1].isEmpty())
+                {
+                    if (manager.loadPreset(preset, true, factoryPaths[id-1].upToFirstOccurrenceOf("/", true, false)))
+                        box.setText(preset, NotificationType::sendNotificationSync);
+                }
+                else if (manager.loadPreset(preset, true))
                     box.setText(preset, NotificationType::sendNotificationSync);
                 else
                     box.setText("preset not found", NotificationType::dontSendNotification);
             }
-            else {
-                if (manager.loadPreset(preset, false))
+            else
+            {
+                if (!userPaths[id-factoryPresetSize-1].isEmpty())
+                {
+                    if (manager.loadPreset(preset, false, userPaths[id-factoryPresetSize-1].upToFirstOccurrenceOf("/", true, false)))
+                        box.setText(preset, NotificationType::sendNotificationSync);
+                }
+                else if (manager.loadPreset(preset, false))
                     box.setText(preset, NotificationType::sendNotificationSync);
                 else
                     box.setText("preset not found", NotificationType::dontSendNotification);
@@ -258,20 +325,24 @@ struct PresetComp : Component, private Timer
 
     void leftArrowClicked()
     {
-        const auto currentIndex = box.getSelectedItemIndex();
-        if (currentIndex != 0)
-            box.setSelectedItemIndex(currentIndex - 1);
+        const auto currentID = box.getSelectedId();
+        DBG("index " << currentID);
+        if (currentID != 0)
+            box.setSelectedId(currentID - 1);
         else
-            box.setSelectedItemIndex(currentIndex + 1);
+            box.setSelectedId(userPresetSize + factoryPresetSize);
+        DBG("new index " << box.getSelectedId());
     }
     
     void rightArrowClicked()
     {
-        const auto currentIndex = box.getSelectedItemIndex();
-        if (currentIndex < box.getNumItems())
-            box.setSelectedItemIndex(currentIndex + 1);
+        const auto currentID = box.getSelectedId();
+        DBG("index " << currentID);
+        if (currentID < factoryPresetSize + userPresetSize)
+            box.setSelectedId(currentID + 1);
         else
-            box.setSelectedItemIndex(0);
+            box.setSelectedId(1);
+        DBG("new index " << box.getSelectedId());
     }
 
     void mouseDown(const MouseEvent &event) override
@@ -287,7 +358,8 @@ struct PresetComp : Component, private Timer
             return;
         }
 
-        Component::mouseDown(event);
+        box.mouseDown(event);
+        // Component::mouseDown(event);
     }
 
     void timerCallback() override
@@ -312,9 +384,8 @@ struct PresetComp : Component, private Timer
 private:
     PresetComboBoxLNF boxLNF;
 
-    PopupMenu userPresets;
-
-    int factoryPresetSize = 0;
+    int factoryPresetSize = 0, userPresetSize = 0;
+    std::vector<String> factoryPaths, userPaths; // paths to factory presets including subdir names
 
     TextEditor editor;
 

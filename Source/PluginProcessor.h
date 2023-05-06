@@ -130,9 +130,12 @@ public:
 private:
     AudioProcessorValueTreeState::ParameterLayout createParams();
 
-    std::atomic<float> *inGain, *outGain, *gate, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
+    std::atomic<float> *inGain, *outGain, *autoGain, *hiGain, *hfEnhance, *lfEnhance;
 
     float lastInGain = 1.f, lastOutGain = 1.f, lastWidth = 1.f, lastEmph = 0.f;
+    bool lastAmpOn = true;
+    AudioBuffer<double> preAmpBuf, postAmpBuf;
+    strix::Crossfade preAmpCrossfade;
 
     /*std::array<ToneStackNodal, 3> toneStack
     { {
@@ -142,10 +145,10 @@ private:
 
     strix::VolumeMeterSource meterSource;
 
-    dsp::NoiseGate<double> gateProc;
+    // dsp::NoiseGate<double> gateProc;
 
     std::array<dsp::Oversampling<double>, 2> oversample{dsp::Oversampling<double>(2),
-                                                        dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandPolyphaseIIR)};
+                                                        dsp::Oversampling<double>(2, 2, dsp::Oversampling<double>::FilterType::filterHalfBandFIREquiripple)};
     size_t os_index = 0;
 
     AudioBuffer<double> doubleBuffer;
@@ -192,9 +195,10 @@ private:
 
     void setOversampleIndex();
 
-    // expects stereo in and out
     void processDoubleBuffer(AudioBuffer<double> &buffer, bool mono)
     {
+        if (buffer.getNumSamples() < 1) // WHY would you ever send 0 samples?
+            return;
         auto inGain_raw = std::pow(10.f, inGain->load() * 0.05f);
         auto outGain_raw = std::pow(10.f, outGain->load() * 0.05f);
         const size_t os_index_ = os_index;
@@ -206,6 +210,7 @@ private:
         dsp::AudioBlock<double> block(buffer);
         const size_t numChannels = mono ? 1 : block.getNumChannels();
 
+        /* push dry samples to mixer */
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
             const auto *in = block.getChannelPointer(ch);
@@ -215,8 +220,8 @@ private:
 
         bool shouldBypass = processBypassIn(block, isBypassed, numChannels);
 
-        if (*gate > -95.0)
-            gateProc.process(dsp::ProcessContextReplacing<double>(block));
+        // if (*gate > -95.0)
+        //     gateProc.process(dsp::ProcessContextReplacing<double>(block));
 
         /*apply input gain*/
         strix::SmoothGain<float>::applySmoothGain(block, inGain_raw, lastInGain);
@@ -237,44 +242,75 @@ private:
         emphLow.processIn(block);
         emphHigh.processIn(block);
 
-        auto osBlock = oversample[os_index_].processSamplesUp(block);
+        const auto p_comp = apvts.getRawParameterValue("comp")->load();
+        const auto linked = (bool)apvts.getRawParameterValue("compLink")->load();
+        const auto compPos = (bool)apvts.getRawParameterValue("compPos")->load();
+        const auto ampOn = (bool)apvts.getRawParameterValue("ampOn")->load();
 
-        auto p_comp = apvts.getRawParameterValue("comp");
-        auto linked = (bool)apvts.getRawParameterValue("compLink")->load();
-        auto compPos = (bool)apvts.getRawParameterValue("compPos")->load();
-        auto ampOn = (bool)apvts.getRawParameterValue("ampOn")->load();
+        // load buffers for crossfade if needed
+        if (ampOn != lastAmpOn)
+            preAmpCrossfade.reset();
+        if (!preAmpCrossfade.complete)
+        {
+            preAmpBuf.makeCopyOf(buffer, true);
+        }
+
+        /* main processing */
+        auto osBlock = oversample[os_index_].processSamplesUp(block);
+        if (mono)
+            osBlock = osBlock.getSingleChannelBlock(0);
 
         switch (currentMode)
         {
         case Guitar:
             if (!compPos)
-                guitar.comp.processBlock(osBlock, *p_comp, linked);
-            if (ampOn)
+                guitar.comp.processBlock(osBlock, p_comp, linked);
+            if (ampOn || !preAmpCrossfade.complete)
+            {
                 guitar.processBlock(osBlock);
+                osBlock.multiplyBy(Decibels::decibelsToGain(-18.0));
+            }
             if (compPos)
-                guitar.comp.processBlock(osBlock, *p_comp, linked);
+                guitar.comp.processBlock(osBlock, p_comp, linked);
             break;
         case Bass:
             if (!compPos)
-                bass.comp.processBlock(osBlock, *p_comp, linked);
-            if (ampOn)
+                bass.comp.processBlock(osBlock, p_comp, linked);
+            if (ampOn || !preAmpCrossfade.complete)
+            {
                 bass.processBlock(osBlock);
+                osBlock.multiplyBy(Decibels::decibelsToGain(-10.0));
+            }
             if (compPos)
-                bass.comp.processBlock(osBlock, *p_comp, linked);
+                bass.comp.processBlock(osBlock, p_comp, linked);
             break;
         case Channel:
             if (!compPos)
-                channel.comp.processBlock(osBlock, *p_comp, linked);
-            if (ampOn)
+                channel.comp.processBlock(osBlock, p_comp, linked);
+            if (ampOn || !preAmpCrossfade.complete)
                 channel.processBlock(osBlock);
             if (compPos)
-                channel.comp.processBlock(osBlock, *p_comp, linked);
+                channel.comp.processBlock(osBlock, p_comp, linked);
             break;
         }
 
         oversample[os_index_].processSamplesDown(block);
 
-        auto latency = oversample[os_index].getLatencyInSamples();
+        // perform crossfade if needed
+        if (!preAmpCrossfade.complete)
+        {
+            if (ampOn) // fade to processed block
+                preAmpCrossfade.processWithState(preAmpBuf, buffer, buffer.getNumSamples());
+            else // fade to pre-amp block
+            {
+                preAmpCrossfade.processWithState(buffer, preAmpBuf, buffer.getNumSamples());
+                buffer.makeCopyOf(preAmpBuf, true);
+            }
+        }
+
+        lastAmpOn = ampOn;
+
+        auto latency = oversample[os_index_].getLatencyInSamples();
         setLatencySamples((int)latency);
 
         emphLow.processOut(block);
@@ -300,6 +336,7 @@ private:
         if (ms && !mono)
             strix::MSMatrix::msDecode(block);
 
+        /* doubler */
         double dubAmt = *apvts.getRawParameterValue("doubler");
         if ((bool)dubAmt && !mono)
             doubler.process(block, dubAmt);
@@ -330,7 +367,7 @@ private:
         for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
             float mix = sm_mix.getNextValue();
-            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+            for (size_t ch = 0; ch < numChannels; ++ch)
             {
                 auto out = block.getChannelPointer(ch);
                 out[i] = ((1.f - mix) * mixDelay.popSample(ch)) + mix * out[i];

@@ -17,7 +17,7 @@ struct MixedFeedback
             double r = ch * 1.0 / channels;
             delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
             delays[ch].prepare(spec);
-            delays[ch].setMaximumDelayInSamples(44100);
+            delays[ch].setMaximumDelayInSamples(SR);
 
             osc[ch].initialise([](double x)
                                { return std::sin(x); });
@@ -99,12 +99,6 @@ struct MixedFeedback
     template <typename Block>
     void process(Block &block)
     {
-        // if (needUpdate)
-        // {
-        //     processSmoothed(block);
-        //     needUpdate = false;
-        //     return;
-        // }
         for (int i = 0; i < block.getNumSamples(); ++i)
         {
             for (int ch = 0; ch < channels; ++ch)

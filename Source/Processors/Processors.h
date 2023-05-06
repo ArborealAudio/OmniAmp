@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include "Arbor_modules/modules/SmoothGain.h"
 namespace Processors
 {
     enum class ProcessorType
@@ -54,33 +53,6 @@ namespace Processors
 
         bool shouldBypass = false;
     };
-
-    namespace clip
-    {
-        template <typename SampleType, typename T>
-        inline void clip(SampleType *in, size_t numSamples, T pLim, T nLim)
-        {
-            for (size_t i = 0; i < numSamples; ++i)
-            {
-#if USE_SIMD
-                in[i] = xsimd::select(in[i] > (SampleType)pLim, (SampleType)pLim, in[i]);
-                in[i] = xsimd::select(in[i] < (SampleType)nLim, (SampleType)nLim, in[i]);
-#else
-                if (in[i] > pLim)
-                    in[i] = pLim;
-                else if (in[i] < nLim)
-                    in[i] = nLim;
-#endif
-            }
-        }
-
-        template <typename Block, typename T>
-        inline void clip(Block &block, T pLim, T nLim)
-        {
-            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
-                clip(block.getChannelPointer(ch), block.getNumSamples(), pLim, nLim);
-        }
-    }
 
 #include "Tube.h"
 #include "PreFilters.h"
@@ -234,6 +206,8 @@ namespace Processors
         Pentode<double> pentode;
 #endif
         Preamp preamp;
+
+        double fudgeGain = 1.f; // dumb thing we need to keep diff. amp types in similar ballpark
 
         strix::FloatParameter *inGain, *outGain, *p_comp, *dist;
         strix::BoolParameter *ampAutoGain, *hiGain, *linked;
@@ -455,10 +429,9 @@ namespace Processors
             else
                 mxr.setInit(true);
 
-            // processBlock.multiplyBy(gain_raw);
             strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
-            if (ampAutoGain_)
-                autoGain *= 1.0 / gain_raw;
+            // if (ampAutoGain_)
+            //     autoGain *= 1.0 / gain_raw;
 
             /* perform sync swap of preamp & poweramp if needed */
             if (ampChanged)
@@ -480,14 +453,13 @@ namespace Processors
             }
             preamp.process(processBlock);
 
-            // processBlock.multiplyBy(out_raw);
             strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
             pentode.processBlockClassB(processBlock);
 
-            if (ampAutoGain_)
-                autoGain *= 1.0 / out_raw;
+            // if (ampAutoGain_)
+            //     autoGain *= 1.0 / out_raw;
 
-            processBlock.multiplyBy(autoGain);
+            // processBlock.multiplyBy(autoGain);
 
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
@@ -553,24 +525,15 @@ namespace Processors
             switch (currentType)
             {
             case Cobalt:
-                toneStack->setNodalCoeffs((T)0.25e-9, (T)25e-9, (T)15e-9, (T)250e3, (T)500e3, (T)50e3, (T)75e3);
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)25e-9, (T)15e-9, (T)250e3, (T)500e3, (T)50e3, (T)200e3);
                 break;
             case Emerald:
                 toneStack->setBiquadFreqs(300.0, 900.0, 200.0, 1000.0, 2300.0);
                 break;
             case Quartz:
-                toneStack->setNodalCoeffs((T)2.5e-10, (T)8e-9, (T)12e-9, (T)250e3, (T)750e3, (T)100e3, (T)500e3);
+                toneStack->setNodalCoeffs((T)0.25e-9, (T)8e-9, (T)12e-9, (T)250e3, (T)750e3, (T)100e3, (T)300e3);
                 break;
             }
-#if 0
-            toneStack->setNodalCoeffs(JUCE_LIVE_CONSTANT((T)2.5e-10),
-            JUCE_LIVE_CONSTANT((T)8e-9),
-            JUCE_LIVE_CONSTANT((T)12e-9),
-            JUCE_LIVE_CONSTANT((T)250e3),
-            JUCE_LIVE_CONSTANT((T)750e3),
-            JUCE_LIVE_CONSTANT((T)100e3),
-            JUCE_LIVE_CONSTANT((T)500e3));
-#endif
         }
 
         void setBias()
@@ -582,10 +545,10 @@ namespace Processors
             case Cobalt:
                 for (auto &t : triode)
                     t.type = TriodeType::VintageTube;
-                triode[1].bias.first = 5.0;
-                triode[1].bias.second = 10.0;
-                triode[2].bias.first = 5.0;
-                triode[2].bias.second = 10.0;
+                triode[1].bias.first = 4.0;
+                triode[1].bias.second = 4.0;
+                triode[2].bias.first = 2.0;
+                triode[2].bias.second = 2.0;
                 triode[3].bias.first = 10.0;
                 triode[3].bias.second = 15.0;
                 break;
@@ -604,14 +567,6 @@ namespace Processors
                 triode[3].bias.first = 25.0;
                 break;
             }
-#if 0
-            triode[1].bias.first = 5.0;
-            triode[1].bias.second = 10.0;
-            triode[2].bias.first = 5.0;
-            triode[2].bias.second = 10.0;
-            triode[3].bias.first = 10.0;
-            triode[3].bias.second = 15.0;
-#endif
         }
 
         void setPreamp()
@@ -626,6 +581,7 @@ namespace Processors
                 preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(&triode[3]);
                 preamp.procs.push_back(toneStack.get());
+                fudgeGain = 2.0;
                 break;
             case Emerald:
                 preamp.procs.push_back(toneStack.get());
@@ -633,6 +589,7 @@ namespace Processors
                 preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(&triode[3]);
                 preamp.procs.push_back(&preFilter);
+                fudgeGain = 1.0;
                 break;
             case Quartz:
                 preamp.procs.push_back(&triode[1]);
@@ -640,6 +597,7 @@ namespace Processors
                 preamp.procs.push_back(&preFilter);
                 preamp.procs.push_back(&triode[2]);
                 preamp.procs.push_back(&triode[3]);
+                fudgeGain = 2.0;
                 break;
             }
         }
@@ -660,12 +618,10 @@ namespace Processors
             case Cobalt:
                 pentode.type = PentodeType::Nu;
                 pentode.bias.first = 0.7;
-                pentode.bias.second = 0.7;
                 break;
             case Emerald:
                 pentode.type = PentodeType::Nu;
                 pentode.bias.first = 0.8;
-                pentode.bias.second = 1.0;
                 break;
             case Quartz:
                 pentode.type = PentodeType::Classic;
@@ -700,11 +656,10 @@ namespace Processors
 
             triode[0].process(processBlock);
 
-            // processBlock.multiplyBy(gain_raw);
             strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
 
-            if (ampAutoGain_)
-                autoGain *= 1.0 / gain_raw;
+            // if (ampAutoGain_)
+            //     autoGain *= 1.0 / gain_raw;
 
             if (*hiGain)
             {
@@ -719,25 +674,20 @@ namespace Processors
                 setPoweramp();
                 ampChanged = false;
             }
-#if 0
-            setBias();
-#endif
             triode[2].shouldBypass = !*hiGain;
             triode[3].shouldBypass = !*hiGain;
             preamp.process(processBlock);
 
-            // processBlock.multiplyBy(out_raw);
             strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
 
-            if (ampAutoGain_)
-                autoGain *= 1.0 / out_raw;
+            // if (ampAutoGain_)
+            //     autoGain *= 1.0 / out_raw;
 
-            if (!*hiGain)
-                pentode.processBlockClassB(processBlock);
-            else
-                pentode.processBlockClassB(processBlock);
+            pentode.processBlockClassB(processBlock);
 
-            processBlock.multiplyBy(autoGain);
+            processBlock *= fudgeGain;
+
+            // processBlock.multiplyBy(autoGain);
 
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
@@ -787,7 +737,7 @@ namespace Processors
             defaultPrepare(spec);
 
             setPreamp(*inGain);
-            setPoweramp(/* *outGain */);
+            setPoweramp();
 
             low.prepare(spec);
             setFilters(0);
@@ -797,6 +747,18 @@ namespace Processors
 
             hi.prepare(spec);
             setFilters(2);
+
+            sm_low.reset(SR, 0.01f);
+            sm_low.setCurrentAndTargetValue(lowGain);
+            sm_mid.reset(SR, 0.01f);
+            sm_mid.setCurrentAndTargetValue(midGain);
+            sm_hi.reset(SR, 0.01f);
+            sm_hi.setCurrentAndTargetValue(trebGain);
+
+            // tmp = (T**)malloc(sizeof(T*) * spec.numChannels);
+            // for (size_t ch = 0; ch < spec.numChannels; ++ch)
+            //     tmp[ch] = (T*)malloc(sizeof(T) * spec.maximumBlockSize);
+            tmp.setSize(spec.numChannels, spec.maximumBlockSize);
         }
 
         inline void setBias(size_t id, float newFirst, float newSecond)
@@ -847,8 +809,8 @@ namespace Processors
             else
             {
                 pentode.setType(PentodeType::Classic);
-                pentode.bias.first = 10.0;
-                pentode.bias.second = 10.0;
+                pentode.bias.first = 12.0;
+                pentode.bias.second = 12.0;
             }
 #if 0
             pentode.bias.first = JUCE_LIVE_CONSTANT(bias);
@@ -866,6 +828,8 @@ namespace Processors
             this->midGain = midGain;
             this->trebGain = trebleGain;
             updateFilters = true;
+            
+            tmp.setSize(spec.numChannels, spec.maximumBlockSize);
         }
 
         void setFilters(int index, float newValue = 0.5f)
@@ -877,9 +841,9 @@ namespace Processors
             case 0:
                 lowGain = newValue;
                 if (currentType == Modern)
-                    *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
+                    *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
                 else
-                    *low.coefficients = *dsp::IIR::Coefficients<double>::makeLowShelf(SR, 300.0, 0.66, gain);
+                    *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 300.0, 0.66, gain);
                 break;
             case 1:
             {
@@ -887,17 +851,21 @@ namespace Processors
                 double Q = 0.707;
                 Q *= 1.0 / gain;
                 if (currentType == Modern)
-                    *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
+                    *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
                 else
-                    *mid.coefficients = *dsp::IIR::Coefficients<double>::makePeakFilter(SR, 800.0, Q, gain);
+                    *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 800.0, Q, gain);
             }
             break;
             case 2:
                 trebGain = newValue;
                 if (currentType == Modern)
-                    *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
-                else
-                    *hi.coefficients = *dsp::IIR::Coefficients<double>::makeHighShelf(SR, 6500.0, 0.5, gain);
+                    *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
+                else {
+                    auto freq = 6500.0;
+                    if (freq > SR * 0.5)
+                        freq = SR * 0.5;
+                    *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq, 0.5, gain);
+                }
                 break;
             }
         }
@@ -905,10 +873,30 @@ namespace Processors
         template <typename FloatType>
         void processBlock(dsp::AudioBlock<FloatType> &block)
         {
-            FloatType gain_raw = jmap(inGain->get(), 1.f, 4.f);
-            FloatType out_raw = jmap(outGain->get(), 1.f, 4.f);
+            auto inGain_ = inGain->get();
+            auto outGain_ = outGain->get();
+            FloatType gain_raw = jmap(inGain_, 1.f, 4.f);
+            FloatType out_raw = jmap(outGain_, 1.f, 4.f);
 
-            pentode.inGain = *outGain;
+            if (inGain_ > 0.f && lastInGain> 1.f)
+                preampTubeState = ProcessNormal;
+            else if (inGain_ <= 0.f && lastInGain <= 1.f)
+                preampTubeState = Bypassed;
+            else if (inGain_ <= 0.f && lastInGain >= 1.f)
+                preampTubeState = ProcessRampOff;
+            else if (inGain_ >= 0.f && lastInGain <= 1.f)
+                preampTubeState = ProcessRampOn;
+
+            if (outGain_ > 0.f && lastOutGain> 1.f)
+                powerampTubeState = ProcessNormal;
+            else if (outGain_ <= 0.f && lastOutGain <= 1.f)
+                powerampTubeState = Bypassed;
+            else if (outGain_ <= 0.f && lastOutGain >= 1.f)
+                powerampTubeState = ProcessRampOff;
+            else if (outGain_ >= 0.f && lastOutGain <= 1.f)
+                powerampTubeState = ProcessRampOn;
+
+            pentode.inGain = outGain_;
 
             FloatType autoGain = 1.0;
             bool ampAutoGain_ = *ampAutoGain;
@@ -920,42 +908,117 @@ namespace Processors
 #endif
 
             if (*dist > 0.f)
+            {
                 mxr.processBlock(processBlock);
+                if (ampAutoGain_)
+                    autoGain *= 1.f / jmap(dist->get(), 1.f, 6.f);
+            }
             else
                 mxr.setInit(true);
 
-            if (*inGain > 0.f)
+            switch (preampTubeState)
             {
-                setPreamp(*inGain);
+            case Bypassed:
+                break;
+            case ProcessNormal:
+                setPreamp(inGain_);
                 strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
                 triode[0].process(processBlock);
                 if (*hiGain)
                     triode[1].process(processBlock);
+                break;
+            case ProcessRampOn:
+            {
+                for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
+                    tmp.copyFrom(ch, 0, processBlock.getChannelPointer(ch), processBlock.getNumSamples());
+#if USE_SIMD
+                auto tmpBlock = strix::AudioBlock<vec> (tmp);
+#else
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp);
+#endif
+                setPreamp(inGain_);
+                strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
+                triode[0].process(processBlock);
+                if (*hiGain)
+                    triode[1].process(processBlock);
+                strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
+            } break;
+            case ProcessRampOff:
+            {
+                for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
+                    tmp.copyFrom(ch, 0, processBlock.getChannelPointer(ch), processBlock.getNumSamples());
+#if USE_SIMD
+                auto tmpBlock = strix::AudioBlock<vec> (tmp);
+#else
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp);
+#endif
+                setPreamp(inGain_);
+                strix::SmoothGain<T>::applySmoothGain(processBlock, gain_raw, lastInGain);
+                triode[0].process(tmpBlock);
+                if (*hiGain)
+                    triode[1].process(tmpBlock);
+                strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
+            } break;
             }
 
             if (ampAutoGain_)
                 autoGain *= 1.0 / std::sqrt(std::sqrt(gain_raw * gain_raw * gain_raw));
 
-            processFilters(processBlock);
+            FloatType autoGain_m = 1.0;
+            processFilters(processBlock, autoGain_m);
 
             if (ampAutoGain_)
                 autoGain *= autoGain_m;
 
-            if (*outGain > 0.f)
+            switch (powerampTubeState)
             {
-                setPoweramp(/* *outGain */);
+            case Bypassed:
+                break;
+            case ProcessNormal:
+                setPoweramp();
                 strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
                 pentode.processBlockClassB(processBlock);
+                break;
+            case ProcessRampOn:
+            {
+                for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
+                    tmp.copyFrom(ch, 0, processBlock.getChannelPointer(ch), processBlock.getNumSamples());
+#if USE_SIMD
+                auto tmpBlock = strix::AudioBlock<vec> (tmp);
+#else
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp);
+#endif
+                setPoweramp();
+                strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
+                pentode.processBlockClassB(processBlock);
+                strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
+            } break;
+            case ProcessRampOff:
+            {
+                for (size_t ch = 0; ch < processBlock.getNumChannels(); ++ch)
+                    tmp.copyFrom(ch, 0, processBlock.getChannelPointer(ch), processBlock.getNumSamples());
+#if USE_SIMD
+                auto tmpBlock = strix::AudioBlock<vec> (tmp);
+#else
+                auto tmpBlock = dsp::AudioBlock<FloatType> (tmp);
+#endif
+                setPoweramp();
+                strix::SmoothGain<T>::applySmoothGain(processBlock, out_raw, lastOutGain);
+                pentode.processBlockClassB(tmpBlock);
+                strix::Crossfade::process(tmpBlock, processBlock, processBlock.getNumSamples());
+            } break;
             }
 
             if (ampAutoGain_)
                 autoGain *= 1.0 / out_raw;
 
+            strix::SmoothGain<T>::applySmoothGain(processBlock, autoGain, lastAutoGain);
 #if USE_SIMD
             simd.deinterleaveBlock(processBlock);
 #endif
-            block.multiplyBy(autoGain);
         }
+
+        SmoothedValue<float> sm_low, sm_mid, sm_hi;
 
     private:
         strix::ChoiceParameter *channelMode;
@@ -965,17 +1028,66 @@ namespace Processors
 
         std::atomic<bool> updateFilters = false;
 
-        double autoGain_m = 1.0;
+        double lastAutoGain = 1.0;
+        #if USE_SIMD
+        strix::Buffer<T> tmp;
+        #else
+        AudioBuffer<T> tmp;
+        #endif
+
+        enum TubeState
+        {
+            Bypassed,
+            ProcessNormal,
+            ProcessRampOn,
+            ProcessRampOff
+        };
+        TubeState preampTubeState, powerampTubeState;
 
         template <class Block>
-        void processFilters(Block &block)
+        void processFilters(Block &block, double &autoGain_m)
         {
-            if (updateFilters)
+            if (updateFilters) // if channel mode changed
             {
                 setFilters(0, lowGain);
                 setFilters(1, midGain);
                 setFilters(2, trebGain);
                 updateFilters = false;
+            }
+
+            SmoothedValue<float> *smoothers [3] { &sm_low, &sm_mid, &sm_hi };
+            uint8 bitmask = 0;
+            for (size_t i = 0; i < 3; ++i)
+            {
+                if (smoothers[i]->isSmoothing())
+                    bitmask |= 1 << i;
+            }
+
+            if (bitmask > 0)
+            {
+                for (size_t i = 0; i < block.getNumSamples(); ++i)
+                {
+                    // set all filters that need update
+                    int bit = 1;
+                    for (int n = 0; n < 3; ++n)
+                    {
+                        if (bit & bitmask)
+                            setFilters(n, smoothers[n]->getNextValue());
+
+                        bit <<= 1;
+                    }
+
+                    for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+                    {
+                        auto in = block.getChannelPointer(ch);
+
+                        in[i] = low.processSample(in[i]);
+                        in[i] = mid.processSample(in[i]);
+                        in[i] = hi.processSample(in[i]);
+                    }
+                }
+                setEQAutoGain(autoGain_m);
+                return;
             }
 
             for (auto ch = 0; ch < block.getNumChannels(); ++ch)
@@ -989,11 +1101,11 @@ namespace Processors
                     in[i] = hi.processSample(in[i]);
                 }
             }
-            setEQAutoGain();
+            setEQAutoGain(autoGain_m);
         }
 
         // get magnitude at some specific frequencies and take the reciprocal
-        void setEQAutoGain()
+        void setEQAutoGain(double &autoGain_m)
         {
             autoGain_m = 1.0;
 

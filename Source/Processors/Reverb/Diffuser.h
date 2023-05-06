@@ -3,6 +3,12 @@
  * Class for processing multi-channel diffusion
  */
 
+#pragma once
+
+#include <stdint.h>
+#include <JuceHeader.h>
+#include "MixMatrix.h"
+
 template <typename T, int channels>
 struct Diffuser
 {
@@ -38,7 +44,7 @@ struct Diffuser
             double minDelay = delayRangeSamples * i / channels;
             double maxDelay = delayRangeSamples * (i + 1) / channels;
             d.prepare(spec);
-            d.setMaximumDelayInSamples(44100);
+            d.setMaximumDelayInSamples(SR);
             d.setDelay((minDelay + maxDelay) / 2.0); // just use the average!
             invert.push_back(rand.nextInt() % 2 == 0);
             ++i;
@@ -88,18 +94,16 @@ struct Diffuser
         // }
         for (auto i = 0; i < block.getNumSamples(); ++i)
         {
-            std::vector<T> vec;
-
             for (auto ch = 0; ch < channels; ++ch)
             {
                 delay[ch].pushSample(0, block.getSample(ch, i));
-                vec.push_back(delay[ch].popSample(0));
+                delayed[ch] = (delay[ch].popSample(0));
             }
 
-            MixMatrix<channels>::processHadamardMatrix(vec.data());
+            MixMatrix<channels>::processHadamardMatrix(delayed.data());
 
             for (auto ch = 0; ch < channels; ++ch)
-                block.getChannelPointer(ch)[i] = vec[ch];
+                block.getChannelPointer(ch)[i] = delayed[ch];
         }
         for (auto ch = 0; ch < channels; ++ch)
             if (invert[ch])
@@ -113,18 +117,16 @@ struct Diffuser
         {
             changeDelay();
 
-            std::vector<T> vec;
-
             for (auto ch = 0; ch < channels; ++ch)
             {
                 delay[ch].pushSample(0, block.getSample(ch, i));
-                vec.push_back(delay[ch].popSample(0));
+                delayed[ch] = (delay[ch].popSample(0));
             }
 
-            MixMatrix<channels>::processHadamardMatrix(vec.data());
+            MixMatrix<channels>::processHadamardMatrix(delayed.data());
 
             for (auto ch = 0; ch < channels; ++ch)
-                block.getChannelPointer(ch)[i] = vec[ch];
+                block.getChannelPointer(ch)[i] = delayed[ch];
         }
         for (auto ch = 0; ch < channels; ++ch)
             if (invert[ch])
@@ -136,6 +138,7 @@ struct Diffuser
 private:
     std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>, channels> delay;
     std::array<int, channels> randDelay;
+    std::array<T, channels> delayed;
     const int64_t seed;
     std::vector<bool> invert;
     double SR = 44100.0;

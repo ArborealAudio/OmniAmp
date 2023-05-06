@@ -21,7 +21,7 @@ struct EnhancerComponent : Component
         }
 
         lfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "lfEnhance", lfEnhance);
-        lfEnhance.setTooltip("A saturating, low-end boost after the amp and before the cab and reverb. The frequency is calibrated depending on the amp's mode.");
+        lfEnhance.setTooltip("A saturating, low-end boost after the amp, cab, & reverb. The frequency is calibrated depending on the amp's mode.");
         lfEnhance.setLabel("LF Enhancer");
         lfEnhance.setDefaultValue(0.f);
         lfEnhance.setValueToStringFunction(percent);
@@ -38,7 +38,7 @@ struct EnhancerComponent : Component
         lfInvert.setTooltip("Invert the low frequency enhancer. At low levels, this works more like a resonant high-pass, while at higher levels it adds more of a bell-shaped boost.");
 
         hfAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "hfEnhance", hfEnhance);
-        hfEnhance.setTooltip("A saturating, hi-end boost after the amp and before the cab and reverb.");
+        hfEnhance.setTooltip("A saturating, hi-end boost after the amp, cab, & reverb.");
         hfEnhance.setLabel("HF Enhancer");
         hfEnhance.setDefaultValue(0.f);
         hfEnhance.setValueToStringFunction(percent);

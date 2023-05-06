@@ -1,5 +1,5 @@
 add_subdirectory(Reverb)
-target_sources(Gamma
+target_sources(OmniAmp
 PRIVATE
     Comp.h
     PreFilters.h
