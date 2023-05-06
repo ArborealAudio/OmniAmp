@@ -121,13 +121,13 @@ struct PreComponent : Component
     void paint(Graphics &g) override
     {
         auto bounds = getLocalBounds().reduced(3).toFloat();
-        g.setColour(Colours::antiquewhite);
+        g.setColour(Colours::grey);
         g.drawRoundedRectangle(bounds, 5.f, 3.f);
 
         if (!minimized)
         {
             float div = doubler.getRight() + (grMeter.getX() - doubler.getRight()) / 2;
-            g.fillRoundedRectangle(div - 1.5f, 5.f, 3.f, getHeight() - 10.f, 3.f);
+            g.fillRoundedRectangle(div - 1.5f, 8.f, 3.f, getHeight() - 16.f, 3.f);
         }
     }
 

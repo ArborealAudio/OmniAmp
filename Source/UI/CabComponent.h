@@ -3,6 +3,8 @@
 #pragma once
 #include <JuceHeader.h>
 
+#define CAB_BACKGROUND_COLOR 0xff256161
+
 struct CabsComponent : Component, AudioProcessorValueTreeState::Listener, Timer
 {
 private:
@@ -191,10 +193,10 @@ public:
     void paint(Graphics &g) override
     {
         auto bounds = getLocalBounds().reduced(3).toFloat();
-        g.setColour(Colours::beige);
+        g.setColour(Colour(CAB_BACKGROUND_COLOR).withAlpha(0.2f));
+        g.fillRoundedRectangle(bounds, 5.f);
+        g.setColour(Colour(CAB_BACKGROUND_COLOR));
         g.drawRoundedRectangle(bounds, 5.f, 3.f);
-
-        g.setColour(Colours::darkgrey);
 
         if (cab_img)
             cab_img->drawWithin(g, cabBounds, RectanglePlacement::centred, 1.f);
@@ -215,18 +217,22 @@ public:
             cab_img = Drawable::createFromImageData(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize);
             // cab_img->replaceColour(Colours::transparentBlack, Colours::olivedrab.withAlpha(0.5f));
             cab_img->replaceColour(Colours::transparentBlack, Colour(LIGHT_GREEN));
+            menu.lnf.backgroundColor = Colour(LIGHT_GREEN).withAlpha(0.5f);
             break;
         case 2:
             cab_img = Drawable::createFromImageData(BinaryData::_4x12_svg, BinaryData::_4x12_svgSize);
             // cab_img->replaceColour(Colours::transparentBlack, Colours::cadetblue.withAlpha(0.5f));
             cab_img->replaceColour(Colours::transparentBlack, Colour(LIGHT_BLUE));
+            menu.lnf.backgroundColor = Colour(LIGHT_BLUE).withAlpha(0.5f);
             break;
         case 3:
             cab_img = Drawable::createFromImageData(BinaryData::_6x10_svg, BinaryData::_6x10_svgSize);
             // cab_img->replaceColour(Colours::transparentBlack, Colours::chocolate.withAlpha(0.5f));
             cab_img->replaceColour(Colours::transparentBlack, Colour(DULL_RED));
+            menu.lnf.backgroundColor = Colour(DULL_RED).withAlpha(0.5f);
             break;
         default:
+            menu.lnf.backgroundColor = Colours::transparentBlack;
             cab_img = nullptr;
             break;
         }

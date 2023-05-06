@@ -60,6 +60,8 @@ public:
 
     void paint(Graphics &g) override
     {
+        g.setColour(Colour(REVERB_COLOR).withAlpha(0.2f));
+        g.fillRoundedRectangle(getLocalBounds().reduced(3).toFloat(), 5.f);
         g.setColour(Colour(REVERB_COLOR));
         g.drawRoundedRectangle(getLocalBounds().reduced(3).toFloat(), 5.f, 3.f);
         reverb.lnf.backgroundColor = reverb.getSelectedId() > 1 ? Colour(REVERB_COLOR) : Colours::transparentBlack;
