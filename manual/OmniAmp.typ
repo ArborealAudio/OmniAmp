@@ -26,7 +26,7 @@ Arboreal Audio presents:
 #align(center)[
 	#image(
 		"UI_full.png",
-		width: 70%
+		width: 100%
 	)
 ]
 #linebreak()
@@ -224,7 +224,7 @@ Enables auto-gain compensation for the enhancer filter, which will reduce the am
 
 A pair of 6db/octave high-pass and low-pass filters, processed after the enhancer filters
 
-#pagebreak()
+#linebreak()
 == Top Controls
 
 1. *Input:* An input gain before all processing, between -12dB and +12dB, useful for adding or decresing distortion or compression.
@@ -239,6 +239,7 @@ A pair of 6db/octave high-pass and low-pass filters, processed after the enhance
 
 6. *Byp:* A global latency-compensated bypass control
 
+#pagebreak()
 == Menu
 
 In the upper right is a popup menu for maintaining some of OmniAmp's more advanced features:
@@ -257,6 +258,7 @@ In the upper right is a popup menu for maintaining some of OmniAmp's more advanc
 
 - *Activate:* If you haven't activated OmniAmp yet, you can click this to bring up the activation prompt and enter your license.
 
+#linebreak()
 == Acknowledgements
 
 Programming, DSP, and design: Alex Riccio
