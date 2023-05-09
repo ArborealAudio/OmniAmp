@@ -13,6 +13,9 @@ class ReverbComponent : public Component
     ChoiceMenu reverb;
     std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> reverbAttach;
 
+    LightButton reverbBright;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> brightAttach;
+
     Label title;
 
 public:
@@ -53,6 +56,11 @@ public:
         addAndMakeVisible(reverb);
         reverbAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(v, "reverbType", reverb);
 
+        addAndMakeVisible(reverbBright);
+        reverbBright.setButtonText("Bright");
+        reverbBright.setTooltip("Switch on Bright mode for the reverb, which lets through more high frequencies.");
+        brightAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(v, "reverbBright", reverbBright);
+
         addAndMakeVisible(title);
         title.setText("Reverb", NotificationType::dontSendNotification);
         title.setJustificationType(Justification::centred);
@@ -83,6 +91,9 @@ public:
         reverbDecay.setBounds(decayBounds);
         predelay.setBounds(predelayBounds);
 
-        reverb.setBounds(b.withSizeKeepingCentre(b.getWidth() * 0.75f, b.getHeight() * 0.66f));
+        // reverb.setBounds(b.withSizeKeepingCentre(b.getWidth() * 0.75f, b.getHeight() * 0.66f));
+        reverb.setBounds(b.removeFromLeft(b.getWidth() * 0.65f).reduced(0, b.getHeight() * 0.155f));
+        reverbBright.setBounds(b.reduced(12, 15));
+        reverbBright.lnf.cornerRadius = reverbBright.getHeight() * 0.25f;
     }
 };
