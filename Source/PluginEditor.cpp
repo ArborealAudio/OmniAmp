@@ -187,6 +187,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
                         p.checkedUpdate = true;
                         dl.changes = dlResult.changes;
                         strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
+                        // PROBLEM: dl object may not exist by the time msg thread runs this
                         MessageManager::callAsync([&]
                                                     { dl.setVisible(dlResult.updateAvailable); });
         });
