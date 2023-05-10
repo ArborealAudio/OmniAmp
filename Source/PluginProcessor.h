@@ -85,8 +85,9 @@ public:
 
     AudioProcessorValueTreeState apvts;
 
-    double lastSampleRate = 0.0, SR = 0.0;
-    int maxBlockSize = 0;
+    // some default values
+    double lastSampleRate = 44100.0, SR = 44100.0;
+    int maxBlockSize = 128;
 
     strix::VolumeMeterSource &getActiveGRSource()
     {
