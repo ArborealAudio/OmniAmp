@@ -15,7 +15,7 @@ static strix::UpdateResult dlResult;
 
 //==============================================================================
 
-class GammaAudioProcessorEditor : public AudioProcessorEditor
+class GammaAudioProcessorEditor : public AudioProcessorEditor, Timer
 {
 public:
     GammaAudioProcessorEditor(GammaAudioProcessor &);
@@ -46,6 +46,14 @@ public:
         }
         else
             AudioProcessorEditor::mouseDown(event);
+    }
+
+    void timerCallback() override
+    {
+        if (!dl.shouldBeHidden)
+            dl.setVisible(dlResult.updateAvailable);
+        if (lThread && !lThread->working)
+            lThread.reset(nullptr);
     }
 
     void resetWindowSize();
