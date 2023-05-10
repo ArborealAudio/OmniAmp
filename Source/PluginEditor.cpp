@@ -184,22 +184,14 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
                 false,
                 strix::readConfigFile(CONFIG_PATH, "beta_update"),
                 strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
-                        p.checkedUpdate = true;
-                        dl.changes = dlResult.changes;
-                        strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
-                        // PROBLEM: dl object may not exist by the time msg thread runs this
-                        MessageManager::callAsync([&]
-                                                    { dl.setVisible(dlResult.updateAvailable); });
+                p.checkedUpdate = true;
+                dl.changes = dlResult.changes;
+                dl.shouldBeHidden = false;
+                strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
         });
     }
 
-    if (lThread)
-    {
-        lThread->onLoopExit = [&] { 
-            MessageManager::callAsync([&]
-            {lThread.reset(nullptr);});
-        };
-    }
+    startTimerHz(1);
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
@@ -235,6 +227,7 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
     opengl.detach();
 #endif
     removeMouseListener(this);
+    stopTimer();
 }
 
 void GammaAudioProcessorEditor::resetWindowSize()
