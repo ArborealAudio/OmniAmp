@@ -24,7 +24,7 @@ struct OptoComp
 
         grSource.prepare(spec, 0.01f);
 
-        grData.setSize(spec.numChannels, spec.maximumBlockSize);
+        grData.setSize(spec.numChannels, spec.maximumBlockSize, false, false, true);
 
         switch (type)
         {
