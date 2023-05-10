@@ -162,7 +162,6 @@ public:
         apvts.removeParameterListener("cabMicPosX", this);
         apvts.removeParameterListener("cabMicPosZ", this);
         stopTimer();
-        cabType = nullptr;
     }
 
     void parameterChanged(const String &paramID, float) override
