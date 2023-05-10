@@ -42,7 +42,7 @@ GammaAudioProcessor::GammaAudioProcessor()
     lfEnhance = apvts.getRawParameterValue("lfEnhance");
 
     apvts.addParameterListener("gainLink", this);
-    // apvts.addParameterListener("gate", this);
+    // // apvts.addParameterListener("gate", this);
     apvts.addParameterListener("treble", this);
     apvts.addParameterListener("mid", this);
     apvts.addParameterListener("bass", this);
@@ -58,7 +58,7 @@ GammaAudioProcessor::GammaAudioProcessor()
 GammaAudioProcessor::~GammaAudioProcessor()
 {
     apvts.removeParameterListener("gainLink", this);
-    // apvts.removeParameterListener("gate", this);
+    // // apvts.removeParameterListener("gate", this);
     apvts.removeParameterListener("treble", this);
     apvts.removeParameterListener("mid", this);
     apvts.removeParameterListener("bass", this);
@@ -264,15 +264,21 @@ void GammaAudioProcessor::parameterChanged(const String &parameterID, float newV
         if ((bool)newValue)
         {
             /*if we switched Link on, output = input + output*/
-            apvts.getParameterAsValue("outputGain").setValue(apvts.getRawParameterValue("outputGain")->load() + apvts.getRawParameterValue("inputGain")->load());
+            auto adjustedGain = *inGain + *outGain;
+            auto outGain_p = apvts.getParameter("outputGain");
+            outGain_p->setValueNotifyingHost(outGain_p->convertTo0to1(adjustedGain));
+            // apvts.getParameterAsValue("outputGain").setValue(apvts.getRawParameterValue("outputGain")->load() + apvts.getRawParameterValue("inputGain")->load());
         }
         else
         {
             /*if we switched Link off, output = output - input*/
-            apvts.getParameterAsValue("outputGain").setValue(apvts.getRawParameterValue("outputGain")->load() - apvts.getRawParameterValue("inputGain")->load());
+            auto adjustedGain = *outGain - *inGain;
+            auto outGain_p = apvts.getParameter("outputGain");
+            outGain_p->setValueNotifyingHost(outGain_p->convertTo0to1(adjustedGain));
+            // apvts.getParameterAsValue("outputGain").setValue(apvts.getRawParameterValue("outputGain")->load() - apvts.getRawParameterValue("inputGain")->load());
         }
     }
-    else if (parameterID == "hq" || parameterID == "renderHQ")
+    else if (parameterID == "hq")
     {
         setOversampleIndex();
         auto ovs_fac = oversample[os_index].getOversamplingFactor();
