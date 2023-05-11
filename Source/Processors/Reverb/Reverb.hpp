@@ -128,7 +128,10 @@ public:
 
         feedback.prepare(spec);
 
-        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(8500.0, spec.sampleRate, 2);
+        auto coeffs = dsp::FilterDesign<double>::designIIRLowpassHighOrderButterworthMethod(8500.0 < spec.sampleRate * 0.5f
+                                                                                            ? 8500.0
+                                                                                            : spec.sampleRate * 0.5f * 0.995f,
+                                                                                            spec.sampleRate, 2);
 
         lp[0].clear();
         lp[1].clear();
@@ -179,12 +182,20 @@ public:
             mix.pushDrySamples(dsp::AudioBlock<double>(buf).getSingleChannelBlock(0).getSubBlock(0, numSamples));
 
         splitBuf.clear();
-        wetBuf.makeCopyOf(buf, true);
+        for (size_t ch = 0; ch < buf.getNumChannels(); ++ch)
+            FloatVectorOperations::copy(wetBuf.getWritePointer(ch), buf.getReadPointer(ch), numSamples);
+
+        // need a sub-buffer which is numSamples-sized (wetBuf may be larger)
+        // it also must be stereo to accomadate the actual reverb algorithm
+        AudioBuffer<double> wetSubBuf (wetBuf.getArrayOfWritePointers(), 2, numSamples);
+        // copy L->R if input buffer is mono
+        if (buf.getNumChannels() < 2)
+            wetSubBuf.copyFrom(1, 0, wetSubBuf.getReadPointer(0), numSamples);
 
         if (!params.bright)
-            dampenBuffer(wetBuf);
+            dampenBuffer(wetSubBuf);
 
-        dsp::AudioBlock<double> dsBlock (wetBuf);
+        dsp::AudioBlock<double> dsBlock (wetSubBuf);
         if (numChannels > 1)
             dsBlock = dsBlock.getSubBlock(0, numSamples);
         else
@@ -195,7 +206,7 @@ public:
         else
             preDelay.process(dsp::ProcessContextReplacing<double>(dsBlock));
 
-        upMix.stereoToMulti(wetBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), numSamples);
+        upMix.stereoToMulti(wetSubBuf.getArrayOfReadPointers(), splitBuf.getArrayOfWritePointers(), numSamples);
 
         dsp::AudioBlock<double> block(splitBuf);
         block = block.getSubBlock(0, numSamples);
@@ -214,18 +225,18 @@ public:
 
         block.add(dsp::AudioBlock<double>(erBuf).getSubBlock(0, numSamples));
 
-        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), wetBuf.getArrayOfWritePointers(), numSamples);
+        upMix.multiToStereo(splitBuf.getArrayOfReadPointers(), wetSubBuf.getArrayOfWritePointers(), numSamples);
 
-        wetBuf.applyGain(upMix.scalingFactor1());
+        wetSubBuf.applyGain(upMix.scalingFactor1());
 
         mix.setWetMixProportion(amt);
         if (numChannels > 1)
-            mix.mixWetSamples(dsp::AudioBlock<double>(wetBuf).getSubBlock(0, numSamples));
+            mix.mixWetSamples(dsp::AudioBlock<double>(wetSubBuf).getSubBlock(0, numSamples));
         else
-            mix.mixWetSamples(dsp::AudioBlock<double>(wetBuf).getSingleChannelBlock(0).getSubBlock(0, numSamples));
+            mix.mixWetSamples(dsp::AudioBlock<double>(wetSubBuf).getSingleChannelBlock(0).getSubBlock(0, numSamples));
 
         for (size_t ch = 0; ch < buf.getNumChannels(); ++ch)
-            FloatVectorOperations::copy(buf.getWritePointer(ch), wetBuf.getReadPointer(ch), numSamples);
+            FloatVectorOperations::copy(buf.getWritePointer(ch), wetSubBuf.getReadPointer(ch), numSamples);
     }
     
 private:
