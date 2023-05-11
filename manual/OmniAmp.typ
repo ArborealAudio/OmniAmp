@@ -18,6 +18,11 @@
 #set align(center)
 Arboreal Audio presents:
 
+#set text(
+	font: "Sora",
+	size: 16pt
+)
+
 = OmniAmp
 == The all-in-one amplifier
  
@@ -31,11 +36,15 @@ Arboreal Audio presents:
 ]
 #linebreak()
 #set align(left)
+#set text(
+	font: "Liberation Sans",
+	size: 14pt
+)
 OmniAmp is a robust audio tool meant to be used on any type of sound source. With its full feature set, this can be the only plugin in your signal chain.
 
-OmniAmp was designed to take the layout of a guitar amplifier and port it to a universal context, with some added features to keep you contained in one interface for the bulk of your mixing.
+It's designed to take the layout of a guitar amplifier and port it to a universal context, with some added features to keep you contained in one interface for the bulk of your mixing.
 
-#pagebreak()
+#linebreak()
 
 == Modes
 
@@ -186,6 +195,8 @@ There are two algorithmic reverbs:
 - *Hall:* A longer, richer reverb, perfect for adding a grander scope to your sound.
 
 You also have *Predelay, Decay,* and *Size* controls for customizing the response more finely. Increasing the size changes the frequency response and early reflection level of the reverb, making things a bit darker and tending towards late reflections, so you can use it in conjunction with the decay control to fine-tune how the space feels.
+
+Last, the *Bright* control gives you more shimmering top-end in the reverb. With this off, frequencies above 8.5kHz will be rolled off with a 2nd-order filter.
 
 #linebreak()
 == Post Section
