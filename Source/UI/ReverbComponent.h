@@ -92,7 +92,7 @@ public:
         predelay.setBounds(predelayBounds);
 
         // reverb.setBounds(b.withSizeKeepingCentre(b.getWidth() * 0.75f, b.getHeight() * 0.66f));
-        reverb.setBounds(b.removeFromLeft(b.getWidth() * 0.65f).reduced(0, b.getHeight() * 0.155f));
+        reverb.setBounds(b.removeFromLeft(b.getWidth() * 0.65f).reduced(0, 15));
         reverbBright.setBounds(b.reduced(12, 15));
         reverbBright.lnf.cornerRadius = reverbBright.getHeight() * 0.25f;
     }
