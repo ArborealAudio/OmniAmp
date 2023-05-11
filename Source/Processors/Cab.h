@@ -280,6 +280,7 @@ public:
 
         apBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
 
+        fdn.prepare(spec);
         setCabType();
 
         hp.prepare(spec);
@@ -296,8 +297,6 @@ public:
         ap.setResonance(0.5);
         ap.prepare(spec);
         ap.setType(strix::FilterType::allpass);
-
-        fdn.prepare(spec);
     }
 
     void reset()
