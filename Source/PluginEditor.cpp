@@ -13,8 +13,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       enhancers(p.apvts),
       menu(p.apvts, p.isUnlocked),
       presetMenu(p.apvts),
-      dl("~/Downloads/"
-         DL_BIN),
+      dl(DL_BIN),
       activation(p.trialRemaining_ms)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
