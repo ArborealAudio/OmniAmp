@@ -62,7 +62,7 @@ Four different, custom amp models.
 
 - *Moonbeam* is a darker amp with less headroom and heavier distortion, good for metal or heavier rock rhythm tones.
 
-- *XRay* an aggressive, midrange-focused amp that bridges the gap between **OmniAmpRay** and **Moonbeam**. Has a fair amount of distortion and cuts through quite well.
+- *XRay* an aggressive, midrange-focused amp that bridges the gap between **GammaRay** and **Moonbeam**. Has a fair amount of distortion and cuts through quite well.
 
 === II. Bass
 
