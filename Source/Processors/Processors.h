@@ -843,7 +843,7 @@ namespace Processors
                 if (currentType == Modern)
                     *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
                 else
-                    *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 300.0, 0.66, gain);
+                    *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 300.0, 0.5, gain);
                 break;
             case 1:
             {
@@ -853,7 +853,7 @@ namespace Processors
                 if (currentType == Modern)
                     *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
                 else
-                    *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 800.0, Q, gain);
+                    *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 800.0, Q * 0.75, gain);
             }
             break;
             case 2:
@@ -861,7 +861,7 @@ namespace Processors
                 if (currentType == Modern)
                     *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
                 else {
-                    auto freq = 6500.0;
+                    auto freq = 3500.0;
                     if (freq > SR * 0.5)
                         freq = SR * 0.5;
                     *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq, 0.5, gain);
