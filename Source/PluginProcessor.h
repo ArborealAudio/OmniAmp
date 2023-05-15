@@ -441,8 +441,15 @@ private:
             FileInputStream read(file);
             if (!read.openedOk())
                 return;
-            auto license = read.readString();
+            auto license = read.readNextLine();
+            auto machineID = read.readNextLine();
+            DBG("LICENSE: " << license);
+            DBG("ID: " << machineID);
             isUnlocked = license.isNotEmpty();
+            if (isUnlocked)
+            {
+                isUnlocked = strcmp(SystemStats::getUniqueDeviceID().toRawUTF8(), machineID.toRawUTF8()) == 0;
+            }
         }
 
         if (isUnlocked)

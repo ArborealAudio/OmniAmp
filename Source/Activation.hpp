@@ -218,6 +218,8 @@ private:
         if (!license.existsAsFile())
             license.create();
 
-        license.replaceWithText(String(key));
+        license.appendText(String(key));
+        license.appendText("\n");
+        license.appendText(SystemStats::getUniqueDeviceID());
     }
 };
