@@ -40,9 +40,9 @@ Arboreal Audio presents:
 	font: "Liberation Sans",
 	size: 14pt
 )
-OmniAmp is a robust audio tool meant to be used on any type of sound source. With its full feature set, this can be the only plugin in your signal chain.
+OmniAmp is a robust audio tool meant to be used on any type of sound source. With its full feature set, you can accomplish a broad range of mixing tasks in the same interface.
 
-It's designed to take the layout of a guitar amplifier and port it to a universal context, with some added features to keep you contained in one interface for the bulk of your mixing.
+Its purpose is to open the doors to what an "amplifier" plugin can be---to push the limits of what's possible in design and feature set.
 
 #linebreak()
 
@@ -250,7 +250,7 @@ A pair of 6db/octave high-pass and low-pass filters, processed after the enhance
 
 6. *Byp:* A global latency-compensated bypass control
 
-#pagebreak()
+#linebreak()
 == Menu
 
 In the upper right is a popup menu for maintaining some of OmniAmp's more advanced features:
@@ -269,7 +269,7 @@ In the upper right is a popup menu for maintaining some of OmniAmp's more advanc
 
 - *Activate:* If you haven't activated OmniAmp yet, you can click this to bring up the activation prompt and enter your license.
 
-#linebreak()
+#pagebreak()
 == Acknowledgements
 
 Programming, DSP, and design: Alex Riccio
