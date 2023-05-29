@@ -143,7 +143,7 @@ This uses short delay lines to add width to a sound that may be narrow or even m
 
 === Opto Comp
 
-An opto-style compressor, inspired by but in no way modelled after one of the earlier Boss compressor pedals.
+An opto-style, feedback compressor, inspired by but in no way modelled after one of the earlier Boss compressor pedals.
 
 All you *really* need to know is that the higher the knob goes = more compression. At 0 it's fully bypassed.
 
@@ -295,11 +295,7 @@ This plugin would not have been possible without the research and open-source co
 
 *And a huge thank-you to the beta testers:*
 
-Jatin Chowdhury
-
-Florian Mrugalla
-
-High Harmonics 
+Jatin, Florian, High Harmonics, Dom 
 
 === #super[1] BSD-3-Clause License
 
