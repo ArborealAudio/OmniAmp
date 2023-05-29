@@ -299,7 +299,7 @@ Jatin Chowdhury
 
 Florian Mrugalla
 
-***REMOVED*** 
+High Harmonics 
 
 === #super[1] BSD-3-Clause License
 
