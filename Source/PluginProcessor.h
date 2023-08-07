@@ -10,20 +10,15 @@
 
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
-    #if NDEBUG
-        #define USE_SIMD 1
-    #else
-        #ifndef PRODUCTION_BUILD // make sure DBG builds are labeled non-production
-            #define PRODUCTION_BUILD 0
-        #endif
+    #define USE_SIMD 1
+    #if DEBUG
+        #define PRODUCTION_BUILD 0
     #endif
-#endif
-#ifndef PRODUCTION_BUILD // use this to control production build parameter
-    #define PRODUCTION_BUILD 1
 #endif
 
 #include <JuceHeader.h>
 
+#include <Arbor_modules.h>
 #include <chowdsp_wdf/chowdsp_wdf.h>
 #include "Processors/Processors.h"
 #include "Presets/PresetManager.h"
