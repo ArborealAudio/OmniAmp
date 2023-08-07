@@ -6,16 +6,18 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9 CACHE INTERNAL "")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (PRODUCTION_BUILD)
-    message("Setting PRODUCTION_BUILD")
     if (WIN32)
         set(CMAKE_SYSTEM_VERSION 7 CACHE INTERNAL "")
     elseif(APPLE)
         set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE INTERNAL "")
     endif()
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "")
+else()
+    set(PRODUCTION_BUILD OFF)
 endif()
+message("PRODUCTION_BUILD: ${PRODUCTION_BUILD}")
 
-project(OmniAmp VERSION 1.0)
+project(OmniAmp VERSION 1.1)
 
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
@@ -51,10 +53,10 @@ clap_juce_extensions_plugin(TARGET OmniAmp
     CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 32
     CLAP_FEATURES audio-effect distortion reverb EQ)
 
-if (BETA_BUILD)
-    message("Setting BETA_BUILD")
-    target_compile_definitions(OmniAmp PUBLIC BETA_BUILD=1)
+if (NOT BETA_BUILD)
+    set(BETA_BUILD OFF)
 endif()
+message("BETA_BUILD: ${BETA_BUILD}")
 
 juce_generate_juce_header(OmniAmp)
 
@@ -66,7 +68,9 @@ target_sources(OmniAmp
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
-target_include_directories(OmniAmp PRIVATE "modules/chowdsp_wdf/include")
+target_include_directories(OmniAmp PRIVATE
+    "modules/chowdsp_wdf/include"
+    "modules/Arbor_modules/")
 
 juce_add_modules(
     "modules/gin/modules/gin"
@@ -75,6 +79,8 @@ juce_add_modules(
 
 target_compile_definitions(OmniAmp
     PUBLIC
+        PRODUCTION_BUILD=${PRODUCTION_BUILD}
+        BETA_BUILD=${BETA_BUILD}
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=1
         JUCE_VST3_CAN_REPLACE_VST2=0
@@ -107,8 +113,9 @@ target_link_libraries(OmniAmp
         juce::juce_dsp
         gin
         gin_graphics
-        Arbor_modules
-)
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags)
 
 if (NOT APPLE)
 target_link_libraries(OmniAmp
