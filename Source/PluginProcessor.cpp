@@ -413,7 +413,7 @@ AudioProcessorValueTreeState::ParameterLayout GammaAudioProcessor::createParams(
     params.emplace_back(std::make_unique<cParam>(ParameterID("mode", 1), "Mode", StringArray{"Guitar", "Bass", "Channel"}, 2));
     params.emplace_back(std::make_unique<cParam>(ParameterID("guitarMode", 1), "Guitar Amp Type", StringArray{"GammaRay", "Sunbeam", "Moonbeam", "XRay"}, 0));
     params.emplace_back(std::make_unique<cParam>(ParameterID("bassMode", 1), "Bass Amp Type", StringArray{"Cobalt", "Emerald", "Quartz"}, 0));
-    params.emplace_back(std::make_unique<cParam>(ParameterID("channelMode", 1), "Channel Strip", StringArray{"Modern", "Vintage"}, 0));
+    params.emplace_back(std::make_unique<cParam>(ParameterID("channelMode", 1), "Channel Strip", StringArray{"Modern", "Vintage", "8802"}, 0));
     params.emplace_back(std::make_unique<bParam>(ParameterID("ampOn", 1), "Amp On/Off", true));
     params.emplace_back(std::make_unique<bParam>(ParameterID("ampAutoGain", 1), "Amp Auto Gain", false));
     params.emplace_back(std::make_unique<fParam>(ParameterID("preampGain", 1), "Preamp Gain", 0.f, 1.f, 0.f));
