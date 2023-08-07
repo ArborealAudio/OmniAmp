@@ -8,7 +8,7 @@ struct PreComponent : Component
 {
 
     PreComponent(strix::VolumeMeterSource &vs, AudioProcessorValueTreeState &v) : vts(v),
-                                                                                  grMeter(vs, strix::VolumeMeterComponent::Horizontal | strix::VolumeMeterComponent::Reduction | strix::VolumeMeterComponent::Background, vts.getRawParameterValue("comp"))
+                                                                                  grMeter(vs, strix::VolumeMeterComponent::Horizontal | strix::VolumeMeterComponent::Reduction | strix::VolumeMeterComponent::Background, 30, vts.getRawParameterValue("comp"))
     {
         for (auto c : getComps())
         {
