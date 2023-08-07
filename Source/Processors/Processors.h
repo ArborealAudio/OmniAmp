@@ -10,6 +10,9 @@
 
 #pragma once
 
+#include <cmath>
+#include <JuceHeader.h>
+
 namespace Processors
 {
     enum class ProcessorType
@@ -37,7 +40,8 @@ namespace Processors
     enum ChannelMode
     {
         Modern,
-        Vintage
+        Vintage,
+        Biamp,
     };
 
     /**
@@ -290,7 +294,7 @@ namespace Processors
             {
             case GammaRay:
                 for (auto &t : triode)
-                    t.type = TriodeType::VintageTube;
+                    t.setType(TriodeType::VintageTube);
                 triode[0].bias.first = 1.0;
                 triode[0].bias.second = 1.0;
                 triode[1].bias.first = 1.4;
@@ -302,14 +306,14 @@ namespace Processors
                 break;
             case Sunbeam:
                 for (auto &t : triode)
-                    t.type = TriodeType::ModernTube;
+                    t.setType(TriodeType::ModernTube);
                 triode[0].bias.first = 1.5;
                 triode[1].bias.first = 0.55;
                 triode[2].bias.first = 5.0;
                 break;
             case Moonbeam:
                 for (auto &t : triode)
-                    t.type = TriodeType::ModernTube;
+                    t.setType(TriodeType::ModernTube);
                 triode[0].bias.first = 1.0;
                 triode[1].bias.first = 2.18;
                 triode[2].bias.first = 4.0;
@@ -317,7 +321,7 @@ namespace Processors
                 break;
             case XRay:
                 for (auto &t : triode)
-                    t.type = TriodeType::VintageTube;
+                    t.setType(TriodeType::VintageTube);
                 triode[0].bias.first = 1.0;
                 triode[0].bias.second = 2.0;
                 triode[1].bias.first = 2.0;
@@ -544,7 +548,7 @@ namespace Processors
             {
             case Cobalt:
                 for (auto &t : triode)
-                    t.type = TriodeType::VintageTube;
+                    t.setType(TriodeType::VintageTube);
                 triode[1].bias.first = 4.0;
                 triode[1].bias.second = 4.0;
                 triode[2].bias.first = 2.0;
@@ -554,14 +558,14 @@ namespace Processors
                 break;
             case Emerald:
                 for (auto &t : triode)
-                    t.type = TriodeType::ModernTube;
+                    t.setType(TriodeType::ModernTube);
                 triode[1].bias.first = 12.0;
                 triode[2].bias.first = 3.0;
                 triode[3].bias.first = 6.0;
                 break;
             case Quartz:
                 for (auto &t : triode)
-                    t.type = TriodeType::ModernTube;
+                    t.setType(TriodeType::ModernTube);
                 triode[1].bias.first = 5.0;
                 triode[2].bias.first = 25.0;
                 triode[3].bias.first = 25.0;
@@ -771,24 +775,38 @@ namespace Processors
         {
             auto gain_raw = jmap(base, 1.f, 4.f);
             auto pre_lim = jmap(base, 0.5f, 1.f);
-            if (currentType == Vintage)
+            switch (currentType)
             {
-                triode[0].type = TriodeType::ChannelTube;
-                triode[1].type = TriodeType::ChannelTube;
+            case Vintage:
+                for (auto &t : triode)
+                    t.setType(TriodeType::ChannelTube);
                 setBias(0, pre_lim, 0.5f * gain_raw); // p: 1 - 2 n: 0.5 - 2
-            }
-            else
-            {
-                triode[0].type = TriodeType::ModernTube;
-                triode[1].type = TriodeType::ModernTube;
+                break;
+            case Modern:
+                for (auto &t : triode)
+                    t.setType(TriodeType::ModernTube);
                 setBias(0, pre_lim * 1.5f, pre_lim * 1.5f); // p & n: 1 - 2
+                break;
+            case Biamp:
+                for (auto &t : triode)
+                    t.setType(TriodeType::SolidState);
+                setBias(0, 0.9, -0.9);
+                break;
             }
             if (*hiGain)
             {
-                if (currentType == Vintage)
+                switch(currentType)
+                {
+                case Vintage:
                     setBias(1, pre_lim, gain_raw); // p: 0.5 - 1 n: 1 - 4
-                else
+                    break;
+                case Modern:
                     setBias(1, gain_raw, gain_raw); // p & n: 1 - 4
+                    break;
+                case Biamp:
+                    setBias(1, 0.5, -0.5);
+                    break;
+                }
             }
 #if 0
             setBias(0, JUCE_LIVE_CONSTANT(pre_lim),
@@ -800,17 +818,21 @@ namespace Processors
 
         inline void setPoweramp(/* float base */)
         {
-            if (currentType == Modern)
+            switch(currentType)
             {
+            case Modern:
                 pentode.setType(PentodeType::Nu);
                 pentode.bias.first = 1.2;
                 pentode.bias.second = 1.2;
-            }
-            else
-            {
+                break;
+            case Vintage:
                 pentode.setType(PentodeType::Classic);
                 pentode.bias.first = 12.0;
                 pentode.bias.second = 12.0;
+                break;
+            case Biamp:
+                pentode.setType(PentodeType::Transformer);
+                break;
             }
 #if 0
             pentode.bias.first = JUCE_LIVE_CONSTANT(bias);
@@ -834,39 +856,97 @@ namespace Processors
 
         void setFilters(int index, float newValue = 0.5f)
         {
-            auto gaindB = jmap(newValue, -6.f, 6.f);
-            auto gain = Decibels::decibelsToGain(gaindB);
+            float maxDb, minDb, gaindB, gain;
+            if (currentType == Biamp)
+            {
+                switch (index)
+                {
+                case 0:
+                    maxDb = 21.f;
+                    minDb = -18.5f;
+                    break;
+                case 1:
+                    maxDb = 10.f;
+                    minDb = -16.5f;
+                    break;
+                case 2:
+                    maxDb = 16.5f;
+                    minDb = -12.f;
+                    break;
+                }
+            }
+            else
+            {
+                maxDb = 6.f;
+                minDb = -6.f;
+            }
+            gaindB = jmap(newValue, minDb, maxDb);
+            gain = Decibels::decibelsToGain(gaindB);
             switch (index)
             {
             case 0:
                 lowGain = newValue;
-                if (currentType == Modern)
+                switch (currentType)
+                {
+                case Modern:
                     *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 250.0, 1.0, gain);
-                else
+                    break;
+                case Vintage:
                     *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 300.0, 0.5, gain);
+                    break;
+                case Biamp:
+                    *low.coefficients = dsp::IIR::ArrayCoefficients<double>::makeLowShelf(SR, 189.0, M_SQRT1_2 * 0.348, gain);
+                    break;
+                }
                 break;
             case 1:
             {
                 midGain = newValue;
                 double Q = 0.707;
                 Q *= 1.0 / gain;
-                if (currentType == Modern)
+                switch (currentType)
+                {
+                case Modern:
                     *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 900.0, Q, gain);
-                else
+                    break;
+                case Vintage:
                     *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 800.0, Q * 0.75, gain);
+                    break;
+                case Biamp:
+                    if (gain >= 1.0)
+                        *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 2900.0, M_SQRT1_2 * 0.6, gain);
+                    else
+                        *mid.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 2900.0, M_SQRT1_2 * 0.4, gain);
+                    break;
+                }
             }
             break;
             case 2:
                 trebGain = newValue;
-                if (currentType == Modern)
+                switch (currentType)
+                {
+                case Modern:
                     *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, 5000.0, 0.8, gain);
-                else {
+                    break;
+                case Vintage: {
                     auto freq = 3500.0;
                     if (freq > SR * 0.5)
                         freq = SR * 0.5;
                     *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makeHighShelf(SR, freq, 0.5, gain);
+                } break;
+                case Biamp:
+                    if (gain >= 1.0)
+                    {
+                        auto frac = gaindB / maxDb;
+                        auto freq = jmap(frac, 10e3f, 17e3f);
+                        auto q = jmap(frac, 0.217f, 0.342f);
+                        *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, freq, M_SQRT1_2 * q, gain);
+                    }
+                    else
+                        *hi.coefficients = dsp::IIR::ArrayCoefficients<double>::makePeakFilter(SR, 10e3, M_SQRT1_2 * jmap(gaindB / minDb, 0.154f, 0.522f), gain);
+                    break;
                 }
-                break;
+            break;
             }
         }
 
@@ -898,7 +978,7 @@ namespace Processors
 
             pentode.inGain = outGain_;
 
-            FloatType autoGain = 1.0;
+            autoGain = 1.0;
             bool ampAutoGain_ = *ampAutoGain;
 
 #if USE_SIMD
@@ -915,6 +995,9 @@ namespace Processors
             }
             else
                 mxr.setInit(true);
+
+            if (currentType == Biamp)
+                processFilters(processBlock);
 
             switch (preampTubeState)
             {
@@ -964,11 +1047,9 @@ namespace Processors
             if (ampAutoGain_)
                 autoGain *= 1.0 / std::sqrt(std::sqrt(gain_raw * gain_raw * gain_raw));
 
-            FloatType autoGain_m = 1.0;
-            processFilters(processBlock, autoGain_m);
-
-            if (ampAutoGain_)
-                autoGain *= autoGain_m;
+            // FloatType autoGain_m = 1.0;
+            if (currentType != Biamp)
+                processFilters(processBlock);
 
             switch (powerampTubeState)
             {
@@ -1028,13 +1109,12 @@ namespace Processors
 
         std::atomic<bool> updateFilters = false;
 
-        double lastAutoGain = 1.0;
-        #if USE_SIMD
+        double autoGain = 1.0, lastAutoGain = 1.0;
+#if USE_SIMD
         strix::Buffer<T> tmp;
-        #else
+#else
         AudioBuffer<T> tmp;
-        #endif
-
+#endif 
         enum TubeState
         {
             Bypassed,
@@ -1045,7 +1125,7 @@ namespace Processors
         TubeState preampTubeState, powerampTubeState;
 
         template <class Block>
-        void processFilters(Block &block, double &autoGain_m)
+        void processFilters(Block &block)
         {
             if (updateFilters) // if channel mode changed
             {
@@ -1086,7 +1166,7 @@ namespace Processors
                         in[i] = hi.processSample(in[i]);
                     }
                 }
-                setEQAutoGain(autoGain_m);
+                setEQAutoGain();
                 return;
             }
 
@@ -1101,13 +1181,13 @@ namespace Processors
                     in[i] = hi.processSample(in[i]);
                 }
             }
-            setEQAutoGain(autoGain_m);
+            setEQAutoGain();
         }
 
         // get magnitude at some specific frequencies and take the reciprocal
-        void setEQAutoGain(double &autoGain_m)
+        void setEQAutoGain()
         {
-            autoGain_m = 1.0;
+            double autoGain_m = 1.0;
 
             auto l_mag = low.coefficients->getMagnitudeForFrequency(300.0, SR);
 
@@ -1121,6 +1201,9 @@ namespace Processors
                 autoGain_m *= 1.0 / m_mag;
                 autoGain_m *= 1.0 / h_mag;
             }
+
+            if (*ampAutoGain)
+                autoGain *= autoGain_m;
         }
     };
 

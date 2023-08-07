@@ -187,7 +187,6 @@ struct AmpControls : Component, private Timer
         switch ((ProcessorType)mode_p->load())
         {
         case ProcessorType::Guitar:
-        {
             switch ((GuitarMode)subMode_p->load())
             {
             case (GuitarMode::GammaRay):
@@ -209,8 +208,7 @@ struct AmpControls : Component, private Timer
                 k->setColor(Colours::antiquewhite, secondaryColor, Colours::white);
                 k->repaint();
             }
-        }
-        break;
+            break;
         case Processors::ProcessorType::Bass:
             switch ((BassMode)subMode_p->load())
             {
@@ -231,31 +229,36 @@ struct AmpControls : Component, private Timer
                 k->repaint();
             }
             break;
-        case Processors::ProcessorType::Channel:
+        case Processors::ProcessorType::Channel: {
             backgroundColor = Colours::darkgrey;
-            secondaryColor = Colours::oldlace;
-            if ((ChannelMode)subMode_p->load() == Modern)
+            Colour gainKnob, toneKnob;
+            switch ((ChannelMode)subMode_p->load())
             {
-                for (auto &k : getKnobs())
-                {
-                    if (k == &bass || k == &mid || k == &treble)
-                        k->setColor(Colour(0.f, 0.f, 0.1f, 1.f), secondaryColor, Colours::white);
-                     else
-                        k->setColor(Colour(LIGHT_BLUE), secondaryColor, Colours::white);
-
-                    k->repaint();
-                }
+            case Modern:
+                secondaryColor = Colours::oldlace;
+                gainKnob = Colour(LIGHT_BLUE);
+                toneKnob = Colour(0.f, 0.f, 0.1f, 1.f);
+                break;
+            case Vintage:
+                secondaryColor = Colours::antiquewhite;
+                toneKnob = Colour(LIGHT_GREEN);
+                gainKnob = Colour(225.f/360.f, 0.f, 0.5f, 1.f);
+                break;
+            case Biamp:
+                toneKnob = Colours::grey;
+                gainKnob = Colours::black;
+                secondaryColor = Colours::white;
+                break;
             }
-            else
+            for (auto &k : getKnobs())
             {
-                for (auto &k : getKnobs())
-                {
-                    if (k == &inGain || k == &outGain || k == &dist)
-                        k->setColor(Colour(LIGHT_GREEN), secondaryColor, Colours::white);
-                    else
-                        k->setColor(Colour(225.f/360.f, 0.f, 0.5f, 1.f), secondaryColor, Colours::white);
-                    k->repaint();
-                }
+                if (k == &bass || k == &mid || k == &treble)
+                    k->setColor(toneKnob, secondaryColor, Colours::white);
+                 else
+                    k->setColor(gainKnob, secondaryColor, Colours::white);
+
+                k->repaint();
+            }
             }
             break;
         };
