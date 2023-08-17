@@ -37,14 +37,15 @@ struct ActivationComponent : Component
             checkInput();
         };
 
-        addChildComponent(close);
-        if (trialRemaining <= 0)
-            close.setEnabled(false);
-        else
-            close.setVisible(true);
+        addAndMakeVisible(close);
         close.onClick = [&]
         {
             setVisible(false);
+        };
+
+        addAndMakeVisible(buy);
+        buy.onClick = []{
+            URL("https://arborealaudio.com/plugins/omniamp").launchInDefaultBrowser();
         };
     }
 
@@ -152,8 +153,9 @@ struct ActivationComponent : Component
         editor.setBoundsInset(editorPadding);
 
         auto buttons = b.removeFromBottom(h * 0.3f);
-        submit.setBounds(buttons.removeFromLeft(w * 0.5f).reduced(10));
-        close.setBounds(buttons.removeFromLeft(w * 0.5f).reduced(10));
+        submit.setBounds(buttons.removeFromLeft(w / 3).reduced(10));
+        close.setBounds(buttons.removeFromLeft(w / 3).reduced(10));
+        buy.setBounds(buttons.removeFromLeft(w / 3).reduced(10));
     }
 
     CheckResult checkSite(const String &input, bool activate)
@@ -202,7 +204,7 @@ struct ActivationComponent : Component
     }
 
     TextEditor editor;
-    TextButton submit{"Submit"}, close{"Close"};
+    TextButton submit{"Submit"}, close{"Close"}, buy{"Buy"};
 
 private:
     std::atomic<CheckResult> m_result = None;
@@ -219,7 +221,5 @@ private:
             license.create();
 
         license.appendText(String(key));
-        license.appendText("\n");
-        license.appendText(SystemStats::getUniqueDeviceID());
     }
 };
