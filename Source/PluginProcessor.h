@@ -434,7 +434,9 @@ private:
 
     void checkLicense()
     {
-        auto file = File(File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/License/license");
+        auto file = File(File::getSpecialLocation(
+            File::userApplicationDataDirectory).getFullPathName()
+            + "/Arboreal Audio/OmniAmp/License/license");
         /* check license file */
         if (file.exists() && !checkUnlock())
         {
@@ -442,21 +444,31 @@ private:
             if (!read.openedOk())
                 return;
             auto license = read.readNextLine();
-            auto machineID = read.readNextLine();
+            // DEPRECATED: auto machineID = read.readNextLine();
             DBG("LICENSE: " << license);
-            DBG("ID: " << machineID);
             isUnlocked = license.isNotEmpty();
-            if (isUnlocked)
-            {
-                isUnlocked = strcmp(SystemStats::getUniqueDeviceID().toRawUTF8(), machineID.toRawUTF8()) == 0;
-            }
+            // UPDATE (v1.0.1): Don't bother w/ Machine ID, it's broken
+            // if (isUnlocked)
+            // {
+            //     auto ids = SystemStats::getMachineIdentifiers(
+            //         SystemStats::MachineIdFlags::uniqueId
+            //         | SystemStats::MachineIdFlags::legacyUniqueId);
+            //     for (auto &id : ids) {
+            //         DBG("Testing ID: " << id);
+            //         isUnlocked = (strcmp(id.toRawUTF8(),
+            //                       machineID.toRawUTF8()) == 0);
+            //         if (isUnlocked) break;
+            //     }
+            // }
         }
 
         if (isUnlocked)
             return;
 
         /* check trial time */
-        File timeFile = File(File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/License/trialkey");
+        File timeFile = File(File::getSpecialLocation(
+            File::userApplicationDataDirectory).getFullPathName()
+            + "/Arboreal Audio/OmniAmp/License/trialkey");
         if (!timeFile.exists())
         {
             timeFile.create();
