@@ -17,7 +17,7 @@ else()
 endif()
 message("PRODUCTION_BUILD: ${PRODUCTION_BUILD}")
 
-project(OmniAmp VERSION 1.0.1)
+project(OmniAmp VERSION 1.1)
 
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
