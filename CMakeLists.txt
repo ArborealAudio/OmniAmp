@@ -38,6 +38,7 @@ juce_add_plugin(OmniAmp
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Arau
     PLUGIN_CODE Oamp
+    BUNDLE_ID "com.ArborealAudio.OmniAmp"
     FORMATS ${JUCE_FORMATS}
     VST2_CATEGORY kPlugCategEffect
     VST3_CATEGORY Fx Distortion
