@@ -9,7 +9,7 @@
 
 #align(center + top)[
 	#image(
-		"../Resources/logo.svg",
+		"./logo.svg",
 		width: 13%,
 		fit: "cover"
 	)
