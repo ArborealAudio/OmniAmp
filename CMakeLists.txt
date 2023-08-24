@@ -106,8 +106,8 @@ juce_add_binary_data(BinaryData SOURCES
 
 # -fPIC flag for Linux
 if (UNIX AND NOT APPLE)
-set_target_properties(BinaryData PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE)
+    set_target_properties(BinaryData PROPERTIES
+        POSITION_INDEPENDENT_CODE TRUE)
 endif()
 
 target_link_libraries(OmniAmp
