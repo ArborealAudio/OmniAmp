@@ -40,7 +40,7 @@ jobs:
       with:
         submodules: recursive
 
-    - uses: seanmiddledeitch/gha-setup-ninja@master
+    - uses: seanmiddleditch/gha-setup-ninja@master
     - run: cmake -Bbuild -GNinja -DPRODUCTION_BUILD=1
 
     - name: Build
