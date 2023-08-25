@@ -35,13 +35,18 @@ jobs:
           libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
           libwebkit2gtk-4.0-dev \
           libglu1-mesa-dev mesa-common-dev
+          
+    - name: Select Xcode Version
+      if: runner.os == 'MacOS'
+      run: xcode-select -s /Applications/Xcode_12.5.1.app
 
     - uses: actions/checkout@v3
       with:
         submodules: recursive
 
     - uses: seanmiddleditch/gha-setup-ninja@master
-    - run: cmake -Bbuild -GNinja -DPRODUCTION_BUILD=1
+    - run: |
+      cmake -Bbuild -GNinja -DPRODUCTION_BUILD=1 -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
