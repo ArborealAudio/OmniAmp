@@ -132,12 +132,12 @@ inline void blurImage(Image &img)
 } // namespace Blur
 
 #include "../Presets/PresetComp.h"
-#include "AmpControls.h"
-#include "Button.h"
-#include "CabComponent.h"
-#include "ChoiceMenu.h"
-#include "EnhancerComponent.h"
 #include "Knob.h"
+#include "ChoiceMenu.h"
+#include "Button.h"
+#include "AmpControls.h"
+#include "CabComponent.h"
+#include "EnhancerComponent.h"
 #include "Menu.h"
 #include "PreComponent.h"
 #include "ReverbComponent.h"

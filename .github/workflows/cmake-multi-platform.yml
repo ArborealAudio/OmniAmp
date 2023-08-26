@@ -52,6 +52,9 @@ jobs:
       run: cmake --build build
 
     # TODO: Run pluginval
+    - name: Validate
+      if: runner.os == 'windows' || runner.os == 'MacOS'
+      run: validate.sh
 
     # TODO: Write unit tests
     # - name: Test
