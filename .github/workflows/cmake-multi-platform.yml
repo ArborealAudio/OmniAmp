@@ -52,7 +52,7 @@ jobs:
       run: cmake --build build --config Release
 
     - name: Validate Unix
-      if: runner.os =! 'Windows'
+      if: runner.os != 'Windows'
       run: ./validate.sh
     - name: Validate Windows
       if: runner.os == 'Windows'
