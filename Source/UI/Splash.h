@@ -12,7 +12,8 @@ struct Splash : Component
 {
     Splash()
     {
-        logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
+        logo = Drawable::createFromImageData(BinaryData::logo_svg,
+                                             BinaryData::logo_svgSize);
     }
 
     void paint(Graphics &g) override
@@ -35,29 +36,26 @@ struct Splash : Component
 
         g.setFont(16.f);
         Time time(Time::getCurrentTime());
-        g.drawFittedText("v" + String(ProjectInfo::versionString) +
-                             "\n" + currentWrapper +
-                             "\n(c) Arboreal Audio " + String(time.getYear()),
-                         b.toNearestInt(),
-                         Justification::centred, 3, 1.f);
+        g.drawFittedText("v" + String(ProjectInfo::versionString) + "\n" +
+                             currentWrapper + "\n(c) Arboreal Audio " +
+                             String(time.getYear()),
+                         b.toNearestInt(), Justification::centred, 3, 1.f);
     }
 
     void mouseDown(const MouseEvent &event) override
     {
         auto b = getLocalBounds().reduced(1).toFloat();
-        auto logoBounds = b.removeFromTop(b.getHeight() * 0.66f).reduced(b.getWidth() * 0.2f);
+        auto logoBounds =
+            b.removeFromTop(b.getHeight() * 0.66f).reduced(b.getWidth() * 0.2f);
 
-        if (logoBounds.contains(event.position))
-        {
-            if (isMouseButtonDown() && !linkClicked)
-            {
+        if (logoBounds.contains(event.position)) {
+            if (isMouseButtonDown() && !linkClicked) {
                 URL("https://arborealaudio.com").launchInDefaultBrowser();
                 linkClicked = true;
                 repaint();
                 return;
             }
-        }
-        else
+        } else
             Component::mouseDown(event);
     }
 
@@ -74,11 +72,10 @@ struct Splash : Component
 
     std::function<void()> onLogoClick;
 
-private:
+  private:
     bool linkClicked = false;
 
     Image img;
 
     std::unique_ptr<Drawable> logo;
-
 };

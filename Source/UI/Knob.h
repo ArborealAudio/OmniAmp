@@ -12,14 +12,13 @@ struct SimpleSlider : Slider
         setSliderSnapsToMousePosition(false);
         setBufferedToImage(true);
     }
-    ~SimpleSlider() override
-    {
-        setLookAndFeel(nullptr);
-    }
+    ~SimpleSlider() override { setLookAndFeel(nullptr); }
 
     double proportionOfLengthToValue(double proportion) override
     {
-        return mapToLog10(proportion, minValue, maxValue * 1.05); // 1.05 = fudge factor to get slider to fill up
+        return mapToLog10(
+            proportion, minValue,
+            maxValue * 1.05); // 1.05 = fudge factor to get slider to fill up
     }
 
     double valueToProportionOfLength(double value) override
@@ -33,12 +32,16 @@ struct SimpleSlider : Slider
 
     struct LNF : LookAndFeel_V4
     {
-        LNF(SimpleSlider &s) : owner(s)
-        {}
+        LNF(SimpleSlider &s) : owner(s) {}
 
-        void drawLinearSlider(Graphics &g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, const Slider::SliderStyle style, Slider &slider) override
+        void drawLinearSlider(Graphics &g, int x, int y, int width, int height,
+                              float sliderPos, float minSliderPos,
+                              float maxSliderPos,
+                              const Slider::SliderStyle style,
+                              Slider &slider) override
         {
-            auto bounds = slider.getLocalBounds().reduced(width * 0.07f, 5).toFloat();
+            auto bounds =
+                slider.getLocalBounds().reduced(width * 0.07f, 5).toFloat();
             g.setColour(owner.outlineColor);
             g.drawRoundedRectangle(bounds, owner.cornerRadius, 2.f);
             auto fillBounds = bounds.reduced(1);
@@ -51,18 +54,18 @@ struct SimpleSlider : Slider
             g.setColour(owner.outlineColor);
             String valStr;
             auto val = slider.getValue();
-            if (val > 1000.0)
-            {
+            if (val > 1000.0) {
                 valStr = String(val / 1000, 2);
                 valStr.append(" kHz", 4);
-            }
-            else
-            {
+            } else {
                 valStr = String((int)val);
                 valStr.append(" Hz", 3);
             }
-            
-            g.drawFittedText(valStr, bounds.reduced(width * 0.33f, height * 0.1f).toNearestInt(), Justification::centred, 1);
+
+            g.drawFittedText(
+                valStr,
+                bounds.reduced(width * 0.33f, height * 0.1f).toNearestInt(),
+                Justification::centred, 1);
         }
 
         SimpleSlider &owner;
@@ -92,18 +95,13 @@ struct Knob : Slider
 
         setBufferedToImage(true);
     }
-    ~Knob() override
-    {
-        setLookAndFeel(nullptr);
-    }
+    ~Knob() override { setLookAndFeel(nullptr); }
 
     /**
-     * Use this to set the default parameter value which the knob can report to its underlings
+     * Use this to set the default parameter value which the knob can report to
+     * its underlings
      */
-    void setDefaultValue(float newDefault)
-    {
-        defaultValue = newDefault;
-    }
+    void setDefaultValue(float newDefault) { defaultValue = newDefault; }
 
     float getDefaultValue() { return defaultValue; }
 
@@ -141,7 +139,8 @@ struct Knob : Slider
     }
 
     /* sets the base & accent colors for Regular-style knobs */
-    void setColor(Colour newBaseColor, Colour newAccentColor = Colours::grey, Colour newTextColor = Colours::antiquewhite)
+    void setColor(Colour newBaseColor, Colour newAccentColor = Colours::grey,
+                  Colour newTextColor = Colours::antiquewhite)
     {
         lnf.baseColor = newBaseColor;
         lnf.accentColor = newAccentColor;
@@ -161,10 +160,11 @@ struct Knob : Slider
         lnf.textYOffset = yOffset;
     }
 
-private:
+  private:
     struct KnobLookAndFeel : LookAndFeel_V4
     {
-        Colour baseColor = Colours::antiquewhite, accentColor = Colours::grey, textColor = Colours::antiquewhite;
+        Colour baseColor = Colours::antiquewhite, accentColor = Colours::grey,
+               textColor = Colours::antiquewhite;
         Flags flags;
 
         int xOffset = 0, yOffset = 0;
@@ -179,41 +179,51 @@ private:
             label = std::make_unique<String>("");
         }
 
-        void drawRotarySlider(Graphics &g, int x, int y, int width, int height, float sliderPos,
-                              const float rotaryStartAngle, const float rotaryEndAngle, Slider &slider) override
+        void drawRotarySlider(Graphics &g, int x, int y, int width, int height,
+                              float sliderPos, const float rotaryStartAngle,
+                              const float rotaryEndAngle,
+                              Slider &slider) override
         {
-            auto drawCustomSlider = [&]
-            {
+            auto drawCustomSlider = [&] {
                 auto radius = (float)jmin(width / 2, height / 2) - 4.f;
                 auto centerX = (float)slider.getLocalBounds().getCentreX();
-                auto centerY = (float)slider.getLocalBounds().getCentreY() + yOffset;
+                auto centerY =
+                    (float)slider.getLocalBounds().getCentreY() + yOffset;
                 auto rx = centerX - radius;
                 auto ry = centerY - radius;
                 auto rw = radius * 2.f;
-                auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+                auto angle = rotaryStartAngle +
+                             sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-                if ((flags & DRAW_TICKS) > 0)
-                {
+                if ((flags & DRAW_TICKS) > 0) {
                     /* draw ticks around knob */
-                    for (int i = 0; i < 11; ++i)
-                    {
+                    for (int i = 0; i < 11; ++i) {
                         Path p;
-                        const auto tickRadius = (float)jmin(slider.getWidth() / 2, slider.getHeight() / 1) - 4.f;
+                        const auto tickRadius =
+                            (float)jmin(slider.getWidth() / 2,
+                                        slider.getHeight() / 1) -
+                            4.f;
                         const auto pointerLength = tickRadius * 0.25f;
                         const auto pointerThickness = 2.5f;
-                        const auto tickAngle = rotaryStartAngle + (i / 10.f) * (rotaryEndAngle - rotaryStartAngle);
-                        p.addRectangle(-pointerThickness * 0.5f, -tickRadius, pointerThickness, pointerLength);
-                        p.applyTransform(AffineTransform::rotation(tickAngle).translated(centerX, centerY));
+                        const auto tickAngle =
+                            rotaryStartAngle +
+                            (i / 10.f) * (rotaryEndAngle - rotaryStartAngle);
+                        p.addRectangle(-pointerThickness * 0.5f, -tickRadius,
+                                       pointerThickness, pointerLength);
+                        p.applyTransform(
+                            AffineTransform::rotation(tickAngle).translated(
+                                centerX, centerY));
 
                         g.setColour(accentColor);
                         g.fillPath(p);
                     }
                 }
-                if ((flags & DRAW_SHADOW) > 0)
-                {
+                if ((flags & DRAW_SHADOW) > 0) {
                     /* shadow & highlight */
-                    Image shadow{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
-                    Image highlight{Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true};
+                    Image shadow{Image::PixelFormat::ARGB, slider.getWidth(),
+                                 slider.getHeight(), true};
+                    Image highlight{Image::PixelFormat::ARGB, slider.getWidth(),
+                                    slider.getHeight(), true};
                     Graphics sg(shadow);
                     Graphics hg(highlight);
                     sg.setColour(Colours::black.withAlpha(0.5f));
@@ -230,18 +240,21 @@ private:
 
                 if ((flags & DRAW_GRADIENT) == 0) // if no gradient
                 {
-                    g.setColour(slider.isMouseOverOrDragging() ? accentColor : baseColor);
+                    g.setColour(slider.isMouseOverOrDragging() ? accentColor
+                                                               : baseColor);
                     g.drawEllipse(rx, ry, rw, rw, 3.f);
 
                     Path p;
                     auto pointerLength = radius * 0.8f;
                     auto pointerThickness = 2.5f;
-                    p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
-                    p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
+                    p.addRectangle(-pointerThickness * 0.5f, -radius,
+                                   pointerThickness, pointerLength);
+                    p.applyTransform(
+                        AffineTransform::rotation(angle).translated(centerX,
+                                                                    centerY));
 
                     g.fillPath(p);
-                }
-                else // should draw gradient
+                } else // should draw gradient
                 {
                     /* base knob */
                     g.setColour(baseColor);
@@ -250,7 +263,13 @@ private:
                     g.drawEllipse(rx, ry, rw, rw, 3.f);
 
                     /* gradient overlay */
-                    ColourGradient gradient{Colours::darkgrey.withAlpha(0.5f), (float)x, (float)y + height, Colour(0xe8e8e8).withAlpha(0.5f), (float)x + width, (float)y, false};
+                    ColourGradient gradient{Colours::darkgrey.withAlpha(0.5f),
+                                            (float)x,
+                                            (float)y + height,
+                                            Colour(0xe8e8e8).withAlpha(0.5f),
+                                            (float)x + width,
+                                            (float)y,
+                                            false};
                     g.setGradientFill(gradient);
                     g.fillEllipse(rx, ry, rw, rw);
 
@@ -258,22 +277,32 @@ private:
                     Path p;
                     auto pointerLength = radius * 0.75f;
                     auto pointerThickness = 2.5f;
-                    p.addRectangle(-pointerThickness * 0.5f, -radius * 0.8, pointerThickness, pointerLength);
-                    p.applyTransform(AffineTransform::rotation(angle).translated(centerX, centerY));
+                    p.addRectangle(-pointerThickness * 0.5f, -radius * 0.8,
+                                   pointerThickness, pointerLength);
+                    p.applyTransform(
+                        AffineTransform::rotation(angle).translated(centerX,
+                                                                    centerY));
 
                     g.setColour(accentColor);
                     g.fillPath(p);
                 }
 
                 /* arc */
-                if ((flags & DRAW_ARC) > 0)
-                {
-                    auto defaultVal = static_cast<Knob *>(&slider)->getDefaultValue();
-                    float arcStart = defaultVal * (rotaryEndAngle - rotaryStartAngle) + rotaryStartAngle;
-                    g.setColour(accentColor.contrasting(0.3f).withMultipliedSaturation(1.2f));
+                if ((flags & DRAW_ARC) > 0) {
+                    auto defaultVal =
+                        static_cast<Knob *>(&slider)->getDefaultValue();
+                    float arcStart =
+                        defaultVal * (rotaryEndAngle - rotaryStartAngle) +
+                        rotaryStartAngle;
+                    g.setColour(
+                        accentColor.contrasting(0.3f).withMultipliedSaturation(
+                            1.2f));
                     Path arc;
-                    arc.addArc(rx - 4, ry - 4, rw + 8, rw + 8, arcStart, angle, true);
-                    g.strokePath(arc, PathStrokeType(4.f, PathStrokeType::beveled, PathStrokeType::rounded));
+                    arc.addArc(rx - 4, ry - 4, rw + 8, rw + 8, arcStart, angle,
+                               true);
+                    g.strokePath(arc,
+                                 PathStrokeType(4.f, PathStrokeType::beveled,
+                                                PathStrokeType::rounded));
                 }
             };
 
@@ -292,7 +321,11 @@ private:
 
             float textBoxHeight = slider.getHeight() / 6.f;
             g.setFont(jlimit(14.f, 17.f, textBoxHeight));
-            g.drawFittedText(text, slider.getLocalBounds().removeFromBottom(textBoxHeight).translated(textXOffset, textYOffset), Justification::centred, 2);
+            g.drawFittedText(text,
+                             slider.getLocalBounds()
+                                 .removeFromBottom(textBoxHeight)
+                                 .translated(textXOffset, textYOffset),
+                             Justification::centred, 2);
         }
     };
     KnobLookAndFeel lnf;

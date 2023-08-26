@@ -25,27 +25,19 @@ struct ActivationComponent : Component
     {
         addAndMakeVisible(editor);
         editor.setFont(Font(18.f));
-        editor.onReturnKey = [&]
-        {
-            checkInput();
-        };
+        editor.onReturnKey = [&] { checkInput(); };
         editor.setTextToShowWhenEmpty("License", Colours::lightgrey);
 
         addAndMakeVisible(submit);
-        submit.onClick = [&]
-        {
-            checkInput();
-        };
+        submit.onClick = [&] { checkInput(); };
 
         addAndMakeVisible(close);
-        close.onClick = [&]
-        {
-            setVisible(false);
-        };
+        close.onClick = [&] { setVisible(false); };
 
         addAndMakeVisible(buy);
-        buy.onClick = []{
-            URL("https://arborealaudio.com/plugins/omniamp").launchInDefaultBrowser();
+        buy.onClick = [] {
+            URL("https://arborealaudio.com/plugins/omniamp")
+                .launchInDefaultBrowser();
         };
     }
 
@@ -57,10 +49,11 @@ struct ActivationComponent : Component
     void checkInput()
     {
         auto text = editor.getText();
-        if (text.isEmpty())
-        {
+        if (text.isEmpty()) {
             editor.clear();
-            editor.setTextToShowWhenEmpty("Actually enter a license...", Colour::fromHSL((float)color / 360.f, 1.f, 0.75f, 1.f));
+            editor.setTextToShowWhenEmpty(
+                "Actually enter a license...",
+                Colour::fromHSL((float)color / 360.f, 1.f, 0.75f, 1.f));
             color += 45;
             if (color % 360 == 0)
                 color = 0;
@@ -70,10 +63,8 @@ struct ActivationComponent : Component
             return;
         }
         m_result = checkSite(text, false);
-        if (m_result == CheckResult::Success)
-        {
-            if (checkSite(text, true) == CheckResult::Success)
-            {
+        if (m_result == CheckResult::Success) {
+            if (checkSite(text, true) == CheckResult::Success) {
                 writeFile(text.toRawUTF8());
                 if (onActivationCheck)
                     onActivationCheck(true);
@@ -82,9 +73,7 @@ struct ActivationComponent : Component
                 close.setEnabled(true);
                 submit.setVisible(false);
             }
-        }
-        else
-        {
+        } else {
             if (onActivationCheck)
                 onActivationCheck(false);
 
@@ -106,41 +95,41 @@ struct ActivationComponent : Component
         g.setColour(Colours::white);
         String message;
         String trialDesc = "";
-        if (m_status == NotSubmitted)
-        {
+        if (m_status == NotSubmitted) {
             message = "Enter your license:";
-        }
-        else if (m_status == Finished)
-        {
+        } else if (m_status == Finished) {
             g.setColour(Colours::red);
-            switch (m_result)
-            {
-                case Success:
-                    message = "License activated! Thank you!";
-                    g.setColour(Colours::white);
-                    break;
-                case InvalidLicense:
-                    message = "Invalid license";
-                    break;
-                case ActivationsMaxed:
-                    message = "Activations maxed";
-                    break;
-                case WrongProduct:
-                    message = "Wrong product";
-                    break;
-                case ConnectionFailed:
-                    message = "Connection failed. Try again.";
-                    break;
-                case None:
-                    message = "Activation...not run? Error!";
-                    break;
+            switch (m_result) {
+            case Success:
+                message = "License activated! Thank you!";
+                g.setColour(Colours::white);
+                break;
+            case InvalidLicense:
+                message = "Invalid license";
+                break;
+            case ActivationsMaxed:
+                message = "Activations maxed";
+                break;
+            case WrongProduct:
+                message = "Wrong product";
+                break;
+            case ConnectionFailed:
+                message = "Connection failed. Try again.";
+                break;
+            case None:
+                message = "Activation...not run? Error!";
+                break;
             }
         }
         if (trialRemaining > 0 && m_result != Success)
-            trialDesc = RelativeTime::milliseconds(trialRemaining).getDescription() + " remaining in free trial";
+            trialDesc =
+                RelativeTime::milliseconds(trialRemaining).getDescription() +
+                " remaining in free trial";
         else if (trialRemaining <= 0 && m_result != Success)
             trialDesc = "Trial expired.";
-        g.drawFittedText(message + "\n" + trialDesc, getLocalBounds().removeFromTop(getHeight() * 0.3f), Justification::centred, 3);
+        g.drawFittedText(message + "\n" + trialDesc,
+                         getLocalBounds().removeFromTop(getHeight() * 0.3f),
+                         Justification::centred, 3);
     }
 
     void resized() override
@@ -160,7 +149,8 @@ struct ActivationComponent : Component
 
     CheckResult checkSite(const String &input, bool activate)
     {
-        auto url = URL("https://3pvj52nx17.execute-api.us-east-1.amazonaws.com");
+        auto url =
+            URL("https://3pvj52nx17.execute-api.us-east-1.amazonaws.com");
         if (activate)
             url = url.withNewSubPath("/default/licenses/activate/" + input);
         else
@@ -168,25 +158,26 @@ struct ActivationComponent : Component
 
         CheckResult result = CheckResult::ConnectionFailed;
 
-        if (auto stream = url.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)
-                                                .withExtraHeaders("x-api-key: Fb5mXNfHiNaSKABQEl0PiFmYBthvv457bOCA1ou2")
-                                                .withConnectionTimeoutMs(10000)))
-        {
+        if (auto stream = url.createInputStream(
+                URL::InputStreamOptions(URL::ParameterHandling::inAddress)
+                    .withExtraHeaders(
+                        "x-api-key: Fb5mXNfHiNaSKABQEl0PiFmYBthvv457bOCA1ou2")
+                    .withConnectionTimeoutMs(10000))) {
             if (activate)
                 return CheckResult::Success;
-            
+
             auto response = stream->readEntireStreamAsString();
             auto json = JSON::parse(response);
 
             if ((bool)json.getProperty("success", var(false)) != true)
                 return CheckResult::InvalidLicense;
-            
+
             auto item = json.getProperty("Item", var());
-            if (item.isObject())
-            {
+            if (item.isObject()) {
                 // it should be a JSON object
                 auto product = item.getProperty("product", var(false));
-                auto numActivations = item.getProperty("activationCount", var());
+                auto numActivations =
+                    item.getProperty("activationCount", var());
                 auto maxActivations = item.getProperty("maxActivations", var());
 
                 if (product.toString() != "omniamp")
@@ -195,8 +186,7 @@ struct ActivationComponent : Component
                     return CheckResult::ActivationsMaxed;
 
                 return CheckResult::Success;
-            }
-            else
+            } else
                 return CheckResult::InvalidLicense;
         }
 
@@ -206,7 +196,7 @@ struct ActivationComponent : Component
     TextEditor editor;
     TextButton submit{"Submit"}, close{"Close"}, buy{"Buy"};
 
-private:
+  private:
     std::atomic<CheckResult> m_result = None;
     std::atomic<CheckStatus> m_status = NotSubmitted;
 
@@ -216,7 +206,10 @@ private:
 
     void writeFile(const char *key)
     {
-        File license {File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/License/license"};
+        File license{
+            File::getSpecialLocation(File::userApplicationDataDirectory)
+                .getFullPathName() +
+            "/Arboreal Audio/OmniAmp/License/license"};
         if (!license.existsAsFile())
             license.create();
 

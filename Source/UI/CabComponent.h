@@ -7,16 +7,20 @@
 
 struct CabsComponent : Component, AudioProcessorValueTreeState::Listener, Timer
 {
-private:
+  private:
     struct MicComponent : Component
     {
         MicComponent(AudioProcessorValueTreeState &a) : apvts(a)
         {
-            micPos = static_cast<strix::FloatParameter *>(a.getParameter("cabMicPosX"));
-            micDepth = static_cast<strix::FloatParameter *>(a.getParameter("cabMicPosZ"));
+            micPos = static_cast<strix::FloatParameter *>(
+                a.getParameter("cabMicPosX"));
+            micDepth = static_cast<strix::FloatParameter *>(
+                a.getParameter("cabMicPosZ"));
 
-            mic_img = Drawable::createFromImageData(BinaryData::mic_svg, BinaryData::mic_svgSize);
-            spkr_img = Drawable::createFromImageData(BinaryData::speaker_svg, BinaryData::speaker_svgSize);
+            mic_img = Drawable::createFromImageData(BinaryData::mic_svg,
+                                                    BinaryData::mic_svgSize);
+            spkr_img = Drawable::createFromImageData(
+                BinaryData::speaker_svg, BinaryData::speaker_svgSize);
         }
 
         void paint(Graphics &g) override
@@ -27,18 +31,23 @@ private:
 
             pos = micBounds.getRelativePoint(micPos->get(), micDepth->get());
 
-            Rectangle<float> micPoint(pos.x - (micWidth * 0.5f), pos.y - (micWidth * 0.5f), micWidth, micWidth);
+            Rectangle<float> micPoint(pos.x - (micWidth * 0.5f),
+                                      pos.y - (micWidth * 0.5f), micWidth,
+                                      micWidth);
             g.setColour(Colours::white);
             g.fillEllipse(micPoint);
 
             spkr_img->replaceColour(Colours::black, Colours::white);
-            spkr_img->drawWithin(g, spkrBounds, RectanglePlacement::centred, 1.f);
+            spkr_img->drawWithin(g, spkrBounds, RectanglePlacement::centred,
+                                 1.f);
         }
 
         void clampPoints()
         {
-            pos.x = jlimit(micBounds.getX(), micBounds.getRight() - micWidth * 0.5f, pos.x);
-            pos.y = jlimit(micBounds.getY(), micBounds.getBottom() - micWidth * 0.5f, pos.y);
+            pos.x = jlimit(micBounds.getX(),
+                           micBounds.getRight() - micWidth * 0.5f, pos.x);
+            pos.y = jlimit(micBounds.getY(),
+                           micBounds.getBottom() - micWidth * 0.5f, pos.y);
         }
 
         void mouseDrag(const MouseEvent &event) override
@@ -47,7 +56,8 @@ private:
             pos.x = event.position.x - (micWidth * 0.5f);
             pos.y = event.position.y + (micWidth * 0.5f);
             auto xFrac = (pos.x - micBounds.getX()) / adjBounds.getWidth();
-            auto yFrac = (pos.y - (getHeight() - micBounds.getHeight())) / adjBounds.getHeight();
+            auto yFrac = (pos.y - (getHeight() - micBounds.getHeight())) /
+                         adjBounds.getHeight();
 
             xFrac = jlimit(0.f, 1.f, xFrac);
             yFrac = jlimit(0.f, 1.f, yFrac);
@@ -62,8 +72,10 @@ private:
         void mouseDoubleClick(const MouseEvent &event) override
         {
             auto adjBounds = micBounds.reduced(micWidth * 0.5f);
-            apvts.getParameterAsValue("cabMicPosX").setValue(apvts.getParameter("cabMicPosX")->getDefaultValue());
-            apvts.getParameterAsValue("cabMicPosZ").setValue(apvts.getParameter("cabMicPosZ")->getDefaultValue());
+            apvts.getParameterAsValue("cabMicPosX")
+                .setValue(apvts.getParameter("cabMicPosX")->getDefaultValue());
+            apvts.getParameterAsValue("cabMicPosZ")
+                .setValue(apvts.getParameter("cabMicPosZ")->getDefaultValue());
             pos = adjBounds.getRelativePoint(micPos->get(), micDepth->get());
             clampPoints();
             repaint();
@@ -76,12 +88,15 @@ private:
             auto height = bounds.getHeight();
             auto micBoundsXInset = width * 0.2f;
             auto micBoundsYInset = height * 0.65f;
-            micBounds = bounds.removeFromBottom(micBoundsYInset).withWidth(width * 0.5f + (micWidth * 0.5f)).withTrimmedLeft(micBoundsXInset).toFloat();
+            micBounds = bounds.removeFromBottom(micBoundsYInset)
+                            .withWidth(width * 0.5f + (micWidth * 0.5f))
+                            .withTrimmedLeft(micBoundsXInset)
+                            .toFloat();
             spkrBounds = bounds.withTrimmedBottom(height * 0.1f).toFloat();
             clampPoints();
         }
 
-    private:
+      private:
         strix::FloatParameter *micPos, *micDepth;
         AudioProcessorValueTreeState &apvts;
 
@@ -94,11 +109,13 @@ private:
     };
 
     ChoiceMenu menu;
-    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> menuAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment>
+        menuAttach;
 
     Knob::Flags flags{Knob::DRAW_GRADIENT | Knob::DRAW_ARC | Knob::DRAW_SHADOW};
     Knob resoLo{flags}, resoHi{flags};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> resoLoAttach, resoHiAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment>
+        resoLoAttach, resoHiAttach;
 
     std::unique_ptr<Drawable> cab_img;
     Rectangle<float> cabBounds;
@@ -112,36 +129,49 @@ private:
 
     AudioProcessorValueTreeState &apvts;
 
-public:
+  public:
     /**
      * @param type pointer to type parameter
      */
-    CabsComponent(AudioProcessorValueTreeState &a) : menu(a.getParameter("cabType")->getAllValueStrings()), micComp(a), apvts(a)
+    CabsComponent(AudioProcessorValueTreeState &a)
+        : menu(a.getParameter("cabType")->getAllValueStrings()), micComp(a),
+          apvts(a)
     {
         apvts.addParameterListener("cabType", this);
         apvts.addParameterListener("cabMicPosX", this);
         apvts.addParameterListener("cabMicPosZ", this);
 
-        cabType = static_cast<strix::ChoiceParameter *>(apvts.getParameter("cabType"));
+        cabType = static_cast<strix::ChoiceParameter *>(
+            apvts.getParameter("cabType"));
 
         addAndMakeVisible(menu);
-        menuAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "cabType", menu);
+        menuAttach =
+            std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
+                apvts, "cabType", menu);
 
         addAndMakeVisible(resoLo);
         resoLo.setDefaultValue(0.5f);
         resoLo.setLabel("Reso Lo");
         resoLo.setColor(Colour(BACKGROUND_COLOR), Colours::antiquewhite);
-        resoLo.setValueToStringFunction([](float val)
-                                        { String s(int(val * 100)); return s + "%"; });
-        resoLoAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "cabResoLo", resoLo);
+        resoLo.setValueToStringFunction([](float val) {
+            String s(int(val * 100));
+            return s + "%";
+        });
+        resoLoAttach =
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                apvts, "cabResoLo", resoLo);
 
         addAndMakeVisible(resoHi);
         resoHi.setDefaultValue(0.5f);
         resoHi.setLabel("Reso Hi");
         resoHi.setColor(Colour(BACKGROUND_COLOR), Colours::antiquewhite);
-        resoHi.setValueToStringFunction([](float val)
-                                        { String s(int(val * 100)); return s + "%"; });
-        resoHiAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(apvts, "cabResoHi", resoHi);
+        resoHi.setValueToStringFunction([](float val) {
+            String s(int(val * 100));
+            return s + "%";
+        });
+        resoHiAttach =
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                apvts, "cabResoHi", resoHi);
 
         addAndMakeVisible(micComp);
 
@@ -176,14 +206,11 @@ public:
 
     void timerCallback() override
     {
-        if (needUpdateState)
-        {
+        if (needUpdateState) {
             setState();
             repaint();
             needUpdateState = false;
-        }
-        else if (needUpdatePos)
-        {
+        } else if (needUpdatePos) {
             repaint();
             needUpdatePos = false;
         }
@@ -202,7 +229,8 @@ public:
     }
 
     /**
-     * @param newState if -1 (default), will read from param value. Otherwise, will override param value and set it from this function
+     * @param newState if -1 (default), will read from param value. Otherwise,
+     * will override param value and set it from this function
      */
     void setState(int newState = -1)
     {
@@ -210,23 +238,30 @@ public:
         if (newState != -1)
             state = newState;
 
-        switch (state)
-        {
+        switch (state) {
         case 1:
-            cab_img = Drawable::createFromImageData(BinaryData::_2x12_svg, BinaryData::_2x12_svgSize);
-            // cab_img->replaceColour(Colours::transparentBlack, Colours::olivedrab.withAlpha(0.5f));
-            cab_img->replaceColour(Colours::transparentBlack, Colour(LIGHT_GREEN));
+            cab_img = Drawable::createFromImageData(BinaryData::_2x12_svg,
+                                                    BinaryData::_2x12_svgSize);
+            // cab_img->replaceColour(Colours::transparentBlack,
+            // Colours::olivedrab.withAlpha(0.5f));
+            cab_img->replaceColour(Colours::transparentBlack,
+                                   Colour(LIGHT_GREEN));
             menu.lnf.backgroundColor = Colour(LIGHT_GREEN).withAlpha(0.5f);
             break;
         case 2:
-            cab_img = Drawable::createFromImageData(BinaryData::_4x12_svg, BinaryData::_4x12_svgSize);
-            // cab_img->replaceColour(Colours::transparentBlack, Colours::cadetblue.withAlpha(0.5f));
-            cab_img->replaceColour(Colours::transparentBlack, Colour(LIGHT_BLUE));
+            cab_img = Drawable::createFromImageData(BinaryData::_4x12_svg,
+                                                    BinaryData::_4x12_svgSize);
+            // cab_img->replaceColour(Colours::transparentBlack,
+            // Colours::cadetblue.withAlpha(0.5f));
+            cab_img->replaceColour(Colours::transparentBlack,
+                                   Colour(LIGHT_BLUE));
             menu.lnf.backgroundColor = Colour(LIGHT_BLUE).withAlpha(0.5f);
             break;
         case 3:
-            cab_img = Drawable::createFromImageData(BinaryData::_6x10_svg, BinaryData::_6x10_svgSize);
-            // cab_img->replaceColour(Colours::transparentBlack, Colours::chocolate.withAlpha(0.5f));
+            cab_img = Drawable::createFromImageData(BinaryData::_6x10_svg,
+                                                    BinaryData::_6x10_svgSize);
+            // cab_img->replaceColour(Colours::transparentBlack,
+            // Colours::chocolate.withAlpha(0.5f));
             cab_img->replaceColour(Colours::transparentBlack, Colour(DULL_RED));
             menu.lnf.backgroundColor = Colour(DULL_RED).withAlpha(0.5f);
             break;
@@ -243,13 +278,16 @@ public:
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(5);
-        micComp.setBounds(bounds.removeFromRight(bounds.getHeight()).reduced(2));
+        micComp.setBounds(
+            bounds.removeFromRight(bounds.getHeight()).reduced(2));
         auto resoBounds = bounds.removeFromRight(bounds.getWidth() * 0.25f);
         resoLo.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
         resoHi.setBounds(resoBounds.removeFromTop(bounds.getHeight() * 0.5f));
         title.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.15f));
-        title.setFont(Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.2f));
-        menu.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.3f).reduced(20, 0));
+        title.setFont(
+            Font(title.getHeight() * 0.75f).withExtraKerningFactor(0.2f));
+        menu.setBounds(
+            bounds.removeFromTop(bounds.getHeight() * 0.3f).reduced(20, 0));
         cabBounds = bounds.reduced(5).toFloat();
     }
 };

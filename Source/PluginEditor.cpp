@@ -1,43 +1,36 @@
-#include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "PluginProcessor.h"
 
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
-    : AudioProcessorEditor(&p),
-      audioProcessor(p),
-      ampControls(p.apvts),
-      link(p.apvts),
-      preComponent(p.getActiveGRSource(), p.apvts),
-      cabComponent(p.apvts),
-      reverbComp(p.apvts),
-      enhancers(p.apvts),
-      menu(p.apvts, p.isUnlocked),
-      presetMenu(p.apvts),
-      dl(DL_BIN),
+    : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.apvts),
+      link(p.apvts), preComponent(p.getActiveGRSource(), p.apvts),
+      cabComponent(p.apvts), reverbComp(p.apvts), enhancers(p.apvts),
+      menu(p.apvts, p.isUnlocked), presetMenu(p.apvts), dl(DL_BIN),
       activation(p.trialRemaining_ms)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
-    if (strix::readConfigFile(CONFIG_PATH, "openGL"))
-    {
+    if (strix::readConfigFile(CONFIG_PATH, "openGL")) {
         opengl.detach();
         opengl.attachTo(*this);
     }
 #endif
 
-    if (strix::readConfigFile(CONFIG_PATH, "tooltips"))
-    {
+    if (strix::readConfigFile(CONFIG_PATH, "tooltips")) {
         tooltip = std::make_unique<TooltipWindow>(this, 1000);
     }
 
-    logo = Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
+    logo = Drawable::createFromImageData(BinaryData::logo_svg,
+                                         BinaryData::logo_svgSize);
     logo->setInterceptsMouseClicks(true, false);
 
     auto lastWidth = strix::readConfigFile(CONFIG_PATH, "size");
     if (lastWidth <= MIN_WIDTH)
         lastWidth = UI_WIDTH;
     setSize(lastWidth, lastWidth * 0.7625f);
-    getConstrainer()->setFixedAspectRatio((double)getWidth() / (double)getHeight());
+    getConstrainer()->setFixedAspectRatio((double)getWidth() /
+                                          (double)getHeight());
 
     addAndMakeVisible(pluginTitle);
     String title = String(ProjectInfo::projectName).toUpperCase();
@@ -54,98 +47,113 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     pluginTitle.setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(menu);
-    menu.windowResizeCallback = [&]
-    { resetWindowSize(); };
-    menu.checkUpdateCallback = [&]
-    {
-        dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::projectName,
-                                                          ProjectInfo::versionString,
-                                                          SITE_URL
-                                                          "/versions/index.json",
-                                                          true,
-                                                          strix::readConfigFile(CONFIG_PATH, "beta_update"));
+    menu.windowResizeCallback = [&] { resetWindowSize(); };
+    menu.checkUpdateCallback = [&] {
+        dlResult = strix::DownloadManager::checkForUpdate(
+            ProjectInfo::projectName, ProjectInfo::versionString,
+            SITE_URL "/versions/index.json", true,
+            strix::readConfigFile(CONFIG_PATH, "beta_update"));
         p.checkedUpdate = true;
-        strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
+        strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
+                                     String(Time::currentTimeMillis()));
         if (!dlResult.updateAvailable)
-            NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
-        else
-        {
+            NativeMessageBox::showMessageBoxAsync(
+                MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
+        else {
             dl.changes = dlResult.changes;
             DBG("Changes: " << dl.changes);
             dl.setVisible(true);
         }
     };
-    menu.showTooltipCallback = [&](bool state)
-    {
+    menu.showTooltipCallback = [&](bool state) {
         if (state)
             tooltip = std::make_unique<TooltipWindow>(this, 1000);
         else
             tooltip = nullptr;
         strix::writeConfigFile(CONFIG_PATH, "tooltips", state);
     };
-    menu.activateCallback = [&]
-    {
-        activation.setVisible(true);
-    };
+    menu.activateCallback = [&] { activation.setVisible(true); };
 #if JUCE_WINDOWS || JUCE_LINUX
-    menu.openGLCallback = [&](bool state)
-    {
+    menu.openGLCallback = [&](bool state) {
         if (state)
             opengl.attachTo(*this);
         else
             opengl.detach();
-        DBG("OpenGL: " << (int)opengl.isAttached() << ", w/ cache size: " << opengl.getImageCacheSize());
+        DBG("OpenGL: " << (int)opengl.isAttached()
+                       << ", w/ cache size: " << opengl.getImageCacheSize());
         strix::writeConfigFile(CONFIG_PATH, "openGL", state);
     };
 #endif
 
-    for (auto *c : getTopComponents())
-    {
+    for (auto *c : getTopComponents()) {
         addAndMakeVisible(*c);
         if (auto k = dynamic_cast<Knob *>(c))
-            k->setColor(Colours::antiquewhite, Colours::antiquewhite.withMultipliedLightness(1.5f));
+            k->setColor(Colours::antiquewhite,
+                        Colours::antiquewhite.withMultipliedLightness(1.5f));
     }
 
     addAndMakeVisible(presetMenu);
     presetMenu.setCurrentPreset(p.currentPreset);
-    presetMenu.box.onChange = [&]
-    {
+    presetMenu.box.onChange = [&] {
         presetMenu.valueChanged();
         p.currentPreset = presetMenu.getCurrentPreset();
     };
 
-    inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "inputGain", inGain);
+    inGainAttach =
+        std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+            p.apvts, "inputGain", inGain);
     inGain.setLabel("Input");
-    inGain.setTooltip("Input gain before all processing, useful for increasing or decreasing headroom before the amp.");
-    inGain.setValueToStringFunction([](float val)
-                                    { String str(val, 1); str += "dB"; return str; });
+    inGain.setTooltip("Input gain before all processing, useful for increasing "
+                      "or decreasing headroom before the amp.");
+    inGain.setValueToStringFunction([](float val) {
+        String str(val, 1);
+        str += "dB";
+        return str;
+    });
 
-    outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "outputGain", outGain);
+    outGainAttach =
+        std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+            p.apvts, "outputGain", outGain);
     outGain.setLabel("Output");
     outGain.setTooltip("Output gain after all processing");
-    outGain.setValueToStringFunction([](float val)
-                                     { String str(val, 1); str += "dB"; return str; });
+    outGain.setValueToStringFunction([](float val) {
+        String str(val, 1);
+        str += "dB";
+        return str;
+    });
 
-    // gateAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "gate", gate);
-    // gate.setLabel("Gate");
-    // gate.setTooltip("Simple noise gate before the amp.");
-    // gate.setValueToStringFunction([](float val)
+    // gateAttach =
+    // std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts,
+    // "gate", gate); gate.setLabel("Gate"); gate.setTooltip("Simple noise gate
+    // before the amp."); gate.setValueToStringFunction([](float val)
     //                               { if (val < -95.f) return String("Off");
-    //                                 if (val >= -95.f) return String(val, 1); else return String(""); });
+    //                                 if (val >= -95.f) return String(val, 1);
+    //                                 else return String(""); });
 
-    widthAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "width", width);
+    widthAttach =
+        std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+            p.apvts, "width", width);
     width.setLabel("Width");
-    width.setTooltip("Standard stereo width control for widening the stereo image, after all processing.");
-    width.setValueToStringFunction([](float val)
-                                   { String s(val * 100, 0); return s + "%"; });
+    width.setTooltip("Standard stereo width control for widening the stereo "
+                     "image, after all processing.");
+    width.setValueToStringFunction([](float val) {
+        String s(val * 100, 0);
+        return s + "%";
+    });
 
-    mixAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts, "mix", mix);
+    mixAttach =
+        std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+            p.apvts, "mix", mix);
     mix.setLabel("Mix");
     mix.setTooltip("Global dry/wet control.");
-    mix.setValueToStringFunction([](float val)
-                                 { String s(val * 100, 0); return s + "%"; });
+    mix.setValueToStringFunction([](float val) {
+        String s(val * 100, 0);
+        return s + "%";
+    });
 
-    bypassAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(p.apvts, "bypass", bypass);
+    bypassAttach =
+        std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(
+            p.apvts, "bypass", bypass);
     bypass.setButtonText("Byp");
     bypass.setTooltip("Latency-compensated bypass of entire plugin");
 
@@ -167,26 +175,23 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addChildComponent(activation);
     if (!p.checkUnlock())
         activation.setVisible(true);
-    activation.onActivationCheck = [&](bool result)
-    {
-        p.isUnlocked = result;
-    };
+    activation.onActivationCheck = [&](bool result) { p.isUnlocked = result; };
     activation.centreWithSize(300, 200);
 
-    if (!p.checkedUpdate)
-    {
+    if (!p.checkedUpdate) {
         lThread = std::make_unique<strix::LiteThread>(1);
-        lThread->addJob([&]
-                        { dlResult = strix::DownloadManager::checkForUpdate(ProjectInfo::projectName, ProjectInfo::versionString,
-                SITE_URL
-                "/versions/index.json",
-                false,
+        lThread->addJob([&] {
+            dlResult = strix::DownloadManager::checkForUpdate(
+                ProjectInfo::projectName, ProjectInfo::versionString,
+                SITE_URL "/versions/index.json", false,
                 strix::readConfigFile(CONFIG_PATH, "beta_update"),
-                strix::readConfigFileString(CONFIG_PATH, "updateCheck").getLargeIntValue());
-                p.checkedUpdate = true;
-                dl.changes = dlResult.changes;
-                dl.shouldBeHidden = false;
-                strix::writeConfigFileString(CONFIG_PATH, "updateCheck", String(Time::currentTimeMillis()));
+                strix::readConfigFileString(CONFIG_PATH, "updateCheck")
+                    .getLargeIntValue());
+            p.checkedUpdate = true;
+            dl.changes = dlResult.changes;
+            dl.shouldBeHidden = false;
+            strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
+                                         String(Time::currentTimeMillis()));
         });
     }
 
@@ -195,26 +200,25 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
     splash.currentWrapper = p.getWrapperTypeString();
-    splash.onLogoClick = [&]
-    {
-        if (!splash.isVisible())
-        {
+    splash.onLogoClick = [&] {
+        if (!splash.isVisible()) {
             splash.setImage(createComponentSnapshot(splash.getBounds()));
             splash.setVisible(true);
         }
     };
 
-    preComponent.onResize = [&]
-    {
-        auto delta = (preComponent.minimized ? -95 : 95); // 95px = (800-610) / 2
+    preComponent.onResize = [&] {
+        auto delta =
+            (preComponent.minimized ? -95 : 95); // 95px = (800-610) / 2
         setSize(getWidth(), getHeight() + delta);
-        getConstrainer()->setFixedAspectRatio((double)getWidth() / (double)getHeight());
+        getConstrainer()->setFixedAspectRatio((double)getWidth() /
+                                              (double)getHeight());
     };
-    enhancers.onResize = [&]
-    {
+    enhancers.onResize = [&] {
         auto delta = (enhancers.minimized ? -95 : 95);
         setSize(getWidth(), getHeight() + delta);
-        getConstrainer()->setFixedAspectRatio((double)getWidth() / (double)getHeight());
+        getConstrainer()->setFixedAspectRatio((double)getWidth() /
+                                              (double)getHeight());
     };
 
     addMouseListener(this, true);
@@ -242,9 +246,12 @@ void GammaAudioProcessorEditor::resetWindowSize()
 void GammaAudioProcessorEditor::paint(juce::Graphics &g)
 {
     g.fillAll(Colour(BACKGROUND_COLOR));
-    auto trimmedTop = getLocalBounds().removeFromTop(uiScale * UI_WIDTH * 0.15f);
-    logoBounds = trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).toFloat();
-    logo->drawWithin(g, logoBounds.reduced(5.f), RectanglePlacement::centred, 1.f);
+    auto trimmedTop =
+        getLocalBounds().removeFromTop(uiScale * UI_WIDTH * 0.15f);
+    logoBounds =
+        trimmedTop.removeFromLeft(trimmedTop.getWidth() / 12).toFloat();
+    logo->drawWithin(g, logoBounds.reduced(5.f), RectanglePlacement::centred,
+                     1.f);
 }
 
 void GammaAudioProcessorEditor::resized()
@@ -269,21 +276,18 @@ void GammaAudioProcessorEditor::resized()
     FlexBox topControlsFlex, uiTopFlex;
     topControlsFlex.flexWrap = FlexBox::Wrap::wrap;
     topControlsFlex.justifyContent = FlexBox::JustifyContent::center;
-    for (auto *c: getTopComponents())
-    {
-        if (c == &link)
-        {
+    for (auto *c : getTopComponents()) {
+        if (c == &link) {
             topControlsFlex.items.add(FlexItem(25 * uiScale, 50, *c));
             continue;
-        }
-        else if (auto *b = dynamic_cast<LightButton * >(c))
-        {
-            topControlsFlex.items.add(FlexItem(50 * uiScale, 35, *c).withMargin(FlexItem::Margin(15.f * uiScale, 0, 15.f * uiScale, 0)));
+        } else if (auto *b = dynamic_cast<LightButton *>(c)) {
+            topControlsFlex.items.add(
+                FlexItem(50 * uiScale, 35, *c)
+                    .withMargin(FlexItem::Margin(15.f * uiScale, 0,
+                                                 15.f * uiScale, 0)));
             b->lnf.cornerRadius = 12.f;
             continue;
-        }
-        else if (auto *k = dynamic_cast<Knob *>(c))
-        {
+        } else if (auto *k = dynamic_cast<Knob *>(c)) {
             k->setTextOffset(0, -3);
             k->setOffset(0, -5);
         }
@@ -299,12 +303,16 @@ void GammaAudioProcessorEditor::resized()
     float titleSection = topSection.getWidth() * 0.22f;
     uiTopFlex.items.add(FlexItem(titleSection, topSectionHeight, pluginTitle));
     uiTopFlex.items.add(FlexItem(topKnobs, topSectionHeight, topControlsFlex));
-    uiTopFlex.items.add(FlexItem(presetSection, 0, presetMenu).withMargin(FlexItem::Margin(topSectionHeight * 0.35f, 0, topSectionHeight * 0.35f, 0)));
+    uiTopFlex.items.add(
+        FlexItem(presetSection, 0, presetMenu)
+            .withMargin(FlexItem::Margin(topSectionHeight * 0.35f, 0,
+                                         topSectionHeight * 0.35f, 0)));
     uiTopFlex.items.add(FlexItem(presetSection / 6.f, topSectionHeight, menu));
 
     uiTopFlex.performLayout(topSection);
 
-    pluginTitle.setFont(Font(pluginTitle.getHeight() * 0.25f).withExtraKerningFactor(0.25f));
+    pluginTitle.setFont(
+        Font(pluginTitle.getHeight() * 0.25f).withExtraKerningFactor(0.25f));
 
     /* rest of UI */
     ampControls.setBounds(ampSection);
