@@ -21,7 +21,7 @@ jobs:
       # 2. <Linux, Release, latest GCC compiler toolchain on the default runner image, default generator>
       # 3. <Linux, Release, latest Clang compiler toolchain on the default runner image, default generator>
       matrix:
-        os: [ubuntu-22.04, windows-2019, macos-11]
+        os: [ubuntu-22.04, windows-2019, macos-12]
 
     steps:
     - name: Install Linux Deps
@@ -36,9 +36,9 @@ jobs:
           libwebkit2gtk-4.0-dev \
           libglu1-mesa-dev mesa-common-dev
           
-    - name: Select Xcode Version
-      if: runner.os == 'MacOS'
-      run: sudo xcode-select -s /Applications/Xcode_12.5.1.app
+#    - name: Select Xcode Version
+#      if: runner.os == 'MacOS'
+#      run: sudo xcode-select -s /Applications/Xcode_12.5.1.app
 
     - uses: actions/checkout@v3
       with:
