@@ -9,25 +9,28 @@
 #pragma once
 
 #if JUCE_MAC
-    #define PRESET_PATH "/Library/Application Support/Arboreal Audio/OmniAmp/Presets"
+#define PRESET_PATH                                                            \
+    "/Library/Application Support/Arboreal Audio/OmniAmp/Presets"
 #elif JUCE_WINDOWS
-    #define PRESET_PATH File::getSpecialLocation(File::userApplicationDataDirectory).getFullPathName() + "/Arboreal Audio/OmniAmp/Presets"
+#define PRESET_PATH                                                            \
+    File::getSpecialLocation(File::userApplicationDataDirectory)               \
+            .getFullPathName() +                                               \
+        "/Arboreal Audio/OmniAmp/Presets"
 #elif JUCE_LINUX
-    #define PRESET_PATH "~/.config/Arboreal Audio/OmniAmp/Presets"
+#define PRESET_PATH "~/.config/Arboreal Audio/OmniAmp/Presets"
 #endif
 
 #include <JuceHeader.h>
 
 struct PresetManager : private AudioProcessorValueTreeState::Listener
 {
-    PresetManager(AudioProcessorValueTreeState& vts) : apvts(vts)
+    PresetManager(AudioProcessorValueTreeState &vts) : apvts(vts)
     {
         if (!userDir.isDirectory())
             userDir.createDirectory();
 
-        for (auto* param : apvts.processor.getParameters())
-        {
-            if (const auto p = dynamic_cast<RangedAudioParameter*>(param))
+        for (auto *param : apvts.processor.getParameters()) {
+            if (const auto p = dynamic_cast<RangedAudioParameter *>(param))
                 if (p->paramID != "hq" && p->paramID != "renderHQ")
                     apvts.addParameterListener(p->paramID, this);
         }
@@ -35,15 +38,14 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
 
     ~PresetManager()
     {
-        for (auto* param : apvts.processor.getParameters())
-        {
-            if (const auto p = dynamic_cast<RangedAudioParameter*>(param))
+        for (auto *param : apvts.processor.getParameters()) {
+            if (const auto p = dynamic_cast<RangedAudioParameter *>(param))
                 if (p->paramID != "hq" && p->paramID != "renderHQ")
                     apvts.removeParameterListener(p->paramID, this);
         }
     }
 
-    void parameterChanged(const String&, float)
+    void parameterChanged(const String &, float)
     {
         if (!stateChanged)
             stateChanged = true;
@@ -51,12 +53,14 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
 
     Array<File> loadFactorySubdirs()
     {
-        return factoryDir.findChildFiles(File::TypesOfFileToFind::findDirectories, false);
+        return factoryDir.findChildFiles(
+            File::TypesOfFileToFind::findDirectories, false);
     }
-    
+
     Array<File> loadUserSubdirs()
     {
-        return userDir.findChildFiles(File::TypesOfFileToFind::findDirectories, false);
+        return userDir.findChildFiles(File::TypesOfFileToFind::findDirectories,
+                                      false);
     }
 
     // get array of file names of a factory subdirectory
@@ -64,9 +68,10 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
     {
         if (!subdir.exists())
             return StringArray{};
-        
+
         assert(subdir.isDirectory());
-        auto presets = subdir.findChildFiles(File::TypesOfFileToFind::findFiles, false, "*.aap");
+        auto presets = subdir.findChildFiles(File::TypesOfFileToFind::findFiles,
+                                             false, "*.aap");
         StringArray result;
         for (auto &p : presets)
             result.add(p.getFileNameWithoutExtension());
@@ -77,21 +82,23 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
     {
         if (!subdir.exists())
             return StringArray{};
-        
+
         assert(subdir.isDirectory());
-        auto presets = subdir.findChildFiles(File::TypesOfFileToFind::findFiles, false, "*.aap");
+        auto presets = subdir.findChildFiles(File::TypesOfFileToFind::findFiles,
+                                             false, "*.aap");
         StringArray names;
         for (auto &p : presets)
             names.add(p.getFileNameWithoutExtension());
         return names;
     }
 
-    bool savePreset(const String& filename, const File& parentDir)
+    bool savePreset(const String &filename, const File &parentDir)
     {
-        auto file = parentDir.getChildFile(File::createLegalFileName(filename)).withFileExtension("aap");
+        auto file = parentDir.getChildFile(File::createLegalFileName(filename))
+                        .withFileExtension("aap");
         if (!file.existsAsFile())
             file.create();
-        
+
         auto state = apvts.copyState();
         auto xml = state.createXml();
 
@@ -103,7 +110,8 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
         return xml->writeTo(file);
     }
 
-    bool loadPreset(const String& filename, bool factoryPreset, const String &subdir = "")
+    bool loadPreset(const String &filename, bool factoryPreset,
+                    const String &subdir = "")
     {
         ValueTree newstate;
         File &dirToUse = factoryPreset ? factoryDir : userDir;
@@ -142,7 +150,7 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
         apvts.replaceState(newstate);
 
         stateChanged = false;
-        
+
         return true;
     }
 
@@ -154,19 +162,15 @@ struct PresetManager : private AudioProcessorValueTreeState::Listener
         return xml->toString();
     }
 
-    void setStateFromString(const String& str)
+    void setStateFromString(const String &str)
     {
         auto newstate = ValueTree::fromXml(str);
         apvts.replaceState(newstate);
     }
 
-    File factoryDir {
-        PRESET_PATH
-        "/Factory" };
-    File userDir{ 
-        PRESET_PATH
-        "/User" };
+    File factoryDir{PRESET_PATH "/Factory"};
+    File userDir{PRESET_PATH "/User"};
 
-private:
-    AudioProcessorValueTreeState& apvts;
+  private:
+    AudioProcessorValueTreeState &apvts;
 };

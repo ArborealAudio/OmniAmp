@@ -1,14 +1,14 @@
 #pragma once
-#include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include <JuceHeader.h>
 
 #define SITE_URL "https://arborealaudio.com"
 #if JUCE_WINDOWS
-    #define DL_BIN "OmniAmp-windows.exe"
+#define DL_BIN "OmniAmp-windows.exe"
 #elif JUCE_MAC
-    #define DL_BIN "OmniAmp-mac.dmg"
+#define DL_BIN "OmniAmp-mac.dmg"
 #elif JUCE_LINUX
-    #define DL_BIN "OmniAmp-linux.tar.xz"
+#define DL_BIN "OmniAmp-linux.tar.xz"
 #endif
 
 static strix::UpdateResult dlResult;
@@ -17,7 +17,7 @@ static strix::UpdateResult dlResult;
 
 class GammaAudioProcessorEditor : public AudioProcessorEditor, Timer
 {
-public:
+  public:
     GammaAudioProcessorEditor(GammaAudioProcessor &);
     ~GammaAudioProcessorEditor() override;
 
@@ -28,23 +28,18 @@ public:
     {
         auto pos = getMouseXYRelative().toFloat();
 
-        if (logoBounds.contains(pos))
-        {
+        if (logoBounds.contains(pos)) {
             if (splash.onLogoClick)
                 splash.onLogoClick();
             repaint();
-        }
-        else if (splash.isVisible())
-        {
+        } else if (splash.isVisible()) {
             if (splash.getBounds().contains(pos.toInt()))
                 splash.mouseDown(event);
-            else
-            {
+            else {
                 splash.setVisible(false);
                 repaint();
             }
-        }
-        else
+        } else
             AudioProcessorEditor::mouseDown(event);
     }
 
@@ -58,7 +53,7 @@ public:
 
     void resetWindowSize();
 
-private:
+  private:
     GammaAudioProcessor &audioProcessor;
 
     std::unique_ptr<Drawable> logo;
@@ -67,23 +62,20 @@ private:
     AmpControls ampControls;
 
     Knob::Flags knobFlags = 0;
-    Knob inGain{knobFlags}, outGain{knobFlags}, width{knobFlags}, mix{knobFlags};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> inGainAttach, outGainAttach, widthAttach, mixAttach;
+    Knob inGain{knobFlags}, outGain{knobFlags}, width{knobFlags},
+        mix{knobFlags};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment>
+        inGainAttach, outGainAttach, widthAttach, mixAttach;
     LightButton bypass;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> bypassAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment>
+        bypassAttach;
 
     LinkButton link;
 
     std::vector<Component *> getTopComponents()
     {
-        return {
-            // &gate,
-            &inGain,
-            &link,
-            &outGain,
-            &width,
-            &mix,
-            &bypass};
+        return {// &gate,
+                &inGain, &link, &outGain, &width, &mix, &bypass};
     }
 
     PreComponent preComponent;

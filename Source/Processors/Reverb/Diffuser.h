@@ -5,25 +5,23 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <JuceHeader.h>
 #include "MixMatrix.h"
+#include <JuceHeader.h>
+#include <stdint.h>
 
-template <typename T, int channels>
-struct Diffuser
+template <typename T, int channels> struct Diffuser
 {
     /**
      * @param seed_ seed for delay time RNG
      */
-    Diffuser(int64_t seed_) : seed(seed_)
-    {
-    }
+    Diffuser(int64_t seed_) : seed(seed_) {}
 
     /**
      * @param delayRangeinS you guessed it, delay range in seconds
      * @param seed_ seed for delay time RNG
      */
-    Diffuser(float delayRangeinS, int64_t seed_) : delayRange(delayRangeinS), seed(seed_)
+    Diffuser(float delayRangeinS, int64_t seed_)
+        : delayRange(delayRangeinS), seed(seed_)
     {
     }
 
@@ -39,8 +37,7 @@ struct Diffuser
 
         int i = 0;
         auto delayRangeSamples = delayRange * SR;
-        for (auto &d : delay)
-        {
+        for (auto &d : delay) {
             double minDelay = delayRangeSamples * i / channels;
             double maxDelay = delayRangeSamples * (i + 1) / channels;
             d.prepare(spec);
@@ -59,8 +56,7 @@ struct Diffuser
         Random rand(seed);
 
         auto delayRangeSamples = delayRange * SR;
-        for (size_t i = 0; i < delay.size(); ++i)
-        {
+        for (size_t i = 0; i < delay.size(); ++i) {
             double minDelay = delayRangeSamples * i / channels;
             double maxDelay = delayRangeSamples * (i + 1) / channels;
             auto nDelay = (minDelay + maxDelay) / 2.0;
@@ -83,8 +79,7 @@ struct Diffuser
     }
 
     // expects a block of N channels
-    template <typename Block>
-    void process(Block &block)
+    template <typename Block> void process(Block &block)
     {
         // if (needUpdate)
         // {
@@ -92,10 +87,8 @@ struct Diffuser
         //     needUpdate = false;
         //     return;
         // }
-        for (auto i = 0; i < block.getNumSamples(); ++i)
-        {
-            for (auto ch = 0; ch < channels; ++ch)
-            {
+        for (auto i = 0; i < block.getNumSamples(); ++i) {
+            for (auto ch = 0; ch < channels; ++ch) {
                 delay[ch].pushSample(0, block.getSample(ch, i));
                 delayed[ch] = (delay[ch].popSample(0));
             }
@@ -107,18 +100,16 @@ struct Diffuser
         }
         for (auto ch = 0; ch < channels; ++ch)
             if (invert[ch])
-                FloatVectorOperations::multiply(block.getChannelPointer(ch), -1.0, block.getNumSamples());
+                FloatVectorOperations::multiply(block.getChannelPointer(ch),
+                                                -1.0, block.getNumSamples());
     }
 
-    template <typename Block>
-    void processSmooth(Block &block)
+    template <typename Block> void processSmooth(Block &block)
     {
-        for (auto i = 0; i < block.getNumSamples(); ++i)
-        {
+        for (auto i = 0; i < block.getNumSamples(); ++i) {
             changeDelay();
 
-            for (auto ch = 0; ch < channels; ++ch)
-            {
+            for (auto ch = 0; ch < channels; ++ch) {
                 delay[ch].pushSample(0, block.getSample(ch, i));
                 delayed[ch] = (delay[ch].popSample(0));
             }
@@ -130,13 +121,16 @@ struct Diffuser
         }
         for (auto ch = 0; ch < channels; ++ch)
             if (invert[ch])
-                FloatVectorOperations::multiply(block.getChannelPointer(ch), -1.0, block.getNumSamples());
+                FloatVectorOperations::multiply(block.getChannelPointer(ch),
+                                                -1.0, block.getNumSamples());
     }
 
     float delayRange;
 
-private:
-    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>, channels> delay;
+  private:
+    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>,
+               channels>
+        delay;
     std::array<int, channels> randDelay;
     std::array<T, channels> delayed;
     const int64_t seed;
