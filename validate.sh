@@ -5,11 +5,10 @@ set -e
 plugin=OmniAmp
 
 # Install pluginval
-# NOTE: We only validate VST3 because AU seems to not work on CI
+# NOTE: We only validate VST3 because AU seems to not work on CI. Keeping plugin_path
+# as array in case we add more paths later.
 # Don't really care about validating VST2 and we'd have to pull in the SDK to
 # build it anyway
-# NOTE: See below re: AUs
-# pluginval.exe --validate [pathToPlugin]Validates the file (or IDs for AUs).
 
 plugin_path=("build/${plugin}_artefacts/Release/VST3/${plugin}.vst3")
 
@@ -22,7 +21,6 @@ else
 	unzip pluginval
 	if [[ $RUNNER_OS == 'macOS' ]]; then
 		pluginval="pluginval.app/Contents/MacOS/pluginval"
-		plugin_path+=("build/${plugin}_artefacts/Release/AU/${plugin}.component")
 	else
 		pluginval="./pluginval"
 	fi
@@ -30,7 +28,7 @@ fi
 
 for p in ${plugin_path[@]}; do
 	echo "Validating $p"
-	if $pluginval --strictness-level 10 --validate-in-process --skip-gui-tests --timeout-ms 300000 $p;
+	if $pluginval --strictness-level 10 --validate-in-process --timeout-ms 300000 $p;
 	then
 		echo "Pluginval successful"
 	else
