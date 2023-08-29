@@ -11,25 +11,32 @@ plugin=OmniAmp
 # NOTE: See below re: AUs
 # pluginval.exe --validate [pathToPlugin]Validates the file (or IDs for AUs).
 
-plugin_path="build/${plugin}_artefacts/Release/VST3/${plugin}.vst3"
+plugin_path=("build/${plugin}_artefacts/Release/VST3/${plugin}.vst3")
 
 if [[ $RUNNER_OS == 'Windows' ]]; then
-	powershell -Command "Invoke-WebRequest -Uri https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_Windows.zip -OutFile pluginval.zip"
+	powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_Windows.zip -OutFile pluginval.zip"
 	powershell -Command "Expand-Archive -Path ./pluginval.zip -DestinationPath ."
 	pluginval="./pluginval.exe"
 else
 	wget -O pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_${RUNNER_OS}.zip
 	unzip pluginval
-	pluginval="pluginval.app/Contents/MacOS/pluginval"
+	if [[ $RUNNER_OS == 'macOS' ]]; then
+		pluginval="pluginval.app/Contents/MacOS/pluginval"
+		plugin_path+=("build/${plugin}_artefacts/Release/AU/${plugin}.component")
+	else
+		pluginval="./pluginval"
+	fi
 fi
 
-echo "Validating $plugin_path"
-if $pluginval --strictness-level 10 --validate-in-process --skip-gui-tests --timeout-ms 300000 $plugin_path;
-then
-	echo "Pluginval successful"
-else
-	echo "Pluginval failed"
-	exit 1
-fi
+for p in ${plugin_path[@]}; do
+	echo "Validating $p"
+	if $pluginval --strictness-level 10 --validate-in-process --skip-gui-tests --timeout-ms 300000 $p;
+	then
+		echo "Pluginval successful"
+	else
+		echo "Pluginval failed"
+		exit 1
+	fi
+done
 
 rm -rf pluginval*
