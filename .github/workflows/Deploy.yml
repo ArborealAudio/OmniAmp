@@ -96,7 +96,7 @@ jobs:
         TEAM_ID: ${{ secrets.TEAM_ID }}
       run: |
         sudo xcode-select -s /Applications/Xcode_13.4.1.app
-        ./scripts/mac-build.sh -n $PROJECT -v $VERSION --clap --vst2
+        ./scripts/mac-build.sh -n $PROJECT -v $VERSION --vst2 --presets
         echo "VERSION=$VERSION" >> "$GITHUB_ENV"
         echo "ARTIFACT=${{ env.PROJECT }}-mac.dmg" >> "$GITHUB_ENV"
         mkdir bin
@@ -107,7 +107,7 @@ jobs:
       run: |
         cmake -Bbuild -GNinja -DPRODUCTION_BUILD=1 -DBUILD_VST2=1
         cmake --build build --config Release
-        ./scripts/linux-installer.sh -n $PROJECT -v $VERSION --clap --vst2
+        ./scripts/linux-installer.sh -n $PROJECT -v $VERSION --vst2 --presets
         echo "VERSION=$VERSION" >> "$GITHUB_ENV"
         echo "ARTIFACT=${{ env.PROJECT }}-linux.tar.xz" >> "$GITHUB_ENV"
         mkdir bin
@@ -117,7 +117,7 @@ jobs:
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        scripts/win-build.sh -n $PROJECT -v $VERSION --clap --vst2 --ninja
+        scripts/win-build.sh -n $PROJECT -v $VERSION --vst2 --ninja --presets
         echo "ARTIFACT=${{ env.PROJECT }}-windows.exe" >> "$GITHUB_ENV"
         mkdir bin
         cp products/Output/${{ env.PROJECT }}-windows.exe bin/
