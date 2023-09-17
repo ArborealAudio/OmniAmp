@@ -30,6 +30,11 @@ if(BUILD_VST2)
     list(APPEND JUCE_FORMATS VST)
 endif()
 
+if (UNIX AND NOT APPLE)
+    message("Adding LV2 target")
+    list(APPEND JUCE_FORMATS LV2)
+endif()
+
 juce_add_plugin(OmniAmp
     COMPANY_NAME "Arboreal Audio"
     COMPANY_COPYRIGHT "(c) 2023 Arboreal Audio, LLC"
