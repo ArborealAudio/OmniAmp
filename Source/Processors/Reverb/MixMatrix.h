@@ -1,19 +1,17 @@
 /**
  * MixMatrix.h
  * Helper functions for using Hadamard or Householder matrices
-*/
+ */
 
 #pragma once
 
 #include <cmath>
-template <int size>
-struct MixMatrix
+template <int size> struct MixMatrix
 {
     MixMatrix() = default;
 
     // Expects an array of N channels worth of samples
-    template <typename T>
-    static inline void processHadamardMatrix(T *ch)
+    template <typename T> static inline void processHadamardMatrix(T *ch)
     {
         recursive(ch);
 
@@ -24,8 +22,7 @@ struct MixMatrix
     }
 
     // Expects an array of N channels worth of samples
-    template <typename T>
-    static void processHouseholder(T *ch)
+    template <typename T> static void processHouseholder(T *ch)
     {
         const T h_mult = -2.0 / (T)size;
 
@@ -39,8 +36,7 @@ struct MixMatrix
             ch[j] += sum; // add the sum to each sample in the array
     }
 
-    template <typename T>
-    static inline void recursive(T *data)
+    template <typename T> static inline void recursive(T *data)
     {
         if (size <= 1)
             return;
@@ -49,8 +45,7 @@ struct MixMatrix
         MixMatrix<hSize>::recursive(data);
         MixMatrix<hSize>::recursive(data + hSize);
 
-        for (int i = 0; i < hSize; ++i)
-        {
+        for (int i = 0; i < hSize; ++i) {
             T a = data[i];
             T b = data[i + hSize];
             data[i] = a + b;

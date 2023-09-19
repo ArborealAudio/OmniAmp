@@ -10,10 +10,11 @@
 
 #pragma once
 
-template <typename T>
-struct OptoComp
+template <typename T> struct OptoComp
 {
-    OptoComp(ProcessorType t, strix::VolumeMeterSource &s, std::atomic<float> *pos) : position(pos), type(t), grSource(s)
+    OptoComp(ProcessorType t, strix::VolumeMeterSource &s,
+             std::atomic<float> *pos)
+        : position(pos), type(t), grSource(s)
     {
     }
 
@@ -24,60 +25,66 @@ struct OptoComp
 
         grSource.prepare(spec, 0.01f);
 
-        grData.setSize(spec.numChannels, spec.maximumBlockSize, false, false, true);
+        grData.setSize(spec.numChannels, spec.maximumBlockSize, false, false,
+                       true);
 
-        switch (type)
-        {
+        switch (type) {
         case ProcessorType::Guitar:
-            sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 200.0, 1.02);
-            sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 3500.0, 0.8);
+            sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(
+                spec.sampleRate, 200.0, 1.02);
+            sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(
+                spec.sampleRate, 3500.0, 0.8);
 
-            hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 1000.0);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 5000.0);
+            hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(
+                spec.sampleRate, 1000.0);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(
+                spec.sampleRate, 5000.0);
 
-            for (auto &h : hp)
-            {
+            for (auto &h : hp) {
                 h.prepare(spec);
                 h.coefficients = hp_coeffs;
             }
-            for (auto &l : lp)
-            {
+            for (auto &l : lp) {
                 l.prepare(spec);
                 l.coefficients = lp_coeffs;
             }
             break;
         case ProcessorType::Bass:
-            sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 150.0);
-            sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(spec.sampleRate, 2500.0);
+            sc_hp_coeffs =
+                dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(
+                    spec.sampleRate, 150.0);
+            sc_lp_coeffs =
+                dsp::IIR::Coefficients<double>::makeFirstOrderLowPass(
+                    spec.sampleRate, 2500.0);
 
-            hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(spec.sampleRate, 1000.0);
-            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 3500.0);
+            hp_coeffs = dsp::IIR::Coefficients<double>::makeFirstOrderHighPass(
+                spec.sampleRate, 1000.0);
+            lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(
+                spec.sampleRate, 3500.0);
 
-            for (auto &h : hp)
-            {
+            for (auto &h : hp) {
                 h.prepare(spec);
                 h.coefficients = hp_coeffs;
             }
-            for (auto &l : lp)
-            {
+            for (auto &l : lp) {
                 l.prepare(spec);
                 l.coefficients = lp_coeffs;
             }
             break;
         case ProcessorType::Channel:
-            sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(spec.sampleRate, 100.0, 0.707);
-            sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(spec.sampleRate, 5000.0, 0.8);
+            sc_hp_coeffs = dsp::IIR::Coefficients<double>::makeHighPass(
+                spec.sampleRate, 100.0, 0.707);
+            sc_lp_coeffs = dsp::IIR::Coefficients<double>::makeLowPass(
+                spec.sampleRate, 5000.0, 0.8);
             break;
         }
 
-        for (auto &h : sc_hp)
-        {
+        for (auto &h : sc_hp) {
             h.prepare(spec);
             h.coefficients = sc_hp_coeffs;
         }
 
-        for (auto &l : sc_lp)
-        {
+        for (auto &l : sc_lp) {
             l.prepare(spec);
             l.coefficients = sc_lp_coeffs;
         }
@@ -101,19 +108,20 @@ struct OptoComp
     // set threshold based on comp param
     void setComp(double newComp)
     {
-        switch (type)
-        {
+        switch (type) {
         case ProcessorType::Guitar:
-        case ProcessorType::Bass:
-        {
+        case ProcessorType::Bass: {
             double c_comp = jmap(newComp, 1.0, 3.0);
-            threshold.store(std::pow(10.0, (-18.0 * c_comp) * 0.05)); /* start at -18dB and scale down 3x */
+            threshold.store(std::pow(
+                10.0, (-18.0 * c_comp) *
+                          0.05)); /* start at -18dB and scale down 3x */
             break;
         }
-        case ProcessorType::Channel:
-        {
+        case ProcessorType::Channel: {
             double c_comp = jmap(newComp, 1.0, 3.0);
-            threshold.store(std::pow(10.0, (-12.0 * c_comp) * 0.05)); /* start at -12dB and scale down 3x */
+            threshold.store(std::pow(
+                10.0, (-12.0 * c_comp) *
+                          0.05)); /* start at -12dB and scale down 3x */
             break;
         }
         }
@@ -121,29 +129,32 @@ struct OptoComp
 
     void processBlock(dsp::AudioBlock<double> &block, T comp, bool linked)
     {
-        if (comp == 0.0)
-        {
+        if (comp == 0.0) {
             grSource.measureGR(1.0);
             reset();
             return;
         }
         if (block.getNumChannels() > 1 && linked)
-            processStereo(block.getChannelPointer(0), block.getChannelPointer(1), comp, block.getNumSamples());
-        else if (block.getNumChannels() > 1 && !linked)
-        {
-            processUnlinked(block.getChannelPointer(0), 0, comp, block.getNumSamples());
-            processUnlinked(block.getChannelPointer(1), 1, comp, block.getNumSamples());
-        }
-        else
-            processUnlinked(block.getChannelPointer(0), 0, comp, block.getNumSamples());
-            
+            processStereo(block.getChannelPointer(0),
+                          block.getChannelPointer(1), comp,
+                          block.getNumSamples());
+        else if (block.getNumChannels() > 1 && !linked) {
+            processUnlinked(block.getChannelPointer(0), 0, comp,
+                            block.getNumSamples());
+            processUnlinked(block.getChannelPointer(1), 1, comp,
+                            block.getNumSamples());
+        } else
+            processUnlinked(block.getChannelPointer(0), 0, comp,
+                            block.getNumSamples());
+
         // copy data to GR meter
-        grSource.copyBuffer(grData.getArrayOfWritePointers(), block.getNumChannels(), block.getNumSamples());
+        grSource.copyBuffer(grData.getArrayOfWritePointers(),
+                            block.getNumChannels(), block.getNumSamples());
     }
 
     strix::VolumeMeterSource &getGRSource() { return grSource; }
 
-private:
+  private:
     /* linked stereo */
     inline void processStereo(T *inL, T *inR, T comp, int numSamples)
     {
@@ -155,8 +166,7 @@ private:
 
         auto grBuf = grData.getArrayOfWritePointers();
 
-        for (int i = 0; i < numSamples; ++i)
-        {
+        for (int i = 0; i < numSamples; ++i) {
             auto abs0 = std::abs(xm[0]);
             auto abs1 = std::abs(xm[1]);
 
@@ -192,8 +202,7 @@ private:
 
         auto grBuf = grData.getWritePointer(ch);
 
-        for (int i = 0; i < numSamples; ++i)
-        {
+        for (int i = 0; i < numSamples; ++i) {
             auto x = std::abs(xm[ch]);
 
             x = sc_hp[ch].processSample(x);
@@ -228,12 +237,9 @@ private:
         T att = std::exp(-1.0 / (att_time * lastSR));
         T rel = std::exp(-1.0 / (rel_time * lastSR));
 
-        if (env > lastEnv[ch])
-        {
+        if (env > lastEnv[ch]) {
             env = env + att * (lastEnv[ch] - env);
-        }
-        else
-        {
+        } else {
             env = env + rel * (lastEnv[ch] - env);
         }
 
@@ -249,8 +255,7 @@ private:
     /* comp: 0-1, c_comp: 1-6 */
     inline void postComp(T &x, int ch, T gr, T comp, T c_comp)
     {
-        switch (type)
-        {
+        switch (type) {
         case ProcessorType::Guitar:
         case ProcessorType::Bass:
             if (c_comp <= 2.f)
@@ -268,15 +273,15 @@ private:
 
         xm[ch] = x;
 
-        switch (type)
-        {
+        switch (type) {
         case ProcessorType::Guitar:
-        case ProcessorType::Bass:
-        {
+        case ProcessorType::Bass: {
             auto bp = hp[ch].processSample(x);
             bp = lp[ch].processSample(bp);
 
-            x += bp * (comp * 1.5); /* use comp as gain for bp signal, this also kind of doubles as a filtered output gain */
+            x += bp *
+                 (comp * 1.5); /* use comp as gain for bp signal, this also kind
+                                  of doubles as a filtered output gain */
             break;
         }
         case ProcessorType::Channel:
@@ -299,7 +304,8 @@ private:
     size_t nChannels = 0;
 
     dsp::IIR::Filter<T> sc_hp[2], sc_lp[2], lp[2], hp[2];
-    dsp::IIR::Coefficients<double>::Ptr sc_hp_coeffs, sc_lp_coeffs, lp_coeffs, hp_coeffs;
+    dsp::IIR::Coefficients<double>::Ptr sc_hp_coeffs, sc_lp_coeffs, lp_coeffs,
+        hp_coeffs;
 
     ProcessorType type;
 

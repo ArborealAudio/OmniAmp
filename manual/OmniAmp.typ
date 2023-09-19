@@ -9,7 +9,7 @@
 
 #align(center + top)[
 	#image(
-		"../Resources/logo.svg",
+		"./logo.svg",
 		width: 13%,
 		fit: "cover"
 	)
@@ -62,7 +62,7 @@ Four different, custom amp models.
 
 - *Moonbeam* is a darker amp with less headroom and heavier distortion, good for metal or heavier rock rhythm tones.
 
-- *XRay* an aggressive, midrange-focused amp that bridges the gap between **GammaRay** and **Moonbeam**. Has a fair amount of distortion and cuts through quite well.
+- *XRay* an aggressive, midrange-focused amp that bridges the gap between *GammaRay* and *Moonbeam*. Has a fair amount of distortion and cuts through quite well.
 
 === II. Bass
 
@@ -72,7 +72,7 @@ Three custom bass amp models:
 
 - *Cobalt:* a modern-sounding, full-voiced bass amp that doesn't spare an ounce of low-end.
 
-- *Emerald* a more modest, modern amp with more headroom than **Cobalt**.
+- *Emerald* a more modest, modern amp with more headroom than *Cobalt*.
 
 - *Quartz* a vintage-sounding amp with a dampened low-end and punchier hi-mids.
 

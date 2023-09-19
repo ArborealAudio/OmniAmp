@@ -1,10 +1,9 @@
 /**
  * MixedFeedback.h
  * Class for processing multi-channel feedback
-*/
+ */
 
-template <typename T, int channels>
-struct MixedFeedback
+template <typename T, int channels> struct MixedFeedback
 {
     void prepare(const dsp::ProcessSpec &spec)
     {
@@ -12,15 +11,13 @@ struct MixedFeedback
 
         double delaySamplesBase = delayMs * 0.001 * spec.sampleRate;
 
-        for (int ch = 0; ch < channels; ++ch)
-        {
+        for (int ch = 0; ch < channels; ++ch) {
             double r = ch * 1.0 / channels;
             delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
             delays[ch].prepare(spec);
             delays[ch].setMaximumDelayInSamples(SR);
 
-            osc[ch].initialise([](double x)
-                               { return std::sin(x); });
+            osc[ch].initialise([](double x) { return std::sin(x); });
             osc[ch].setFrequency(std::pow(modFreq, (double)ch / channels));
             osc[ch].prepare(spec);
         }
@@ -50,8 +47,7 @@ struct MixedFeedback
         delayMs = params.roomSizeMs;
         rt60 = params.rt60;
         double delaySamplesBase = delayMs * 0.001 * SR;
-        for (int ch = 0; ch < channels; ++ch)
-        {
+        for (int ch = 0; ch < channels; ++ch) {
             double r = ch * 1.0 / channels;
             delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
         }
@@ -75,8 +71,7 @@ struct MixedFeedback
     void changeDelayAndDecay()
     {
         double delaySamplesBase = delayMs * 0.001 * SR;
-        for (int ch = 0; ch < channels; ++ch)
-        {
+        for (int ch = 0; ch < channels; ++ch) {
             double r = ch * 1.0 / channels;
             delaySamples[ch] = std::pow(2.0, r) * delaySamplesBase;
         }
@@ -96,13 +91,10 @@ struct MixedFeedback
             o.reset();
     }
 
-    template <typename Block>
-    void process(Block &block)
+    template <typename Block> void process(Block &block)
     {
-        for (int i = 0; i < block.getNumSamples(); ++i)
-        {
-            for (int ch = 0; ch < channels; ++ch)
-            {
+        for (int i = 0; i < block.getNumSamples(); ++i) {
+            for (int ch = 0; ch < channels; ++ch) {
                 auto mod = osc[ch].processSample(delaySamples[ch]);
                 auto dtime = delaySamples[ch] - (0.2 * mod);
                 auto d = delays[ch].popSample(0, dtime);
@@ -113,8 +105,7 @@ struct MixedFeedback
 
             MixMatrix<channels>::processHouseholder(delayed.data());
 
-            for (int ch = 0; ch < channels; ++ch)
-            {
+            for (int ch = 0; ch < channels; ++ch) {
                 auto in = block.getChannelPointer(ch)[i];
                 auto sum = in + delayed[ch] * decayGain;
                 delays[ch].pushSample(0, sum);
@@ -124,15 +115,12 @@ struct MixedFeedback
         }
     }
 
-    template <typename Block>
-    void processSmoothed(Block &block)
+    template <typename Block> void processSmoothed(Block &block)
     {
-        for (int i = 0; i < block.getNumSamples(); ++i)
-        {
+        for (int i = 0; i < block.getNumSamples(); ++i) {
             changeDelayAndDecay();
 
-            for (int ch = 0; ch < channels; ++ch)
-            {
+            for (int ch = 0; ch < channels; ++ch) {
                 auto mod = osc[ch].processSample(delaySamples[ch]);
                 auto dtime = delaySamples[ch] - (0.2 * mod);
                 auto d = delays[ch].popSample(0, dtime);
@@ -143,8 +131,7 @@ struct MixedFeedback
 
             MixMatrix<channels>::processHouseholder(delayed.data());
 
-            for (int ch = 0; ch < channels; ++ch)
-            {
+            for (int ch = 0; ch < channels; ++ch) {
                 auto in = block.getChannelPointer(ch)[i];
                 auto sum = in + delayed[ch] * decayGain;
                 delays[ch].pushSample(0, sum);
@@ -155,16 +142,19 @@ struct MixedFeedback
     }
 
     T decayGain = 0.85;
-    /*A fraction of Nyquist, where the lowpass will be placed in the feedback path*/
+    /*A fraction of Nyquist, where the lowpass will be placed in the feedback
+     * path*/
     T dampening = 1.0;
     T modFreq = 1.0;
 
-private:
+  private:
     T delayMs = 150.0;
     T rt60 = 0.0;
     std::atomic<bool> needUpdate = false;
     std::array<int, channels> delaySamples;
-    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>, channels> delays;
+    std::array<dsp::DelayLine<T, dsp::DelayLineInterpolationTypes::Linear>,
+               channels>
+        delays;
     // container for N number of delayed & filtered samples
     std::array<T, channels> delayed;
     strix::SVTFilter<T> lp, hp;

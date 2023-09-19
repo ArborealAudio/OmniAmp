@@ -12,24 +12,28 @@
 
 struct AmpControls : Component, private Timer
 {
-    AmpControls(AudioProcessorValueTreeState &a) : vts(a),
-                                                   mode(static_cast<strix::ChoiceParameter *>(vts.getParameter("mode"))->getAllValueStrings()),
-                                                   guitarMode(static_cast<strix::ChoiceParameter *>(vts.getParameter("guitarMode"))->getAllValueStrings()),
-                                                   bassMode(static_cast<strix::ChoiceParameter *>(vts.getParameter("bassMode"))->getAllValueStrings()),
-                                                   channelMode(static_cast<strix::ChoiceParameter *>(vts.getParameter("channelMode"))->getAllValueStrings())
+    AmpControls(AudioProcessorValueTreeState &a)
+        : vts(a),
+          mode(static_cast<strix::ChoiceParameter *>(vts.getParameter("mode"))
+                   ->getAllValueStrings()),
+          guitarMode(static_cast<strix::ChoiceParameter *>(
+                         vts.getParameter("guitarMode"))
+                         ->getAllValueStrings()),
+          bassMode(static_cast<strix::ChoiceParameter *>(
+                       vts.getParameter("bassMode"))
+                       ->getAllValueStrings()),
+          channelMode(static_cast<strix::ChoiceParameter *>(
+                          vts.getParameter("channelMode"))
+                          ->getAllValueStrings())
     {
         for (auto &k : getKnobs())
             addAndMakeVisible(*k);
 
         mode_p = vts.getRawParameterValue("mode");
 
-        auto zeroToTen = [](float val)
-        {
-            return String(val * 10.0, 1);
-        };
+        auto zeroToTen = [](float val) { return String(val * 10.0, 1); };
 
-        auto decibels = [](float val)
-        {
+        auto decibels = [](float val) {
             val = jmap(val, -6.f, 6.f);
             String str(val, 1);
             str.append("dB", 2);
@@ -41,66 +45,99 @@ struct AmpControls : Component, private Timer
             eqFunc = decibels;
         else
             eqFunc = zeroToTen;
-        
-        distAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(vts, "dist", dist);
+
+        distAttach =
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                vts, "dist", dist);
         dist.setLabel("Overdrive");
         dist.setTooltip("A one-knob distortion pedal. Fully bypassed at 0.");
         dist.setValueToStringFunction(zeroToTen);
 
-        inGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "preampGain", inGain);
+        inGainAttach =
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                a, "preampGain", inGain);
         inGain.setLabel("Preamp");
-        inGain.setTooltip("Preamp gain stage. In Channel mode, is bypassed at 0.");
+        inGain.setTooltip(
+            "Preamp gain stage. In Channel mode, is bypassed at 0.");
         inGain.setValueToStringFunction(zeroToTen);
 
-        String eqTooltip = "EQ section of the amp. In Channel mode, the EQ knobs will cut below 50% and add above 50%.\n\nIn Guitar & Bass mode, these controls will work like a traditional amp tone stack.";
+        String eqTooltip =
+            "EQ section of the amp. In Channel mode, the EQ knobs will cut "
+            "below 50% and add above 50%.\n\nIn Guitar & Bass mode, these "
+            "controls will work like a traditional amp tone stack.";
 
-        bassAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "bass", bass);
+        bassAttach =
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                a, "bass", bass);
         bass.setLabel("Bass");
         bass.setTooltip(eqTooltip);
         bass.setValueToStringFunction(eqFunc);
 
-        midAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "mid", mid);
+        midAttach =
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                a, "mid", mid);
         mid.setLabel("Mid");
         mid.setTooltip(eqTooltip);
         mid.setValueToStringFunction(eqFunc);
 
-        trebleAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "treble", treble);
+        trebleAttach =
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                a, "treble", treble);
         treble.setLabel("Treble");
         treble.setTooltip(eqTooltip);
         treble.setValueToStringFunction(eqFunc);
 
-        outGainAttach = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(a, "powerampGain", outGain);
+        outGainAttach =
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                a, "powerampGain", outGain);
         outGain.setLabel("Power Amp");
-        outGain.setTooltip("Power amp stage. In Channel mode, fully bypassed at 0.");
+        outGain.setTooltip(
+            "Power amp stage. In Channel mode, fully bypassed at 0.");
         outGain.setValueToStringFunction(zeroToTen);
 
         addAndMakeVisible(mode);
-        modeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "mode", mode);
+        modeAttach =
+            std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
+                a, "mode", mode);
 
         addChildComponent(guitarMode);
         addChildComponent(bassMode);
         addChildComponent(channelMode);
-        gtrModeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "guitarMode", guitarMode);
-        bassModeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "bassMode", bassMode);
-        chanModeAttach = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(a, "channelMode", channelMode);
+        gtrModeAttach =
+            std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
+                a, "guitarMode", guitarMode);
+        bassModeAttach =
+            std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
+                a, "bassMode", bassMode);
+        chanModeAttach =
+            std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
+                a, "channelMode", channelMode);
         setSubModePtr();
 
         setColorScheme();
 
         addChildComponent(autoGain);
         if (*mode_p > 1)
-            autoGain.setVisible(true); 
-        autoGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "ampAutoGain", autoGain);
+            autoGain.setVisible(true);
+        autoGainAttach =
+            std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(
+                a, "ampAutoGain", autoGain);
         autoGain.setButtonText("Auto");
-        autoGain.setTooltip("Enable auto gain compensation for the entire amp section.");
+        autoGain.setTooltip(
+            "Enable auto gain compensation for the entire amp section.");
 
         addAndMakeVisible(hiGain);
-        hiGainAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "hiGain", hiGain);
+        hiGainAttach =
+            std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(
+                a, "hiGain", hiGain);
         hiGain.setButtonText("Boost");
-        hiGain.setTooltip("Boost for the preamp stage. Adds volume and new tubes to the circuit.");
+        hiGain.setTooltip("Boost for the preamp stage. Adds volume and new "
+                          "tubes to the circuit.");
 
         addAndMakeVisible(power);
-        powerAttach = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(a, "ampOn", power);
+        powerAttach =
+            std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(
+                a, "ampOn", power);
 
         startTimerHz(30);
     }
@@ -114,13 +151,11 @@ struct AmpControls : Component, private Timer
     void setSubModePtr()
     {
         Rectangle<int> bounds;
-        if (subMode != nullptr)
-        {
+        if (subMode != nullptr) {
             subMode->setVisible(false);
             bounds = subMode->getBounds();
         }
-        switch ((int)*mode_p)
-        {
+        switch ((int)*mode_p) {
         case 0:
             subMode = &guitarMode;
             subMode_p = vts.getRawParameterValue("guitarMode");
@@ -149,19 +184,12 @@ struct AmpControls : Component, private Timer
         setSubModePtr();
 
         std::function<String(float)> function;
-        if (currentMode < 2)
-        {
-            function = [](float val)
-            {
-                return String(val * 10.0, 1);
-            };
+        if (currentMode < 2) {
+            function = [](float val) { return String(val * 10.0, 1); };
 
             autoGain.setVisible(false);
-        }
-        else
-        {
-            function = [](float val)
-            {
+        } else {
+            function = [](float val) {
                 val = jmap(val, -6.f, 6.f);
                 String str(val, 1);
                 str.append("dB", 2);
@@ -184,8 +212,7 @@ struct AmpControls : Component, private Timer
     void setColorScheme()
     {
         using namespace Processors;
-        switch ((ProcessorType)mode_p->load())
-        {
+        switch ((ProcessorType)mode_p->load()) {
         case ProcessorType::Guitar:
             switch ((GuitarMode)subMode_p->load())
             {
@@ -203,15 +230,14 @@ struct AmpControls : Component, private Timer
                 break;
             }
             secondaryColor = Colour(BACKGROUND_COLOR).contrasting(1.f);
-            for (auto &k : getKnobs())
-            {
-                k->setColor(Colours::antiquewhite, secondaryColor, Colours::white);
+            for (auto &k : getKnobs()) {
+                k->setColor(Colours::antiquewhite, secondaryColor,
+                            Colours::white);
                 k->repaint();
             }
             break;
         case Processors::ProcessorType::Bass:
-            switch ((BassMode)subMode_p->load())
-            {
+            switch ((BassMode)subMode_p->load()) {
             case Cobalt:
                 backgroundColor = Colour(COBALT);
                 break;
@@ -223,8 +249,7 @@ struct AmpControls : Component, private Timer
                 break;
             }
             secondaryColor = Colours::lightgrey;
-            for (auto &k : getKnobs())
-            {
+            for (auto &k : getKnobs()) {
                 k->setColor(Colours::black, secondaryColor, Colours::white);
                 k->repaint();
             }
@@ -268,7 +293,10 @@ struct AmpControls : Component, private Timer
 
     void paint(Graphics &g) override
     {
-        ColourGradient grad(backgroundColor, getLocalBounds().getCentreX(), getLocalBounds().getCentreY(), Colour(BACKGROUND_COLOR), getWidth(), getHeight(), true);
+        ColourGradient grad(backgroundColor, getLocalBounds().getCentreX(),
+                            getLocalBounds().getCentreY(),
+                            Colour(BACKGROUND_COLOR), getWidth(), getHeight(),
+                            true);
         g.setGradientFill(grad);
         g.fillRoundedRectangle(getLocalBounds().reduced(3).toFloat(), 5.f);
         g.setColour(secondaryColor);
@@ -279,23 +307,29 @@ struct AmpControls : Component, private Timer
     {
         auto bounds = getLocalBounds();
 
-        auto mb = bounds.removeFromTop(bounds.getHeight() * 0.7f)/* .reduced(5) */; // bounds becomes bottom section
+        auto mb = bounds.removeFromTop(
+            bounds.getHeight() *
+            0.7f) /* .reduced(5) */; // bounds becomes bottom section
         auto chunk = mb.getWidth() / getKnobs().size(); // knob chunk
 
-        for (auto &k : getKnobs())
-        {
+        for (auto &k : getKnobs()) {
             k->setBounds(mb.removeFromLeft(chunk).reduced(5));
             k->setOffset(0, -3);
             k->setTextOffset(0, 2);
         }
 
-        // bounds at this point is bottom 30% 
-        auto botItemBounds = bounds.reduced(chunk * 0.5, 0); // reduce by knob-width on either side
+        // bounds at this point is bottom 30%
+        auto botItemBounds = bounds.reduced(
+            chunk * 0.5, 0); // reduce by knob-width on either side
         float botChunk = botItemBounds.getWidth() / 5;
-        auto autoBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
-        auto boostBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
-        auto modeBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
-        auto subModeBounds = botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
+        auto autoBounds =
+            botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
+        auto boostBounds =
+            botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
+        auto modeBounds =
+            botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
+        auto subModeBounds =
+            botItemBounds.removeFromLeft(botChunk).reduced(botChunk * 0.1f);
         auto powerBounds = botItemBounds.removeFromLeft(botChunk).reduced(5);
         powerBounds.setWidth(powerBounds.getHeight());
 
@@ -308,20 +342,25 @@ struct AmpControls : Component, private Timer
         power.setBounds(powerBounds);
     }
 
-private:
+  private:
     AudioProcessorValueTreeState &vts;
 
-    Knob::Flags knobFlags = Knob::DRAW_GRADIENT | Knob::DRAW_TICKS | Knob::DRAW_SHADOW;
-    Knob dist{knobFlags}, inGain{knobFlags}, outGain{knobFlags}, bass{knobFlags}, mid{knobFlags}, treble{knobFlags};
-    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> distAttach, inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
+    Knob::Flags knobFlags =
+        Knob::DRAW_GRADIENT | Knob::DRAW_TICKS | Knob::DRAW_SHADOW;
+    Knob dist{knobFlags}, inGain{knobFlags}, outGain{knobFlags},
+        bass{knobFlags}, mid{knobFlags}, treble{knobFlags};
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> distAttach,
+        inGainAttach, outGainAttach, bassAttach, midAttach, trebleAttach;
 
     ChoiceMenu mode, guitarMode, bassMode, channelMode;
-    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> modeAttach, gtrModeAttach, bassModeAttach, chanModeAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment>
+        modeAttach, gtrModeAttach, bassModeAttach, chanModeAttach;
     ChoiceMenu *subMode = nullptr;
 
     LightButton hiGain, autoGain;
     PowerButton power;
-    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> hiGainAttach, autoGainAttach, powerAttach;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment>
+        hiGainAttach, autoGainAttach, powerAttach;
 
     Colour backgroundColor = Colours::black;
     Colour secondaryColor = Colours::white;
@@ -331,12 +370,6 @@ private:
 
     std::vector<Knob *> getKnobs()
     {
-        return {
-            &dist,
-            &inGain,
-            &bass,
-            &mid,
-            &treble,
-            &outGain};
+        return {&dist, &inGain, &bass, &mid, &treble, &outGain};
     }
 };

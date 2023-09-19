@@ -26,32 +26,27 @@ struct bias_t
 /**
  * A saturation emulator for Class B tube/transformer simulation, with option for a dynamic bias
  */
-template <typename T>
-struct Pentode
+template <typename T> struct Pentode
 {
     Pentode() = default;
 
     /**
-     * @param type Pentode Type. Use widely asymmetric values in Classic mode to get the intended effect
+     * @param type Pentode Type. Use widely asymmetric values in Classic mode to
+     * get the intended effect
      */
-    Pentode(PentodeType _type) : type(_type)
-    {
-    }
+    Pentode(PentodeType _type) : type(_type) {}
 
     void setType(const PentodeType newType)
     {
         // TODO: Test and set bandpass for Transformer mode
         // will likely involve very wide bandpass as opposed to midrange bump/dip
         type = newType;
-        if (type)
-        {
+        if (type) {
             bpPre.setCutoffFreq(2000.0);
             bpPre.setResonance(0.2);
             bpPost.setCutoffFreq(2500.0);
             bpPost.setResonance(0.2);
-        }
-        else
-        {
+        } else {
             bpPre.setCutoffFreq(1000.0);
             bpPre.setResonance(0.1);
             bpPost.setCutoffFreq(1000.0);
@@ -61,8 +56,7 @@ struct Pentode
 
     void prepare(const dsp::ProcessSpec &spec)
     {
-        for (auto &f : dcBlock)
-        {
+        for (auto &f : dcBlock) {
             f.prepare(spec);
             f.setCutoffFreq(10.0);
             f.setType(strix::FilterType::highpass);
@@ -87,11 +81,9 @@ struct Pentode
         sc_lp.reset();
     }
 
-    template <typename Block>
-    void processBlockClassB(Block &block)
+    template <typename Block> void processBlockClassB(Block &block)
     {
-        for (int ch = 0; ch < block.getNumChannels(); ++ch)
-        {
+        for (int ch = 0; ch < block.getNumChannels(); ++ch) {
             auto in = block.getChannelPointer(ch);
             switch(type)
             {
@@ -105,6 +97,7 @@ struct Pentode
                 processSamplesTransformer(in, ch, block.getNumSamples());
                 break;
             }
+
         }
     }
 
@@ -112,13 +105,12 @@ struct Pentode
     PentodeType type = PentodeType::Nu;
     float inGain = 1.f;
 
-private:
+  private:
     void processSamplesNu(T *in, size_t ch, size_t numSamples, T gp, T gn)
     {
         float bpPreGain = -inGain * 0.5f;
         float bpPostGain = -bpPreGain;
-        for (size_t i = 0; i < numSamples; ++i)
-        {
+        for (size_t i = 0; i < numSamples; ++i) {
             in[i] += bpPreGain * bpPre.processSample(ch, in[i]);
             in[i] -= 1.2 * processEnvelopeDetector(in[i], ch);
             in[i] = saturateSym(in[i], gp);
@@ -130,8 +122,7 @@ private:
     {
         float bpPreGain = jmap(inGain, 1.f, -1.f);
         float bpPostGain = -bpPreGain;
-        for (size_t i = 0; i < numSamples; ++i)
-        {
+        for (size_t i = 0; i < numSamples; ++i) {
             in[i] += bpPreGain * bpPre.processSample(ch, in[i]);
             in[i] -= 0.8 * processEnvelopeDetector(in[i], ch);
 
@@ -205,8 +196,7 @@ private:
     inline T classicPentode(T xn, T Ln, T Lp, T g = 1.0)
     {
 #if USE_SIMD
-        return xsimd::select(xn <= 0.0,
-                             (g * xn) / (1.0 - ((g * xn) / Ln)),
+        return xsimd::select(xn <= 0.0, (g * xn) / (1.0 - ((g * xn) / Ln)),
                              (g * xn) / (1.0 + ((g * xn) / Lp)));
 #else
         if (xn <= 0.0)
@@ -234,8 +224,7 @@ enum TriodeType
     SolidState
 };
 
-template <typename T>
-struct AVTriode : PreampProcessor
+template <typename T> struct AVTriode : PreampProcessor
 {
 
     AVTriode() = default;
@@ -274,16 +263,15 @@ struct AVTriode : PreampProcessor
     {
         sm_gp.setTargetValue(bias.first);
         sm_gn.setTargetValue(bias.second);
-        switch (mode)
-        {
+        switch (mode) {
         case VintageTube:
-            for (size_t i = 0; i < numSamples; ++i)
-            {
+            for (size_t i = 0; i < numSamples; ++i) {
                 auto p = sm_gp.getNextValue();
                 auto n = sm_gn.getNextValue();
 #if USE_SIMD
                 x[i] = xsimd::select(x[i] > 0.0,
-                                     (x[i] + (x[i] * x[i])) / (1.0 + p * x[i] * x[i]),
+                                     (x[i] + (x[i] * x[i])) /
+                                         (1.0 + p * x[i] * x[i]),
                                      x[i] / (1.0 - n * x[i]));
 #else
                 if (x[i] > 0.0)
@@ -294,15 +282,13 @@ struct AVTriode : PreampProcessor
             }
             break;
         case ModernTube:
-            for (size_t i = 0; i < numSamples; ++i)
-            {
+            for (size_t i = 0; i < numSamples; ++i) {
                 auto p = sm_gp.getNextValue();
                 x[i] = (1.f / p) * strix::fast_tanh(p * x[i]);
             }
             break;
         case ChannelTube:
-            for (size_t i = 0; i < numSamples; ++i)
-            {
+            for (size_t i = 0; i < numSamples; ++i) {
                 auto p = sm_gp.getNextValue();
                 auto n = sm_gn.getNextValue();
                 auto f1 = (1.f / p) * strix::tanh(p * x[i]) * y_m[ch];
@@ -348,12 +334,10 @@ struct AVTriode : PreampProcessor
 #if USE_SIMD
     void process(strix::AudioBlock<vec> &block) override
     {
-        for (size_t ch = 0; ch < block.getNumChannels(); ch++)
-        {
+        for (size_t ch = 0; ch < block.getNumChannels(); ch++) {
             auto in = block.getChannelPointer(ch);
 
-            switch (type)
-            {
+            switch (type) {
             case VintageTube:
                 processSamples<VintageTube>(in, ch, block.getNumSamples());
                 break;
@@ -372,12 +356,10 @@ struct AVTriode : PreampProcessor
 #else
     void process(dsp::AudioBlock<double> &block) override
     {
-        for (size_t ch = 0; ch < block.getNumChannels(); ch++)
-        {
+        for (size_t ch = 0; ch < block.getNumChannels(); ch++) {
             auto in = block.getChannelPointer(ch);
 
-            switch (type)
-            {
+            switch (type) {
             case VintageTube:
                 processSamples<VintageTube>(in, ch, block.getNumSamples());
                 break;
@@ -397,7 +379,7 @@ struct AVTriode : PreampProcessor
 
     bias_t bias;
 
-private:
+  private:
     std::vector<T> y_m;
     strix::SVTFilter<T> sc_filter;
     SmoothedValue<double> sm_gp, sm_gn;

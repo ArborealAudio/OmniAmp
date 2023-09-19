@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_OSX_SYSROOT /Users/alex/dev/MacOSX11.3.sdk/ CACHE INTERNAL "")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9 CACHE INTERNAL "")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -25,14 +24,15 @@ add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 
 set(JUCE_FORMATS AU VST3)
 
-if(UNIX AND NOT APPLE)
-    list(APPEND JUCE_FORMATS LV2)
-endif()
-
 if(BUILD_VST2)
     message("Adding VST2 target")
-    juce_set_vst2_sdk_path("$ENV{HOME}/vst2_sdk")
+    juce_set_vst2_sdk_path("vst2_sdk")
     list(APPEND JUCE_FORMATS VST)
+endif()
+
+if (UNIX AND NOT APPLE)
+    message("Adding LV2 target")
+    list(APPEND JUCE_FORMATS LV2)
 endif()
 
 juce_add_plugin(OmniAmp
@@ -106,8 +106,8 @@ juce_add_binary_data(BinaryData SOURCES
 
 # -fPIC flag for Linux
 if (UNIX AND NOT APPLE)
-set_target_properties(BinaryData PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE)
+    set_target_properties(BinaryData PROPERTIES
+        POSITION_INDEPENDENT_CODE TRUE)
 endif()
 
 target_link_libraries(OmniAmp
