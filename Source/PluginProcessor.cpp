@@ -437,7 +437,7 @@ GammaAudioProcessor::createParams()
         StringArray{"Cobalt", "Emerald", "Quartz"}, 0));
     params.emplace_back(
         std::make_unique<cParam>(ParameterID("channelMode", 1), "Channel Strip",
-                                 StringArray{"Modern", "Vintage"}, 0));
+                                 StringArray{"Modern", "Vintage", "Biamp"}, 0));
     params.emplace_back(
         std::make_unique<bParam>(ParameterID("ampOn", 1), "Amp On/Off", true));
     params.emplace_back(std::make_unique<bParam>(ParameterID("ampAutoGain", 1),
