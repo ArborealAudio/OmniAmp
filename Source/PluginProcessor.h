@@ -22,6 +22,7 @@
 #include <chowdsp_wdf/chowdsp_wdf.h>
 #include "Presets/PresetManager.h"
 #include "Processors/Processors.h"
+#include "tuner.h"
 #include "UI/UI.h"
 #if !PRODUCTION_BUILD
 #define DEV_BUILD 1
@@ -121,6 +122,8 @@ class GammaAudioProcessor : public juce::AudioProcessor,
     var trialEnded = false;
     int64 trialRemaining_ms = 0;
     inline var checkUnlock() { return isUnlocked; }
+
+	Tuner tuner;
 
   private:
     AudioProcessorValueTreeState::ParameterLayout createParams();

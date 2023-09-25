@@ -66,7 +66,8 @@ target_sources(OmniAmp
     PRIVATE
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
-        Source/Activation.hpp)
+        Source/Activation.hpp
+		Source/tuner.cpp)
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)

@@ -6,8 +6,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.apvts),
       link(p.apvts), preComponent(p.getActiveGRSource(), p.apvts),
       cabComponent(p.apvts), reverbComp(p.apvts), enhancers(p.apvts),
-      menu(p.apvts, p.isUnlocked), presetMenu(p.apvts), dl(DL_BIN),
-      activation(p.trialRemaining_ms)
+	  tuner(p.tuner), menu(p.apvts, p.isUnlocked),
+	  presetMenu(p.apvts), dl(DL_BIN), activation(p.trialRemaining_ms)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize((size_t)64 * 1024000);
@@ -162,6 +162,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(cabComponent);
     addAndMakeVisible(reverbComp);
     addAndMakeVisible(enhancers);
+
+	addAndMakeVisible(tuner);
 
     setResizable(true, true);
     getConstrainer()->setMinimumWidth(MIN_WIDTH);

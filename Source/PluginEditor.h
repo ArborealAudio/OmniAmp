@@ -1,6 +1,7 @@
 #pragma once
 #include "PluginProcessor.h"
 #include <JuceHeader.h>
+#include "UI/Tuner.hpp"
 
 #define SITE_URL "https://arborealaudio.com"
 #if JUCE_WINDOWS
@@ -86,6 +87,8 @@ class GammaAudioProcessorEditor : public AudioProcessorEditor, Timer
     Label pluginTitle;
     MenuComponent menu;
     PresetComp presetMenu;
+
+	TunerComponent tuner;
 
     // FlexBox uiTopFlex, topControlsFlex;
 

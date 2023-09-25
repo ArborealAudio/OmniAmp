@@ -189,6 +189,8 @@ void GammaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     preAmpBuf.setSize(spec.numChannels, samplesPerBlock);
     preAmpCrossfade.setFadeTime(spec.sampleRate, 0.1f);
 
+	tuner.init(sampleRate, (uint32)samplesPerBlock);
+
     simd.setInterleavedBlockSize(spec.numChannels, samplesPerBlock);
 }
 
@@ -305,11 +307,19 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
+
     doubleBuffer.makeCopyOf(buffer, true);
 
     if (totalNumInputChannels < totalNumOutputChannels)
         doubleBuffer.copyFrom(1, 0, doubleBuffer.getReadPointer(0),
                               doubleBuffer.getNumSamples());
+
+	// Load input into tuner's mono buffer
+	tuner.createMonoBuffer(doubleBuffer.getArrayOfReadPointers(),
+						   doubleBuffer.getNumChannels(),
+						   doubleBuffer.getNumSamples());
+	// Process tuner pitch detection
+	tuner.process((uint32)doubleBuffer.getNumSamples());
 
     processDoubleBuffer(doubleBuffer, totalNumOutputChannels < 2);
 
@@ -338,6 +348,13 @@ void GammaAudioProcessor::processBlock(juce::AudioBuffer<double> &buffer,
 
     if (totalNumInputChannels < totalNumOutputChannels)
         buffer.copyFrom(1, 0, buffer.getReadPointer(0), buffer.getNumSamples());
+	
+	// Load input into tuner's mono buffer
+	tuner.createMonoBuffer(buffer.getArrayOfReadPointers(),
+						   buffer.getNumChannels(),
+						   buffer.getNumSamples());
+	// Process tuner pitch detection
+	tuner.process((uint32)buffer.getNumSamples());
 
     processDoubleBuffer(buffer, totalNumOutputChannels < 2);
 }
