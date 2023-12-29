@@ -30,15 +30,14 @@ if(BUILD_VST2)
     list(APPEND JUCE_FORMATS VST)
 endif()
 
-if (UNIX AND NOT APPLE)
-    message("Adding LV2 target")
-    list(APPEND JUCE_FORMATS LV2)
+if (NOT INSTALL)
+    set(INSTALL OFF)
 endif()
 
 juce_add_plugin(OmniAmp
     COMPANY_NAME "Arboreal Audio"
     COMPANY_COPYRIGHT "(c) 2023 Arboreal Audio, LLC"
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    COPY_PLUGIN_AFTER_BUILD ${INSTALL}
     PLUGIN_MANUFACTURER_CODE Arau
     PLUGIN_CODE Oamp
     BUNDLE_ID "com.ArborealAudio.OmniAmp"
@@ -108,6 +107,7 @@ juce_add_binary_data(BinaryData SOURCES
 if (UNIX AND NOT APPLE)
     set_target_properties(BinaryData PROPERTIES
         POSITION_INDEPENDENT_CODE TRUE)
+    target_link_libraries(OmniAmp PRIVATE "-static-libgcc" "-static-libstdc++")
 endif()
 
 target_link_libraries(OmniAmp
