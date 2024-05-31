@@ -183,7 +183,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         lThread->addJob([&] {
             dlResult = strix::DownloadManager::checkForUpdate(
                 ProjectInfo::projectName, ProjectInfo::versionString,
-                SITE_URL "/versions/index.json", false,
+                SITE_URL
+                "/versions/index.json", false,
                 strix::readConfigFile(CONFIG_PATH, "beta_update"),
                 strix::readConfigFileString(CONFIG_PATH, "updateCheck")
                     .getLargeIntValue());

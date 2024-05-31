@@ -3,7 +3,7 @@
 #pragma once
 #include <JuceHeader.h>
 
-struct ActivationComponent : Component
+struct ActivationComponent : Component, Timer
 {
     enum CheckResult
     {
@@ -18,6 +18,7 @@ struct ActivationComponent : Component
     enum CheckStatus
     {
         NotSubmitted,
+        Waiting,
         Finished
     };
 
@@ -39,6 +40,18 @@ struct ActivationComponent : Component
             URL("https://arborealaudio.com/plugins/omniamp")
                 .launchInDefaultBrowser();
         };
+
+        thread = std::make_unique<strix::LiteThread>(1);
+        startTimerHz(2);
+    }
+
+    ~ActivationComponent() { stopTimer(); }
+
+    void timerCallback() override
+    {
+        if (m_status == Finished)
+            checkResults();
+        repaint();
     }
 
     /* called when UI submits a license key & when site check is successful.
@@ -49,30 +62,41 @@ struct ActivationComponent : Component
     void checkInput()
     {
         auto text = editor.getText();
+        license_text = text;
         if (text.isEmpty()) {
             editor.clear();
             editor.setTextToShowWhenEmpty(
                 "Actually enter a license...",
                 Colour::fromHSL((float)color / 360.f, 1.f, 0.75f, 1.f));
             color += 45;
-            if (color % 360 == 0)
-                color = 0;
+            color %= 360;
             if (onActivationCheck)
                 onActivationCheck(false);
-            repaint();
             return;
         }
-        m_result = checkSite(text, false);
-        if (m_result == CheckResult::Success) {
-            if (checkSite(text, true) == CheckResult::Success) {
-                writeFile(text.toRawUTF8());
+        if (thread){
+            thread->addJob([this, text]{
+                               m_status = Waiting;
+                               check_result = checkSite(text, false);
+                               if (check_result == Success) {
+                                   activate_result = checkSite(text, true);
+                                   m_status = Finished;
+                               }
+                           });
+        }
+    }
+
+    void checkResults()
+    {
+        if (check_result == Success &&
+            activate_result == Success) {
+                writeFile(license_text.toRawUTF8());
                 if (onActivationCheck)
                     onActivationCheck(true);
                 editor.setVisible(false);
                 close.setVisible(true);
                 close.setEnabled(true);
                 submit.setVisible(false);
-            }
         } else {
             if (onActivationCheck)
                 onActivationCheck(false);
@@ -82,8 +106,6 @@ struct ActivationComponent : Component
             editor.giveAwayKeyboardFocus();
             editor.setTextToShowWhenEmpty("Invalid license...", Colours::red);
         }
-        m_status = Finished;
-        repaint();
     }
 
     void paint(Graphics &g) override
@@ -97,11 +119,16 @@ struct ActivationComponent : Component
         String trialDesc = "";
         if (m_status == NotSubmitted) {
             message = "Enter your license:";
+        } else if (m_status == Waiting) {
+            message = "Checking...";
         } else if (m_status == Finished) {
             g.setColour(Colours::red);
-            switch (m_result) {
+            switch (check_result) {
             case Success:
-                message = "License activated! Thank you!";
+                if (activate_result == Success)
+                    message = "License activated! Thank you!";
+                else
+                    message = "Valid license -- error activating. Try again.";
                 g.setColour(Colours::white);
                 break;
             case InvalidLicense:
@@ -111,7 +138,7 @@ struct ActivationComponent : Component
                 message = "Activations maxed";
                 break;
             case WrongProduct:
-                message = "Wrong product";
+                message = "License for wrong product";
                 break;
             case ConnectionFailed:
                 message = "Connection failed. Try again.";
@@ -121,11 +148,11 @@ struct ActivationComponent : Component
                 break;
             }
         }
-        if (trialRemaining > 0 && m_result != Success)
+        if (trialRemaining > 0 && check_result != Success)
             trialDesc =
                 RelativeTime::milliseconds(trialRemaining).getDescription() +
                 " remaining in free trial";
-        else if (trialRemaining <= 0 && m_result != Success)
+        else if (trialRemaining <= 0 && check_result != Success)
             trialDesc = "Trial expired.";
         g.drawFittedText(message + "\n" + trialDesc,
                          getLocalBounds().removeFromTop(getHeight() * 0.3f),
@@ -156,21 +183,27 @@ struct ActivationComponent : Component
         else
             url = url.withNewSubPath("/default/licenses/" + input);
 
+        DBG("Querying URL: " << url.toString(false));
+
         CheckResult result = CheckResult::ConnectionFailed;
 
         if (auto stream = url.createInputStream(
                 URL::InputStreamOptions(URL::ParameterHandling::inAddress)
                     .withExtraHeaders(
-                        "x-api-key: Fb5mXNfHiNaSKABQEl0PiFmYBthvv457bOCA1ou2")
+                        "x-api-key: "
+                        AWS_API_KEY)
                     .withConnectionTimeoutMs(10000))) {
-            if (activate)
-                return CheckResult::Success;
 
             auto response = stream->readEntireStreamAsString();
+            DBG("Response: \n" << response);
             auto json = JSON::parse(response);
+            const auto success = (bool)json.getProperty("success", var(false));
 
-            if ((bool)json.getProperty("success", var(false)) != true)
+            if (success != true)
                 return CheckResult::InvalidLicense;
+
+            if (activate && success)
+                return CheckResult::Success;
 
             auto item = json.getProperty("Item", var());
             if (item.isObject()) {
@@ -197,8 +230,12 @@ struct ActivationComponent : Component
     TextButton submit{"Submit"}, close{"Close"}, buy{"Buy"};
 
   private:
-    std::atomic<CheckResult> m_result = None;
+    std::atomic<CheckResult> check_result = None, activate_result = None;
     std::atomic<CheckStatus> m_status = NotSubmitted;
+
+    String license_text;
+
+    std::unique_ptr<strix::LiteThread> thread = nullptr;
 
     int64 trialRemaining = 0;
 
