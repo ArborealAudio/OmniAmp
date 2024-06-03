@@ -86,7 +86,9 @@ target_compile_definitions(OmniAmp
         JUCE_USE_CURL=1
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
-        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
+        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1
+        AWS_API_KEY="$ENV{AWS_API_KEY}"
+)
 
 juce_add_binary_data(BinaryData SOURCES
     "Resources/2x12.svg"
