@@ -195,8 +195,15 @@ struct ActivationComponent : Component, Timer
                         AWS_API_KEY)
                     .withConnectionTimeoutMs(10000))) {
 
+            auto web_stream = dynamic_cast<WebInputStream *>(stream.get());
+            const auto status = web_stream->getStatusCode();
+            DBG("Status: " << status);
+            if (status != 200) {
+                return CheckResult::ConnectionFailed;
+            }
+
             auto response = stream->readEntireStreamAsString();
-            DBG("Response: \n" << response);
+            DBG("Response: " << response);
             auto json = JSON::parse(response);
             const auto success = (bool)json.getProperty("success", var(false));
 
