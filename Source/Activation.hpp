@@ -74,29 +74,30 @@ struct ActivationComponent : Component, Timer
                 onActivationCheck(false);
             return;
         }
-        if (thread){
-            thread->addJob([this, text]{
-                               m_status = Waiting;
-                               check_result = checkSite(text, false);
-                               if (check_result == Success) {
-                                   activate_result = checkSite(text, true);
-                                   m_status = Finished;
-                               }
-                           });
+        if (thread && m_status == NotSubmitted) {
+            m_status = Waiting;
+            DBG("Checking license...\n");
+            thread->addJob([this, text] {
+                check_result = checkSite(text, false);
+                if (check_result == Success) {
+                    activate_result = checkSite(text, true);
+                    m_status = Finished;
+                }
+            });
         }
     }
 
     void checkResults()
     {
-        if (check_result == Success &&
-            activate_result == Success) {
-                writeFile(license_text.toRawUTF8());
-                if (onActivationCheck)
-                    onActivationCheck(true);
-                editor.setVisible(false);
-                close.setVisible(true);
-                close.setEnabled(true);
-                submit.setVisible(false);
+        if (check_result == Success && activate_result == Success) {
+            stopTimer();
+            writeFile(license_text.toRawUTF8());
+            if (onActivationCheck)
+                onActivationCheck(true);
+            editor.setVisible(false);
+            close.setVisible(true);
+            close.setEnabled(true);
+            submit.setVisible(false);
         } else {
             if (onActivationCheck)
                 onActivationCheck(false);
