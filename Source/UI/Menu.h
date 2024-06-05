@@ -130,9 +130,11 @@ class MenuComponent : public Component
                             "Default window size");
             m.addCustomItem(6, checkUpdate, getWidth(), 35, true, nullptr,
                             "Check update");
+#if !NO_LICENSE_CHECK
             if (!isActivated)
                 m.addCustomItem(7, activate, getWidth(), 35, true, nullptr,
                                 "Activate");
+#endif
             m.showMenuAsync(
                 PopupMenu::Options()
                     .withMinimumWidth(175)
@@ -165,10 +167,12 @@ class MenuComponent : public Component
                         if (checkUpdateCallback)
                             checkUpdateCallback();
                         break;
+#if !NO_LICENSE_CHECK
                     case 7:
                         if (activateCallback)
                             activateCallback();
                         break;
+#endif
                     }
                 });
         };
