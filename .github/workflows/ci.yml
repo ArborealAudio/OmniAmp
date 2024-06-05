@@ -20,9 +20,14 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
-        os: [ubuntu-20.04, windows-2019, macos-12]
+        include:
+        - os: ubuntu-20.04
+          cmake-options: -GNinja
+        - os: windows-2019
+          cmake-options: -T clang-cl
+        - os: macos-12
+          cmake-options: -GNinja
 
     steps:
     - name: Install Linux Deps
@@ -47,14 +52,10 @@ jobs:
       uses: seanmiddleditch/gha-setup-ninja@master
       
     - name: Configure
-      run: cmake -Bbuild -GNinja -DPRODUCTION_BUILD=1 -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+      run: cmake -Bbuild ${{ matrix.cmake-options }} -DPRODUCTION_BUILD=1
 
     - name: Build
       run: cmake --build build --config Release
 
-    - name: Validate Unix
-      if: runner.os != 'Windows'
-      run: ./validate.sh
-    - name: Validate Windows
-      if: runner.os == 'Windows'
-      run: bash validate.sh
+    - name: Validate
+      run: bash ./validate.sh
