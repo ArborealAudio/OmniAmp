@@ -19,6 +19,7 @@ struct ActivationComponent : Component, Timer
     {
         NotSubmitted,
         Waiting,
+        Reset,
         Finished
     };
 
@@ -41,7 +42,7 @@ struct ActivationComponent : Component, Timer
                 .launchInDefaultBrowser();
         };
 
-        thread = std::make_unique<strix::LiteThread>(1);
+        thread = std::make_unique<strix::LiteThread>(-1);
         startTimerHz(2);
     }
 
@@ -74,15 +75,15 @@ struct ActivationComponent : Component, Timer
                 onActivationCheck(false);
             return;
         }
-        if (thread && m_status == NotSubmitted) {
+        if (thread && (m_status == NotSubmitted || m_status == Reset)) {
             m_status = Waiting;
             DBG("Checking license...\n");
             thread->addJob([this, text] {
                 check_result = checkSite(text, false);
                 if (check_result == Success) {
                     activate_result = checkSite(text, true);
-                    m_status = Finished;
                 }
+                m_status = Finished;
             });
         }
     }
@@ -104,8 +105,8 @@ struct ActivationComponent : Component, Timer
 
             editor.setVisible(true);
             editor.clear();
-            editor.giveAwayKeyboardFocus();
             editor.setTextToShowWhenEmpty("Invalid license...", Colours::red);
+            m_status = Reset;
         }
     }
 
@@ -122,7 +123,7 @@ struct ActivationComponent : Component, Timer
             message = "Enter your license:";
         } else if (m_status == Waiting) {
             message = "Checking...";
-        } else if (m_status == Finished) {
+        } else if (m_status == Finished || m_status == Reset) {
             g.setColour(Colours::red);
             switch (check_result) {
             case Success:
@@ -198,9 +199,6 @@ struct ActivationComponent : Component, Timer
             auto web_stream = dynamic_cast<WebInputStream *>(stream.get());
             const auto status = web_stream->getStatusCode();
             DBG("Status: " << status);
-            if (status != 200) {
-                return CheckResult::ConnectionFailed;
-            }
 
             auto response = stream->readEntireStreamAsString();
             DBG("Response: " << response);
@@ -213,22 +211,13 @@ struct ActivationComponent : Component, Timer
             if (activate && success)
                 return CheckResult::Success;
 
-            auto item = json.getProperty("Item", var());
-            if (item.isObject()) {
-                // it should be a JSON object
-                auto product = item.getProperty("product", var(false));
-                auto numActivations =
-                    item.getProperty("activationCount", var());
-                auto maxActivations = item.getProperty("maxActivations", var());
+            auto numActivations = json.getProperty("timesActivated", var());
+            auto maxActivations = json.getProperty("timesActivatedMax", var());
 
-                if (product.toString() != "omniamp")
-                    return CheckResult::WrongProduct;
-                if (numActivations >= maxActivations)
-                    return CheckResult::ActivationsMaxed;
+            if (numActivations >= maxActivations)
+                return CheckResult::ActivationsMaxed;
 
-                return CheckResult::Success;
-            } else
-                return CheckResult::InvalidLicense;
+            return CheckResult::Success;
         }
 
         return result;
