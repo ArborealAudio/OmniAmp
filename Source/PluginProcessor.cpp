@@ -54,7 +54,9 @@ GammaAudioProcessor::GammaAudioProcessor()
     LookAndFeel::getDefaultLookAndFeel().setDefaultSansSerifTypeface(
         getCustomFont());
 
+#if !NO_LICENSE_CHECK
     checkLicense();
+#endif
 }
 
 GammaAudioProcessor::~GammaAudioProcessor()

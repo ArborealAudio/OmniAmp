@@ -172,11 +172,13 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     dl.changes = dlResult.changes;
     dl.centreWithSize(300, 200);
 
+#if !NO_LICENSE_CHECK
     addChildComponent(activation);
     if (!p.checkUnlock())
         activation.setVisible(true);
     activation.onActivationCheck = [&](bool result) { p.isUnlocked = result; };
     activation.centreWithSize(300, 200);
+#endif
 
     if (!p.checkedUpdate) {
         lThread = std::make_unique<strix::LiteThread>(1);
