@@ -92,6 +92,7 @@ struct ActivationComponent : Component, Timer
     {
         if (check_result == Success && activate_result == Success) {
             stopTimer();
+            thread->working = false;
             writeFile(license_text.toRawUTF8());
             if (onActivationCheck)
                 onActivationCheck(true);
