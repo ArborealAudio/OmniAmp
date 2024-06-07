@@ -3,7 +3,7 @@
 )
 #set text(
 	fill: white,
-	font: "Liberation Sans",
+	font: "Helvetica",
 	size: 14pt
 )
 
@@ -37,8 +37,8 @@ Arboreal Audio presents:
 #linebreak()
 #set align(left)
 #set text(
-	font: "Liberation Sans",
-	size: 14pt
+	font: "Helvetica",
+	size: 12pt
 )
 OmniAmp is a robust audio tool meant to be used on any type of sound source. With its full feature set, you can accomplish a broad range of mixing tasks in the same interface.
 
@@ -118,7 +118,8 @@ An additional gain stage at the end of the amp/channel strip. In the Guitar and 
 
 In Channel mode, this is bypassed at 0.
 
-#pagebreak()
+#line(length: 100%, stroke: 1pt + white)
+
 == Pre Section
 
 #image("Pre.png")
@@ -323,6 +324,8 @@ https://github.com/free-audio/clap-juce-extensions
 *And a huge thank-you to the beta testers:*
 
 Jatin, Florian, High Harmonics, Dom 
+
+#line(length: 100%, stroke: 1pt + white)
 
 === #super[1] GPLv3 License
 
