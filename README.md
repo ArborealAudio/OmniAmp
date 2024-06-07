@@ -23,7 +23,7 @@ To compile:
 ## Credits
 
 - [JUCE](https://github.com/juce-framework/juce)
-- [chowdsp-wdf](https://github.com/Chowdhury-DSP/chowdsp-wdf)
+- [chowdsp-wdf](https://github.com/Chowdhury-DSP/chowdsp_wdf)
 - [Gin](https://github.com/FigBug/gin)
 - [xsimd](https://github.com/xtensor-stack/xsimd)
 - [clap-juce-extensions](https://github.com/free-audio/clap-juce-extensions)
