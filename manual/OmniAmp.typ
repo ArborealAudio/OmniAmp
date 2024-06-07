@@ -3,7 +3,7 @@
 )
 #set text(
 	fill: white,
-	font: "Liberation Sans",
+	font: "Helvetica",
 	size: 14pt
 )
 
@@ -37,8 +37,8 @@ Arboreal Audio presents:
 #linebreak()
 #set align(left)
 #set text(
-	font: "Liberation Sans",
-	size: 14pt
+	font: "Helvetica",
+	size: 12pt
 )
 OmniAmp is a robust audio tool meant to be used on any type of sound source. With its full feature set, you can accomplish a broad range of mixing tasks in the same interface.
 
@@ -118,7 +118,8 @@ An additional gain stage at the end of the amp/channel strip. In the Guitar and 
 
 In Channel mode, this is bypassed at 0.
 
-#pagebreak()
+#line(length: 100%, stroke: 1pt + white)
+
 == Pre Section
 
 #image("Pre.png")
@@ -278,26 +279,59 @@ This plugin would not have been possible without the research and open-source co
 
 #show link: underline
 
-- Jatin Chowdhury | https://github.com/Chowdhury-DSP/chowdsp_wdf (c) 2022, Chowdhury-DSP #super[1] | #link("https://chowdsp.com/")[chowdsp.com]
+=== chowdsp_wdf #super[2]
+(c) 2022 Jatin Chowdhury
 
-- Sam Schachter | https://github.com/schachtersam32/WaveDigitalFilters_Sharc
+https://github.com/Chowdhury-DSP/chowdsp_wdf 
 
-- xsimd | https://github.com/xtensor-stack/xsimd (c) 2016, Johan Mabille, Sylvain Corlay, Wolf Vollprecht and Martin Renou
-  (c) 2016, QuantStack
-  (c) 2018, Serge Guelton #super[1]
+#link("https://chowdsp.com/")[chowdsp.com]
 
-- Roland Rabien | https://github.com/FigBug/Gin (c) 2018, Roland Rabien #super[1]
+=== WaveDigitalFilters_SHARC
 
-- JUCE | https://github.com/juce-framework/JUCE | #link("https://juce.com")[juce.com]
+https://github.com/schachtersam32/WaveDigitalFilters_Sharc
 
-- Alexandre Bique and Paul Walker | #link("https://github.com/free-audio")[Free Audio/CLAP] | (c) 2021 Alexandre BIQUE
-  (c) 2019-2020, Paul Walker #super[2]
+=== xsimd #super[2]
+(c) 2016 Johan Mabille, Sylvain Corlay, Wolf Vollprecht and Martin Renou
+
+(c) 2016 QuantStack
+
+(c) 2018 Serge Guelton
+
+https://github.com/xtensor-stack/xsimd
+
+=== Gin #super[2]
+(c) 2018 Roland Rabien
+
+https://github.com/FigBug/Gin
+
+=== JUCE #super[1]
+(c) 2022 Raw Software Limited
+
+https://github.com/juce-framework/JUCE
+
+=== VST3 SDK #super[1]
+(c) 2024 Steinberg Media Technologies GmbH, All Rights Reserved
+
+https://github.com/steinbergmedia/vst3sdk
+
+=== clap-juce-extensions #super[3]
+(c) 2021 Alexandre BIQUE
+
+(c) 2019-2020 Paul Walker
+
+https://github.com/free-audio/clap-juce-extensions
 
 *And a huge thank-you to the beta testers:*
 
 Jatin, Florian, High Harmonics, Dom 
 
-=== #super[1] BSD-3-Clause License
+#line(length: 100%, stroke: 1pt + white)
+
+=== #super[1] GPLv3 License
+
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+=== #super[2] BSD-3-Clause License
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
@@ -318,7 +352,7 @@ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAG
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-=== #super[2] MIT License
+=== #super[3] MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, 
 publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:

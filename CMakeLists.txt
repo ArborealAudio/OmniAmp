@@ -17,7 +17,7 @@ else()
 endif()
 message("PRODUCTION_BUILD: ${PRODUCTION_BUILD}")
 
-project(OmniAmp VERSION 1.0.1)
+project(OmniAmp VERSION 1.0.2)
 
 add_subdirectory(modules/juce)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
@@ -34,9 +34,13 @@ if (NOT INSTALL)
     set(INSTALL OFF)
 endif()
 
+if (NOT NO_LICENSE_CHECK)
+    set(NO_LICENSE_CHECK 0)
+endif()
+
 juce_add_plugin(OmniAmp
     COMPANY_NAME "Arboreal Audio"
-    COMPANY_COPYRIGHT "(c) 2023 Arboreal Audio, LLC"
+    COMPANY_COPYRIGHT "(c) 2024 Arboreal Audio, LLC"
     COPY_PLUGIN_AFTER_BUILD ${INSTALL}
     PLUGIN_MANUFACTURER_CODE Arau
     PLUGIN_CODE Oamp
@@ -47,7 +51,9 @@ juce_add_plugin(OmniAmp
     AU_MAIN_TYPE kAudioUnitType_Effect
     PRODUCT_NAME "OmniAmp"
     NEEDS_CURL TRUE
-    HARDENED_RUNTIME_ENABLE TRUE)
+    HARDENED_RUNTIME_ENABLE TRUE
+    LV2URI https://github.com/ArborealAudio/OmniAmp.git
+)
 
 clap_juce_extensions_plugin(TARGET OmniAmp
     CLAP_ID "com.ArborealAudio.OmniAmp.clap"
@@ -86,7 +92,10 @@ target_compile_definitions(OmniAmp
         JUCE_USE_CURL=1
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
-        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1)
+        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1
+        AWS_API_KEY="$ENV{AWS_API_KEY}"
+        NO_LICENSE_CHECK=${NO_LICENSE_CHECK}
+)
 
 juce_add_binary_data(BinaryData SOURCES
     "Resources/2x12.svg"
