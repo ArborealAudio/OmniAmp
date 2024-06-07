@@ -40,7 +40,7 @@ endif()
 
 juce_add_plugin(OmniAmp
     COMPANY_NAME "Arboreal Audio"
-    COMPANY_COPYRIGHT "(c) 2023 Arboreal Audio, LLC"
+    COMPANY_COPYRIGHT "(c) 2024 Arboreal Audio, LLC"
     COPY_PLUGIN_AFTER_BUILD ${INSTALL}
     PLUGIN_MANUFACTURER_CODE Arau
     PLUGIN_CODE Oamp
@@ -51,7 +51,9 @@ juce_add_plugin(OmniAmp
     AU_MAIN_TYPE kAudioUnitType_Effect
     PRODUCT_NAME "OmniAmp"
     NEEDS_CURL TRUE
-    HARDENED_RUNTIME_ENABLE TRUE)
+    HARDENED_RUNTIME_ENABLE TRUE
+    LV2URI https://github.com/ArborealAudio/OmniAmp.git
+)
 
 clap_juce_extensions_plugin(TARGET OmniAmp
     CLAP_ID "com.ArborealAudio.OmniAmp.clap"
