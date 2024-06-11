@@ -79,7 +79,7 @@
 															<key>GID</key>
 															<integer>0</integer>
 															<key>PATH</key>
-															<string>OmniAmp.vst3</string>
+															<string>VST3/OmniAmp.vst3</string>
 															<key>PATH_TYPE</key>
 															<integer>1</integer>
 															<key>PERMISSIONS</key>
@@ -550,7 +550,7 @@
 				<key>USE_HFS+_COMPRESSION</key>
 				<false/>
 				<key>VERSION</key>
-				<string>1.0.1</string>
+				<string>#PLUGIN_VERSION#</string>
 			</dict>
 			<key>TYPE</key>
 			<integer>0</integer>
@@ -632,7 +632,7 @@
 															<key>GID</key>
 															<integer>0</integer>
 															<key>PATH</key>
-															<string>OmniAmp.component</string>
+															<string>Components/OmniAmp.component</string>
 															<key>PATH_TYPE</key>
 															<integer>1</integer>
 															<key>PERMISSIONS</key>
@@ -1103,7 +1103,7 @@
 				<key>USE_HFS+_COMPRESSION</key>
 				<false/>
 				<key>VERSION</key>
-				<string>1.0.1</string>
+				<string>#PLUGIN_VERSION#</string>
 			</dict>
 			<key>TYPE</key>
 			<integer>0</integer>
@@ -1185,7 +1185,7 @@
 															<key>GID</key>
 															<integer>0</integer>
 															<key>PATH</key>
-															<string>OmniAmp.vst</string>
+															<string>VST/OmniAmp.vst</string>
 															<key>PATH_TYPE</key>
 															<integer>1</integer>
 															<key>PERMISSIONS</key>
@@ -1656,7 +1656,7 @@
 				<key>USE_HFS+_COMPRESSION</key>
 				<false/>
 				<key>VERSION</key>
-				<string>1.0.1</string>
+				<string>#PLUGIN_VERSION#</string>
 			</dict>
 			<key>TYPE</key>
 			<integer>0</integer>
@@ -2213,7 +2213,7 @@
 				<key>USE_HFS+_COMPRESSION</key>
 				<false/>
 				<key>VERSION</key>
-				<string>1.0.1</string>
+				<string>#PLUGIN_VERSION#</string>
 			</dict>
 			<key>TYPE</key>
 			<integer>0</integer>
@@ -2317,7 +2317,7 @@
 						<key>VALUE</key>
 						<dict>
 							<key>PATH</key>
-							<string>EULA.txt</string>
+							<string>LICENSE</string>
 							<key>PATH_TYPE</key>
 							<integer>1</integer>
 						</dict>
