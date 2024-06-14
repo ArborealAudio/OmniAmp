@@ -10,6 +10,7 @@ on:
 env:
   PLUGIN_NAME: OmniAmp
   PLUGIN_VERSION: "1.0.2"
+  AWS_API_KEY: ${{ secrets.AWS_API_KEY }}
 
 jobs:
   build_and_deploy:
