@@ -5,9 +5,9 @@
 
 set -e
 
-name='$PLUGIN_NAME'
+name=$PLUGIN_NAME
 version=v${PLUGIN_VERSION}
-version_num='$PLUGIN_VERSION'
+version_num=$PLUGIN_VERSION
 clap=false
 vst3_no_recurse=false
 manual=true
@@ -62,10 +62,11 @@ if [[ $presets == true ]]; then
     cp -r presets pkg/Factory
 fi
 cp LICENSE pkg/LICENSE
+cp ./installer/win-extra/install_script.iss pkg
+cp ./installer/win-extra/icon.ico pkg
 
 echo "Finishing installer package..."
 cd pkg
-cp $script_dir/win-extra/install_script.iss .
 
 # remove CLAP lines if not packaging it
 if [[ $clap == false ]]; then
@@ -75,7 +76,6 @@ fi
 
 [[ $presets == false ]] && sed -i '/Presets/d' install_script.iss
 
-cp $script_dir/win-extra/icon.ico .
 iscc -Dname=$name -Dversion=$version_num install_script.iss
 
 echo "Installer built in $PWD/Output"
