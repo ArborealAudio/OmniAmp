@@ -108,6 +108,7 @@ jobs:
         cp pkg/Output/${PLUGIN_NAME}-windows.exe bin/
 
     - name: Sign (Windows)
+      if: runner.os == 'Windows'
       uses: azure/trusted-signing-action@v0.3.16
       with:
         azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
