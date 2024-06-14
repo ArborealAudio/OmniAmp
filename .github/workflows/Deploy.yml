@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   workflow_run:
-    workflows: ["Cmake"]
+    workflows: ["ci"]
     types: [completed]
     branches: ["master"]
   workflow_dispatch:
