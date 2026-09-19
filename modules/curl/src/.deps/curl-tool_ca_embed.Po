@@ -1,0 +1,2 @@
+curl-tool_ca_embed.o: tool_ca_embed.c /usr/include/stdc-predef.h
+/usr/include/stdc-predef.h:

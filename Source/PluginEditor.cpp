@@ -10,7 +10,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       activation(p.trialRemaining_ms)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
-    opengl.setImageCacheSize((size_t)64 * 1024000);
+    opengl.setImageCacheSize(64 << 20ul);
     if (strix::readConfigFile(CONFIG_PATH, "openGL")) {
         opengl.detach();
         opengl.attachTo(*this);
@@ -49,6 +49,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(menu);
     menu.windowResizeCallback = [&] { resetWindowSize(); };
     menu.checkUpdateCallback = [&] {
+		// TODO Make HTTP request here
         dlResult = strix::DownloadManager::checkForUpdate(
             ProjectInfo::projectName, ProjectInfo::versionString,
             SITE_URL "/versions/index.json", true,

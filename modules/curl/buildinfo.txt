@@ -1,0 +1,13 @@
+# This is a generated file.  Do not edit.
+buildinfo.configure.tool: configure
+buildinfo.configure.args:  '--prefix=/home/alex/dev/OmniAmp/1.0.3/modules/http-deps' '--disable-shared' '--enable-static' '--with-openssl=/home/alex/dev/OmniAmp/1.0.3/modules/http-deps' '--without-libpsl' '--without-zlib' '--without-brotli' '--without-zstd' '--without-libidn2' '--without-libssh2' 'LDFLAGS=-L/home/alex/dev/OmniAmp/1.0.3/modules/http-deps/lib' 'CPPFLAGS=-I/home/alex/dev/OmniAmp/1.0.3/modules/http-deps/include'
+buildinfo.host: x86_64-pc-linux-gnu
+buildinfo.host.cpu: x86_64
+buildinfo.host.os: linux-gnu
+buildinfo.target: x86_64-pc-linux-gnu
+buildinfo.target.cpu: x86_64
+buildinfo.target.os: linux-gnu
+buildinfo.target.flags: UNIX GCC
+buildinfo.compiler: GNU_C
+buildinfo.compiler.version: 13
+buildinfo.sysroot: 
