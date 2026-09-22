@@ -36,6 +36,9 @@ endif()
 
 if (NOT NO_LICENSE_CHECK)
     set(NO_LICENSE_CHECK 0)
+	if (NOT DEFINED ENV{AWS_API_KEY} OR "$ENV{AWS_API_KEY}" STREQUAL "")
+		message(FATAL_ERROR "Must define AWS_API_KEY if compiling with license checks")
+	endif()
 endif()
 
 juce_add_plugin(OmniAmp
@@ -69,9 +72,9 @@ juce_generate_juce_header(OmniAmp)
 
 target_sources(OmniAmp
     PRIVATE
-        Source/PluginEditor.cpp
+        # Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
-        Source/Activation.hpp)
+)
 
 add_subdirectory(Source/Processors)
 add_subdirectory(Source/UI)
@@ -98,6 +101,7 @@ ExternalProject_Add(dep_openssl
 		--prefix=<INSTALL_DIR>
 		--openssldir="${OPENSSL_INSTALL_DIR}/ssl"
 		--libdir=lib
+		-fPIC
 		no-shared
 		no-tests
 		no-apps
@@ -142,6 +146,7 @@ ExternalProject_Add(dep_curl
         -DBUILD_CURL_EXE=OFF
         -DBUILD_TESTING=OFF
 		-DCURL_STATICLIB=ON
+		-DCMAKE_POSITION_INDEPENDENT_CODE=ON
 
         -DCURL_USE_OPENSSL=ON
         -DOPENSSL_USE_STATIC_LIBS=ON

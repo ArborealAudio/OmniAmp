@@ -56,6 +56,19 @@ const char *cstring_from_string(http_String str) {
 	return cstr;
 }
 
+http_String string_from_cstring(const char *cstring) {
+	int len = 0;
+	const char *ptr = cstring;
+	while (*ptr) {
+		len += 1;
+		ptr += 1;
+	}
+	return (http_String){
+		.data = cstring,
+		.len = len,
+	};
+}
+
 http_StringBuilder sb_init(int capacity) {
 	char *data = (char*)http_alloc(capacity);
 	return (http_StringBuilder){
@@ -87,7 +100,8 @@ http_String string_from_sb(http_StringBuilder *sb) {
 /* Callback used to write response to an internal buffer */
 internal size_t get_cb(char *ptr, size_t item_size, size_t n, void *user) {
 	Http *http = (Http*)user;
-	return sb_append(&http->response.body, ptr, n);
+	http_debug("Received %zu bytes\n", item_size * n);
+	return sb_append(&http->response.body, ptr, item_size * n);
 }
 
 /* Callback used to write response to a file */
@@ -100,17 +114,20 @@ internal size_t save_cb(char *ptr, size_t item_size, size_t n, void *user) {
 	return write_size;
 }
 
-void http_init(Http *http, http_String url) {
+void http_init(Http *http, http_String url, bool should_save_file) {
 	http->url = url;
 	http->response.body = sb_init(4096);
+	http->should_save_file = should_save_file;
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	http->curl = curl_easy_init();
 	size_t save = temp_begin();
 	curl_easy_setopt(http->curl, CURLOPT_URL, cstring_from_string(url));
 	temp_end(save);
 	if (http->should_save_file) {
+		http_debug("Setting HTTP context with save callback\n");
 		curl_easy_setopt(http->curl, CURLOPT_WRITEFUNCTION, save_cb);
 	} else {
+		http_debug("Setting HTTP context with get callback\n");
 		curl_easy_setopt(http->curl, CURLOPT_WRITEFUNCTION, get_cb);
 	}
 	curl_easy_setopt(http->curl, CURLOPT_WRITEDATA, http);
@@ -171,7 +188,7 @@ void http_send_request(Http *http) {
 	{
 		curl_off_t dl_len;
 		res = curl_easy_getinfo(http->curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &dl_len);
-		http_debug("DL SIZE: %" CURL_FORMAT_CURL_OFF_T "\n", dl_len);
+		http_debug("DL SIZE: %" CURL_FORMAT_CURL_OFF_T " bytes\n", dl_len);
 		http->response.content_length = (size_t)dl_len;
 	}
 }

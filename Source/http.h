@@ -27,6 +27,7 @@ typedef struct {
 #define STR_LIT(cstr) (http_String){.data = cstr, .len = sizeof(cstr)}
 
 const char *cstring_from_string(http_String str);
+http_String string_from_cstring(const char *cstring);
 
 typedef struct {
 	char *data;
@@ -82,7 +83,7 @@ typedef struct {
 /* Initialize an Http context. You should stack-allocate an Http context yourself
  * and supply it to this function.
  * `url` is the target URL the request is pointed to.*/
-void http_init(Http *http, http_String url);
+void http_init(Http *http, http_String url, bool should_save_file);
 /* Deinit Http context */
 void http_deinit(Http *http);
 /* Set the target URL. This might be used to provide a new URL for the same Http context */

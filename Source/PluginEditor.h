@@ -1,21 +1,11 @@
 #pragma once
 #include "PluginProcessor.h"
 #include <JuceHeader.h>
-
-#define SITE_URL "https://arborealaudio.com"
-#if JUCE_WINDOWS
-#define DL_BIN "OmniAmp-windows.exe"
-#elif JUCE_MAC
-#define DL_BIN "OmniAmp-mac.dmg"
-#elif JUCE_LINUX
-#define DL_BIN "OmniAmp-linux.tar.xz"
-#endif
-
-static strix::UpdateResult dlResult;
+#include "http_interface.cpp"
 
 //==============================================================================
 
-class GammaAudioProcessorEditor : public AudioProcessorEditor, Timer
+class GammaAudioProcessorEditor : public AudioProcessorEditor
 {
   public:
     GammaAudioProcessorEditor(GammaAudioProcessor &);
@@ -43,17 +33,8 @@ class GammaAudioProcessorEditor : public AudioProcessorEditor, Timer
             AudioProcessorEditor::mouseDown(event);
     }
 
-    void timerCallback() override
-    {
-        if (!dl.shouldBeHidden)
-            dl.setVisible(dlResult.updateAvailable);
-        if (lThread && !lThread->working)
-            lThread.reset(nullptr);
-    }
-
     void resetWindowSize();
 
-  private:
     GammaAudioProcessor &audioProcessor;
 
     std::unique_ptr<Drawable> logo;
@@ -72,6 +53,8 @@ class GammaAudioProcessorEditor : public AudioProcessorEditor, Timer
 
     LinkButton link;
 
+    ActivationComponent activation;
+
     std::vector<Component *> getTopComponents()
     {
         return {// &gate,
@@ -87,13 +70,7 @@ class GammaAudioProcessorEditor : public AudioProcessorEditor, Timer
     MenuComponent menu;
     PresetComp presetMenu;
 
-    // FlexBox uiTopFlex, topControlsFlex;
-
-    std::unique_ptr<strix::LiteThread> lThread;
-
-    strix::DownloadManager dl;
     Splash splash;
-    ActivationComponent activation;
 
 #if JUCE_WINDOWS || JUCE_LINUX
     OpenGLContext opengl;

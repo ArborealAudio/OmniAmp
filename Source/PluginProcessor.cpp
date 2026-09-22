@@ -9,6 +9,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+#include "PluginEditor.cpp"
+
 //==============================================================================
 GammaAudioProcessor::GammaAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -24,8 +26,8 @@ GammaAudioProcessor::GammaAudioProcessor()
       apvts(*this, nullptr, "Parameters", createParams()),
       guitar(apvts, meterSource), bass(apvts, meterSource),
       channel(apvts, meterSource),
-      cab(apvts,
-          (Processors::CabType)apvts.getRawParameterValue("cabType")->load()),
+	  cab(apvts,
+		  (Processors::CabType)apvts.getRawParameterValue("cabType")->load()),
       hfEnhancer(apvts), lfEnhancer(apvts), reverb(apvts),
       emphLow(apvts, (strix::FloatParameter *)apvts.getParameter("lfEmphasis"),
               (strix::FloatParameter *)apvts.getParameter("lfEmphasisFreq")),

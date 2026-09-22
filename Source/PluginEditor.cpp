@@ -1,13 +1,36 @@
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 
+static void on_activation_check(void *user, String key) {
+	GammaAudioProcessorEditor *editor = (GammaAudioProcessorEditor*)user;
+	ActivationComponent *activation = &editor->activation;
+
+	http_debug("License check result: %d\n", activation->check_result);
+	// THis belongs elsewhere lol
+	/* editor->audioProcessor.checkedUpdate = true; */
+	/* strix::writeConfigFileString(CONFIG_PATH, "updateCheck", */
+	/* 							 String(Time::currentTimeMillis())); */
+	if (activation->check_result == LicenseCheckResult::CheckSucceeded) {
+		editor->audioProcessor.isUnlocked = true;
+
+        File license{
+            File::getSpecialLocation(File::userApplicationDataDirectory)
+                .getFullPathName() +
+            "/Arboreal Audio/OmniAmp/License/license"};
+        if (!license.existsAsFile())
+            license.create();
+
+        license.appendText(key);
+	}
+}
+
 //==============================================================================
 GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p), ampControls(p.apvts),
       link(p.apvts), preComponent(p.getActiveGRSource(), p.apvts),
       cabComponent(p.apvts), reverbComp(p.apvts), enhancers(p.apvts),
-      menu(p.apvts, p.isUnlocked), presetMenu(p.apvts), dl(DL_BIN),
-      activation(p.trialRemaining_ms)
+      menu(p.apvts, p.isUnlocked), presetMenu(p.apvts),
+      activation(this, p.trialRemaining_ms, on_activation_check)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize(64 << 20ul);
@@ -49,22 +72,10 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(menu);
     menu.windowResizeCallback = [&] { resetWindowSize(); };
     menu.checkUpdateCallback = [&] {
-		// TODO Make HTTP request here
-        dlResult = strix::DownloadManager::checkForUpdate(
-            ProjectInfo::projectName, ProjectInfo::versionString,
-            SITE_URL "/versions/index.json", true,
-            strix::readConfigFile(CONFIG_PATH, "beta_update"));
-        p.checkedUpdate = true;
-        strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
-                                     String(Time::currentTimeMillis()));
-        if (!dlResult.updateAvailable)
-            NativeMessageBox::showMessageBoxAsync(
-                MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
-        else {
-            dl.changes = dlResult.changes;
-            DBG("Changes: " << dl.changes);
-            dl.setVisible(true);
-        }
+		UpdateCheck update_check = check_for_update();
+		if (update_check.result != UpdateCheckResult::NewUpdate)
+			NativeMessageBox::showMessageBoxAsync(
+				MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
     };
     menu.showTooltipCallback = [&](bool state) {
         if (state)
@@ -169,37 +180,23 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     getConstrainer()->setMaximumWidth(MAX_WIDTH);
 
     /* extra components (download, activation, splash, thread initialization) */
-    addChildComponent(dl);
-    dl.changes = dlResult.changes;
-    dl.centreWithSize(300, 200);
+    /* addChildComponent(dl); */
+    /* dl.changes = dlResult.changes; */
+    /* dl.centreWithSize(300, 200); */
 
 #if !NO_LICENSE_CHECK
     addChildComponent(activation);
     if (!p.checkUnlock())
         activation.setVisible(true);
-    activation.onActivationCheck = [&](bool result) { p.isUnlocked = result; };
     activation.centreWithSize(300, 200);
 #endif
 
     if (!p.checkedUpdate) {
-        lThread = std::make_unique<strix::LiteThread>(1);
-        lThread->addJob([&] {
-            dlResult = strix::DownloadManager::checkForUpdate(
-                ProjectInfo::projectName, ProjectInfo::versionString,
-                SITE_URL
-                "/versions/index.json", false,
-                strix::readConfigFile(CONFIG_PATH, "beta_update"),
-                strix::readConfigFileString(CONFIG_PATH, "updateCheck")
-                    .getLargeIntValue());
-            p.checkedUpdate = true;
-            dl.changes = dlResult.changes;
-            dl.shouldBeHidden = false;
-            strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
-                                         String(Time::currentTimeMillis()));
-        });
+		int last_check = strix::readConfigFile(CONFIG_PATH, "updateCheck");
+		Time day_ago = Time::getCurrentTime() - RelativeTime::hours(24);
+		if (last_check < day_ago.toMilliseconds())
+			check_for_update();
     }
-
-    startTimerHz(1);
 
     addChildComponent(splash);
     splash.centreWithSize(250, 350);
@@ -234,7 +231,6 @@ GammaAudioProcessorEditor::~GammaAudioProcessorEditor()
     opengl.detach();
 #endif
     removeMouseListener(this);
-    stopTimer();
 }
 
 void GammaAudioProcessorEditor::resetWindowSize()
@@ -325,7 +321,6 @@ void GammaAudioProcessorEditor::resized()
     reverbComp.setBounds(cabVerbSection);
     enhancers.setBounds(enhancerSection);
 
-    dl.centreWithSize(300, 200);
     splash.centreWithSize(250, 350);
     activation.centreWithSize(300, 200);
 
