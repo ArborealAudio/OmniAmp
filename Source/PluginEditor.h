@@ -54,6 +54,7 @@ class GammaAudioProcessorEditor : public AudioProcessorEditor
     LinkButton link;
 
     ActivationComponent activation;
+	DownloadComponent dl;
 
     std::vector<Component *> getTopComponents()
     {

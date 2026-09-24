@@ -8,8 +8,6 @@ static void on_activation_check(void *user, String key) {
 	http_debug("License check result: %d\n", activation->check_result);
 	// THis belongs elsewhere lol
 	/* editor->audioProcessor.checkedUpdate = true; */
-	/* strix::writeConfigFileString(CONFIG_PATH, "updateCheck", */
-	/* 							 String(Time::currentTimeMillis())); */
 	if (activation->check_result == LicenseCheckResult::CheckSucceeded) {
 		editor->audioProcessor.isUnlocked = true;
 
@@ -73,9 +71,17 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     menu.windowResizeCallback = [&] { resetWindowSize(); };
     menu.checkUpdateCallback = [&] {
 		UpdateCheck update_check = check_for_update();
-		if (update_check.result != UpdateCheckResult::NewUpdate)
-			NativeMessageBox::showMessageBoxAsync(
-				MessageBoxIconType::NoIcon, "Update", "No new updates", &menu);
+		if (update_check.result == UpdateCheckResult::NewUpdate) {
+			dl.setVisible(true);
+		} else {
+			NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon,
+					"Update", "No new updates", &menu);
+			dl.setVisible(false);
+		} 
+		dl.set_update_check_info(&update_check);
+		p.checkedUpdate = true;
+		strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
+				String(Time::currentTimeMillis()));
     };
     menu.showTooltipCallback = [&](bool state) {
         if (state)
@@ -180,9 +186,9 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     getConstrainer()->setMaximumWidth(MAX_WIDTH);
 
     /* extra components (download, activation, splash, thread initialization) */
-    /* addChildComponent(dl); */
+    addChildComponent(dl);
     /* dl.changes = dlResult.changes; */
-    /* dl.centreWithSize(300, 200); */
+    dl.centreWithSize(300, 200);
 
 #if !NO_LICENSE_CHECK
     addChildComponent(activation);
@@ -194,8 +200,18 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     if (!p.checkedUpdate) {
 		int last_check = strix::readConfigFile(CONFIG_PATH, "updateCheck");
 		Time day_ago = Time::getCurrentTime() - RelativeTime::hours(24);
-		if (last_check < day_ago.toMilliseconds())
-			check_for_update();
+		if (last_check < day_ago.toMilliseconds()) {
+			UpdateCheck check = check_for_update();
+			strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
+					String(Time::currentTimeMillis()));
+			dl.set_update_check_info(&check);
+			p.checkedUpdate = true;
+			if (check.result == UpdateCheckResult::NewUpdate) {
+				dl.setVisible(true);
+			} else {
+				dl.setVisible(false);
+			}
+		}
     }
 
     addChildComponent(splash);

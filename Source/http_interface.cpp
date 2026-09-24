@@ -118,6 +118,9 @@ static UpdateCheck check_for_update() {
 		if (new_update)
 			check.result = UpdateCheckResult::NewUpdate;
 	}
+#if !NDEBUG
+	check.result = UpdateCheckResult::NewUpdate;
+#endif
 
 cleanup:
 	http_deinit(&ctx);
@@ -170,7 +173,6 @@ cleanup:
 	return result;
 }
 
-struct ActivationComponent;
 typedef void(*ActivationCheckCb)(void *editor, String key);
 
 struct ActivationComponent : Component {
@@ -272,9 +274,9 @@ struct ActivationComponent : Component {
 
 		g.setFont(18.f);
 		g.setColour(message_color);
-        g.drawFittedText(message + "\n" + trial_message,
-                         getLocalBounds().removeFromTop(getHeight() * 0.3f),
-                         Justification::centred, 3);
+		g.drawFittedText(message + "\n" + trial_message,
+				getLocalBounds().removeFromTop(getHeight() * 0.3f),
+				Justification::centred, 3);
 	}
 
 	void resized() override {
@@ -289,5 +291,95 @@ struct ActivationComponent : Component {
         submit.setBounds(buttons.removeFromLeft(w / 3).reduced(10));
         close.setBounds(buttons.removeFromLeft(w / 3).reduced(10));
         buy.setBounds(buttons.removeFromLeft(w / 3).reduced(10));
+	}
+};
+
+struct DownloadComponent : Component {
+	UpdateCheck check;
+	TextButton download{"Download"}, close{"Close"};
+
+	enum class State {
+		None,
+		UpdateAvailable,
+		Downloading,
+		Finished,
+	};
+
+	State state = State::None;
+
+	const String update_check_messages[3] = {
+		[(int)UpdateCheckResult::NoUpdate] = String("No Update"),
+		[(int)UpdateCheckResult::NewUpdate] = String("New Update"),
+		[(int)UpdateCheckResult::ConnectionFailed] = String("Connection Failed"),
+	};
+
+	DownloadComponent() {
+		addChildComponent(download);
+		download.onClick = [&] {
+			download_update();
+		};
+
+		addAndMakeVisible(close);
+		close.onClick = [&] {
+			setVisible(false);
+		};
+	}
+
+	void set_update_check_info(const UpdateCheck *check) {
+		this->check = *check;
+		bool update_available = this->check.result == UpdateCheckResult::NewUpdate;
+		download.setVisible(update_available);
+		if (update_available) {
+			state = State::UpdateAvailable;
+		}
+	}
+
+	void download_update() {
+		const juce::String file_path =
+			File::getSpecialLocation(File::userHomeDirectory).getFullPathName()
+			+ "/Downloads/" + ProjectInfo::projectName + "-" OS_STRING BIN_EXT;
+		DBG("Saving update to: " << file_path);
+		Http http = {
+			.save_file_path = (http_String){.data = file_path.toRawUTF8(), .len = file_path.length()},
+		};
+		http_String bin_url = (http_String){.data = check.bin_url.toRawUTF8(), .len = check.bin_url.length()};
+		http_init(&http, bin_url, true);
+		state = State::Downloading;
+		repaint();
+		http_debug("Downloading update from: %.*s\n", bin_url.len, bin_url.data);
+		http_send_request(&http);
+		http_deinit(&http);
+		state = State::Finished;
+		repaint();
+	}
+
+	void paint(Graphics &g) override
+	{
+		juce::String display;
+		switch (state) {
+		case State::UpdateAvailable:
+			display = update_check_messages[(int)check.result] + "\n\n" + check.changes;
+			break;
+		case State::Downloading:
+			display = "Downloading...";
+			break;
+		case State::Finished:
+			display = "Download complete.\nThe installer is in your Downloads folder. You must close your DAW to run the installation.";
+			break;
+		default: display = String(); break;
+		}
+		g.setColour(Colours::black);
+		g.fillRoundedRectangle(getLocalBounds().toFloat(), 10.f);
+
+		g.setFont(18.f);
+		g.setColour(Colours::white);
+		g.drawFittedText(display, getLocalBounds().removeFromTop(getHeight() * 0.3f), Justification::centred, 3);
+	}
+
+	void resized() override
+	{
+		auto bot_third = getLocalBounds().removeFromBottom((float)getHeight() * 0.33f);
+		download.setBounds(bot_third.removeFromLeft(getWidth() / 2));
+		close.setBounds(bot_third);
 	}
 };
