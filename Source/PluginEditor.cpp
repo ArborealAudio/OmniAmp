@@ -1,25 +1,111 @@
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 
-static void on_activation_check(void *user, String key) {
-	GammaAudioProcessorEditor *editor = (GammaAudioProcessorEditor*)user;
-	ActivationComponent *activation = &editor->activation;
+// ISSUE We shouldn't call into anything Component-related here, since that is not
+// thread-safe and JUCE throws a bunch of assertions unless we acquire a lock on the
+// message thread, defeating the whoel purpose of being async
+static void on_activation_check(HttpThread *http_thread, const String &key, LicenseCheckResult result) {
+	GammaAudioProcessorEditor &editor = static_cast<GammaAudioProcessorEditor&>(http_thread->editor);
+	ActivationComponent *a = &editor.activation;
 
-	http_debug("License check result: %d\n", activation->check_result);
-	// THis belongs elsewhere lol
-	/* editor->audioProcessor.checkedUpdate = true; */
-	if (activation->check_result == LicenseCheckResult::CheckSucceeded) {
-		editor->audioProcessor.isUnlocked = true;
+	DBG("License check result: " << (int)result);
 
-        File license{
-            File::getSpecialLocation(File::userApplicationDataDirectory)
-                .getFullPathName() +
-            "/Arboreal Audio/OmniAmp/License/license"};
-        if (!license.existsAsFile())
-            license.create();
+	a->message_color = Colours::white;
+	switch (result) {
+		case LicenseCheckResult::None: 
+			a->message = "Activation not run. Try again.";
+			a->message_color = Colours::red;
+			break;
+		case LicenseCheckResult::CheckSucceeded: {
+			a->message = "License activated! Thank you!";
+			a->trial_message = String();
+			// Set plugin's unlocked flag, write license info to file
+			editor.audioProcessor.isUnlocked = true;
 
-        license.appendText(key);
+			File license{
+				File::getSpecialLocation(File::userApplicationDataDirectory)
+					.getFullPathName() +
+				"/Arboreal Audio/OmniAmp/License/license"};
+			if (!license.existsAsFile())
+				license.create();
+
+			license.appendText(key);
+		} break;
+		case LicenseCheckResult::EmptyLicense:
+			a->message = "Actually enter a license...";
+			a->message_color = Colour::fromHSL(a->color / 360.f, 1.f, 0.75f, 1.f);
+			a->color += 45.f;
+			a->color = fmodf(a->color, 360.f);
+			break;
+		case LicenseCheckResult::InvalidLicense:
+			a->message = "Invalid/malformed license";
+			a->message_color = Colours::red;
+			break;
+		case LicenseCheckResult::LicenseNotFound:
+			a->message = "License not found";
+			a->message_color = Colours::red;
+			break;
+		case LicenseCheckResult::ConnectionFailed:
+			a->message = "Connection Failed";
+			a->message_color = Colours::red;
+			break;
 	}
+
+	if (result != LicenseCheckResult::CheckSucceeded) {
+		if (a->trial_remaining > 0) {
+			a->trial_message = RelativeTime::milliseconds(a->trial_remaining).getDescription() + " remaining in free trial";
+		} else if (a->trial_remaining <= 0) {
+			a->trial_message = "Trial expired";
+		}
+		a->text_edit.clear();
+	} else {
+		a->text_edit.setVisible(false);
+		a->submit.setVisible(false);
+		a->buy.setVisible(false);
+	}
+
+	a->repaint();
+}
+
+static void on_update_check(HttpThread *ctx, UpdateCheck check) {
+	GammaAudioProcessorEditor &editor = static_cast<GammaAudioProcessorEditor&>(ctx->editor);
+	if (check.result == UpdateCheckResult::NewUpdate) {
+		editor.dl.setVisible(true);
+	} else {
+		// TODO Only show this if update was manually req'd
+		/* NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon, */
+		/* 		"Update", "No new updates", &editor.menu); */
+		editor.dl.setVisible(false);
+	} 
+	editor.dl.set_update_check_info(&check);
+	editor.audioProcessor.checkedUpdate = true;
+	strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
+			String(Time::currentTimeMillis()));
+}
+
+// DO NOT call Component functions directly in this callback
+static void update_download_progress(void *ctx, size_t bytes_read, size_t total_size) {
+	HttpThread *http = (HttpThread*)ctx;
+	GammaAudioProcessorEditor &editor = static_cast<GammaAudioProcessorEditor&>(http->editor);
+	DownloadComponent &dl = editor.dl;
+	if (dl.state != DownloadComponent::State::Downloading)
+		dl.state = DownloadComponent::State::Downloading;
+	dl.bytes_read += bytes_read;
+	dl.total_size = total_size;
+	juce::MessageManager::callAsync([&]{
+		dl.repaint();
+	});
+}
+
+static void update_download_finished(HttpThread *ctx, size_t total_size, bool valid_file) {
+	GammaAudioProcessorEditor &editor = static_cast<GammaAudioProcessorEditor&>(ctx->editor);
+	DownloadComponent &dl = editor.dl;
+	dl.state = valid_file ? DownloadComponent::State::Finished : DownloadComponent::State::BadChecksum;
+	if (!valid_file)
+		dl.download.setVisible(false);
+	if (dl.total_size != total_size)
+		dl.total_size = total_size;
+	dl.repaint();
 }
 
 //==============================================================================
@@ -28,7 +114,9 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       link(p.apvts), preComponent(p.getActiveGRSource(), p.apvts),
       cabComponent(p.apvts), reverbComp(p.apvts), enhancers(p.apvts),
       menu(p.apvts, p.isUnlocked), presetMenu(p.apvts),
-      activation(this, p.trialRemaining_ms, on_activation_check)
+	  http_thread(*this, on_activation_check, on_update_check, update_download_progress, update_download_finished),
+      activation(&http_thread, p.trialRemaining_ms),
+	  dl(&http_thread)
 {
 #if JUCE_WINDOWS || JUCE_LINUX
     opengl.setImageCacheSize(64 << 20ul);
@@ -70,18 +158,7 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
     addAndMakeVisible(menu);
     menu.windowResizeCallback = [&] { resetWindowSize(); };
     menu.checkUpdateCallback = [&] {
-		UpdateCheck update_check = check_for_update();
-		if (update_check.result == UpdateCheckResult::NewUpdate) {
-			dl.setVisible(true);
-		} else {
-			NativeMessageBox::showMessageBoxAsync(MessageBoxIconType::NoIcon,
-					"Update", "No new updates", &menu);
-			dl.setVisible(false);
-		} 
-		dl.set_update_check_info(&update_check);
-		p.checkedUpdate = true;
-		strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
-				String(Time::currentTimeMillis()));
+		http_thread.push_cmd(HttpThreadCmd::CheckUpdate);
     };
     menu.showTooltipCallback = [&](bool state) {
         if (state)
@@ -140,14 +217,6 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
         return str;
     });
 
-    // gateAttach =
-    // std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(p.apvts,
-    // "gate", gate); gate.setLabel("Gate"); gate.setTooltip("Simple noise gate
-    // before the amp."); gate.setValueToStringFunction([](float val)
-    //                               { if (val < -95.f) return String("Off");
-    //                                 if (val >= -95.f) return String(val, 1);
-    //                                 else return String(""); });
-
     widthAttach =
         std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
             p.apvts, "width", width);
@@ -187,30 +256,20 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
 
     /* extra components (download, activation, splash, thread initialization) */
     addChildComponent(dl);
-    /* dl.changes = dlResult.changes; */
-    dl.centreWithSize(300, 200);
+    dl.centreWithSize(400, 300);
 
 #if !NO_LICENSE_CHECK
     addChildComponent(activation);
     if (!p.checkUnlock())
         activation.setVisible(true);
-    activation.centreWithSize(300, 200);
+    activation.centreWithSize(400, 300);
 #endif
 
     if (!p.checkedUpdate) {
 		int last_check = strix::readConfigFile(CONFIG_PATH, "updateCheck");
 		Time day_ago = Time::getCurrentTime() - RelativeTime::hours(24);
 		if (last_check < day_ago.toMilliseconds()) {
-			UpdateCheck check = check_for_update();
-			strix::writeConfigFileString(CONFIG_PATH, "updateCheck",
-					String(Time::currentTimeMillis()));
-			dl.set_update_check_info(&check);
-			p.checkedUpdate = true;
-			if (check.result == UpdateCheckResult::NewUpdate) {
-				dl.setVisible(true);
-			} else {
-				dl.setVisible(false);
-			}
+			http_thread.push_cmd(HttpThreadCmd::CheckUpdate);
 		}
     }
 

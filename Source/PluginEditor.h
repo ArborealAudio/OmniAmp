@@ -53,6 +53,7 @@ class GammaAudioProcessorEditor : public AudioProcessorEditor
 
     LinkButton link;
 
+	HttpThread http_thread;
     ActivationComponent activation;
 	DownloadComponent dl;
 
@@ -83,3 +84,5 @@ class GammaAudioProcessorEditor : public AudioProcessorEditor
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GammaAudioProcessorEditor)
 };
+
+

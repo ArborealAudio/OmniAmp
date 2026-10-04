@@ -67,7 +67,7 @@ typedef enum {
 typedef struct {
 	http_ResponseCode code;
 	http_StringBuilder body;
-	size_t content_length;
+	size_t content_len;
 } http_Response;
 
 typedef struct {
@@ -78,12 +78,23 @@ typedef struct {
 	bool should_save_file;
 	http_String save_file_path;
 	FILE *save_file;
+	bool first_write;
+	void *user;
+	void(*dl_progress)(void *user, size_t bytes_read, size_t total_size);
 } Http;
+
+typedef struct {
+	http_String url;
+	bool should_save_file;
+	http_String save_file_path;
+	void *user;
+	void(*dl_progress)(void *user, size_t bytes_read, size_t total_size);
+} HttpOpt;
 
 /* Initialize an Http context. You should stack-allocate an Http context yourself
  * and supply it to this function.
  * `url` is the target URL the request is pointed to.*/
-void http_init(Http *http, http_String url, bool should_save_file);
+void http_init(Http *http, const HttpOpt *opt);
 /* Deinit Http context */
 void http_deinit(Http *http);
 /* Set the target URL. This might be used to provide a new URL for the same Http context */

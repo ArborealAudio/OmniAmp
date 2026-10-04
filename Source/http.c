@@ -97,10 +97,26 @@ http_String string_from_sb(http_StringBuilder *sb) {
 	};
 }
 
+internal void http_first_write_detail(Http *http) {
+	http->first_write = false;
+	long response;
+	CURLcode res;
+	res = curl_easy_getinfo(http->curl, CURLINFO_RESPONSE_CODE, &response);
+	http->response.code = (http_ResponseCode)response;
+	res = curl_easy_getinfo(http->curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &http->response.content_len);
+	http_debug("DL SIZE: %" CURL_FORMAT_CURL_OFF_T " bytes\n", http->response.content_len);
+}
+
 /* Callback used to write response to an internal buffer */
 internal size_t get_cb(char *ptr, size_t item_size, size_t n, void *user) {
 	Http *http = (Http*)user;
 	http_debug("Received %zu bytes\n", item_size * n);
+	if (http->first_write) {
+		http_first_write_detail(http);
+	}
+	if (http->dl_progress) {
+		http->dl_progress(http->user, item_size * n, http->response.content_len);
+	}
 	return sb_append(&http->response.body, ptr, item_size * n);
 }
 
@@ -108,20 +124,29 @@ internal size_t get_cb(char *ptr, size_t item_size, size_t n, void *user) {
 internal size_t save_cb(char *ptr, size_t item_size, size_t n, void *user) {
 	Http *http = (Http*)user;
 	size_t write_size = item_size * n;
+	if (http->first_write) {
+		http_first_write_detail(http);
+	}
 
 	http_debug("Downloading %zu bytes...\n", write_size);
+	if (http->dl_progress) {
+		http->dl_progress(http->user, item_size * n, http->response.content_len);
+	}
 	fwrite(ptr, 1, write_size, http->save_file);
 	return write_size;
 }
 
-void http_init(Http *http, http_String url, bool should_save_file) {
-	http->url = url;
+void http_init(Http *http, const HttpOpt *opt) {
+	http->url = opt->url;
 	http->response.body = sb_init(4096);
-	http->should_save_file = should_save_file;
+	http->should_save_file = opt->should_save_file;
+	http->save_file_path = opt->save_file_path;
+	http->dl_progress = opt->dl_progress;
+	http->user = opt->user;
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	http->curl = curl_easy_init();
 	size_t save = temp_begin();
-	curl_easy_setopt(http->curl, CURLOPT_URL, cstring_from_string(url));
+	curl_easy_setopt(http->curl, CURLOPT_URL, cstring_from_string(opt->url));
 	temp_end(save);
 	if (http->should_save_file) {
 		http_debug("Setting HTTP context with save callback\n");
@@ -174,22 +199,11 @@ void http_send_request(Http *http) {
 		}
 		temp_end(save);
 	}
+	http->first_write = true;
 	CURLcode res = curl_easy_perform(http->curl);
 	if (res != CURLE_OK) {
 		http_debug("libcurl request failed: %s\n", curl_easy_strerror(res));
 		return;
-	}
-
-	{
-		long response;
-		res = curl_easy_getinfo(http->curl, CURLINFO_RESPONSE_CODE, &response);
-		http->response.code = (http_ResponseCode)response;
-	}
-	{
-		curl_off_t dl_len;
-		res = curl_easy_getinfo(http->curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &dl_len);
-		http_debug("DL SIZE: %" CURL_FORMAT_CURL_OFF_T " bytes\n", dl_len);
-		http->response.content_length = (size_t)dl_len;
 	}
 }
 

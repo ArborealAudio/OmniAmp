@@ -182,6 +182,7 @@ target_compile_definitions(OmniAmp
     PUBLIC
         PRODUCTION_BUILD=${PRODUCTION_BUILD}
         BETA_BUILD=${BETA_BUILD}
+		USE_HTTP_BACKEND=${USE_HTTP_BACKEND}
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
@@ -190,6 +191,11 @@ target_compile_definitions(OmniAmp
         AWS_API_KEY="$ENV{AWS_API_KEY}"
         NO_LICENSE_CHECK=${NO_LICENSE_CHECK}
 )
+
+# if (NOT ${PRODUCTION_BUILD})
+# 	add_compile_options(-fsanitize=address)
+# 	add_link_options(-fsanitize=address)
+# endif()
 
 juce_add_binary_data(BinaryData SOURCES
     "Resources/2x12.svg"
@@ -218,6 +224,7 @@ target_link_libraries(OmniAmp
         BinaryData
         juce::juce_audio_utils
         juce::juce_dsp
+		juce::juce_cryptography
         gin
         gin_graphics
 		CURL::libcurl
@@ -232,3 +239,10 @@ target_link_libraries(OmniAmp
     PRIVATE
     juce::juce_opengl)
 endif()
+
+# if (NOT ${PRODUCTION_BUILD})
+# 	target_link_libraries(OmniAmp
+# 		PRIVATE
+# 			asan
+# 	)
+# endif()

@@ -8,9 +8,6 @@
 // define for SIMD-specific declarations & functions
 #ifndef USE_SIMD
 #define USE_SIMD 1
-#if DEBUG
-#define PRODUCTION_BUILD 0
-#endif
 #endif
 
 #include <JuceHeader.h>
