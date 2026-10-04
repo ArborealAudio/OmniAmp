@@ -192,10 +192,10 @@ target_compile_definitions(OmniAmp
         NO_LICENSE_CHECK=${NO_LICENSE_CHECK}
 )
 
-# if (NOT ${PRODUCTION_BUILD})
-# 	add_compile_options(-fsanitize=address)
-# 	add_link_options(-fsanitize=address)
-# endif()
+if (${USE_ASAN})
+	add_compile_options(-fsanitize=address)
+	add_link_options(-fsanitize=address)
+endif()
 
 juce_add_binary_data(BinaryData SOURCES
     "Resources/2x12.svg"
@@ -240,9 +240,9 @@ target_link_libraries(OmniAmp
     juce::juce_opengl)
 endif()
 
-# if (NOT ${PRODUCTION_BUILD})
-# 	target_link_libraries(OmniAmp
-# 		PRIVATE
-# 			asan
-# 	)
-# endif()
+if (${USE_ASAN})
+	target_link_libraries(OmniAmp
+		PRIVATE
+			asan
+	)
+endif()

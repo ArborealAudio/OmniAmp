@@ -9,7 +9,7 @@
 #endif
 
 #define URL_BASE "https://arborealaudio.com/"
-#define VERSIONS_URI "versions/index.json"
+#define VERSIONS_URI "versions/v2/index.json"
 #define VERSIONS_DRAFT_URI "versions/draft/index.json"
 #define LICENSE_URL_BASE "https://3pvj52nx17.execute-api.us-east-1.amazonaws.com/default/licenses/" 
 #if PRODUCTION_BUILD
@@ -151,18 +151,25 @@ struct HttpThread : juce::Thread {
 					});
 					break;
 				case HttpThreadCmd::DownloadUpdate: {
-					juce::String file_path = File::getSpecialLocation(File::userHomeDirectory).getFullPathName() + "/Downloads/" +
-						ProjectInfo::projectName + "-" OS_STRING BIN_EXT;
-					download_update(this, update_check.bin_url, file_path, dl_prog_cb);
-					juce::File bin_file = File(file_path);
-					// validate checksum
-					juce::SHA256 file_hash = juce::SHA256(bin_file);
-					const String &expect_hash = update_check.bin_checksum;
-					bool valid = file_hash.toHexString() == expect_hash;
-					size_t file_size = (size_t)bin_file.getSize();
-					if (!valid) {
-						if (!bin_file.deleteRecursively()) {
-							DBG(__func__ << ": Failed to delete downloaded bin...");
+					bool valid = true;
+					size_t file_size = 0;
+					{
+						const juce::ScopedLock sl(lock);
+						juce::String file_path = File::getSpecialLocation(File::userHomeDirectory).getFullPathName()
+							+ "/Downloads/" + ProjectInfo::projectName + "-" OS_STRING BIN_EXT;
+						download_update(this, update_check.bin_url, file_path, dl_prog_cb);
+						juce::File bin_file = File(file_path);
+						// validate checksum
+						juce::SHA256 file_hash = juce::SHA256(bin_file);
+						const String &expect_hash = update_check.bin_checksum;
+						if (!expect_hash.isEmpty()) {
+							valid = file_hash.toHexString() == expect_hash;
+							size_t file_size = (size_t)bin_file.getSize();
+							if (!valid) {
+								if (!bin_file.deleteRecursively()) {
+									DBG(__func__ << ": Failed to delete downloaded bin...");
+								}
+							}
 						}
 					}
 

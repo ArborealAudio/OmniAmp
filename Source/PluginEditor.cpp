@@ -114,7 +114,8 @@ GammaAudioProcessorEditor::GammaAudioProcessorEditor(GammaAudioProcessor &p)
       link(p.apvts), preComponent(p.getActiveGRSource(), p.apvts),
       cabComponent(p.apvts), reverbComp(p.apvts), enhancers(p.apvts),
       menu(p.apvts, p.isUnlocked), presetMenu(p.apvts),
-	  http_thread(*this, on_activation_check, on_update_check, update_download_progress, update_download_finished),
+	  http_thread(*this, on_activation_check, on_update_check,
+			  update_download_progress, update_download_finished),
       activation(&http_thread, p.trialRemaining_ms),
 	  dl(&http_thread)
 {
