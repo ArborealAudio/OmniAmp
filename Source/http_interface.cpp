@@ -11,11 +11,11 @@
 #define URL_BASE "https://arborealaudio.com/"
 #define VERSIONS_URI "versions/v2/index.json"
 #define VERSIONS_DRAFT_URI "versions/draft/index.json"
-#define LICENSE_URL_BASE "https://3pvj52nx17.execute-api.us-east-1.amazonaws.com/default/licenses/" 
+#define LICENSE_URL_BASE "https://3pvj52nx17.execute-api.us-east-1.amazonaws.com/default/licenses/"
 #if PRODUCTION_BUILD
-static http_String versions_url = STR_LIT(URL_BASE VERSIONS_URI);
+static juce::String versions_url = juce::String(URL_BASE VERSIONS_URI);
 #else
-static http_String versions_url = STR_LIT(URL_BASE VERSIONS_DRAFT_URI);
+static juce::String versions_url = juce::String(URL_BASE VERSIONS_DRAFT_URI);
 #endif
 
 #if JUCE_WINDOWS
@@ -144,7 +144,7 @@ struct HttpThread : juce::Thread {
 				case HttpThreadCmd::CheckLicense:
 					{
 						const juce::ScopedLock sl(lock);
-						license_result = check_license(license_key); 
+						license_result = check_license(license_key);
 					}
 					juce::MessageManager::callAsync([this]{
 						activation_cb(this, license_key, license_result);
@@ -162,13 +162,13 @@ struct HttpThread : juce::Thread {
 						// validate checksum
 						juce::SHA256 file_hash = juce::SHA256(bin_file);
 						const String &expect_hash = update_check.bin_checksum;
-						if (!expect_hash.isEmpty()) {
-							valid = file_hash.toHexString() == expect_hash;
-							size_t file_size = (size_t)bin_file.getSize();
-							if (!valid) {
-								if (!bin_file.deleteRecursively()) {
-									DBG(__func__ << ": Failed to delete downloaded bin...");
-								}
+						valid = file_hash.toHexString() == expect_hash;
+						size_t file_size = (size_t)bin_file.getSize();
+						if (!valid) {
+						    DBG("Found update download checksum: " << file_hash.toHexString());
+						    DBG("Expected: " << expect_hash);
+							if (!bin_file.deleteRecursively()) {
+								DBG(__func__ << ": Failed to delete downloaded bin...");
 							}
 						}
 					}
@@ -240,12 +240,12 @@ static void parse_update_json(juce::var json, UpdateCheck *check) {
 static UpdateCheck check_for_update() {
 	Http ctx = {};
 	HttpOpt http_opt = {};
-	http_opt.url = versions_url;
+	http_opt.url = (http_String){.data = versions_url.text, .len = versions_url.len};
 
 	UpdateCheck check = {};
 	http_String response;
 
-	printf("Checking for update at URL: %.*s\n", versions_url.len, versions_url.data);
+	DBG("Checking for update at URL: " << versions_url);
 	http_init(&ctx, &http_opt);
 	http_send_request(&ctx);
 
@@ -292,7 +292,7 @@ static LicenseCheckResult check_license(const juce::String &license) {
 		http_init(&ctx, &http_opt);
 		http_add_header(&ctx, STR_LIT("x-api-key: " AWS_API_KEY));
 		http_send_request(&ctx);
-		
+
 		// parse response body
 		http_ResponseCode res_code = ctx.response.code;
 		if (res_code != 200) {
@@ -330,6 +330,91 @@ static void download_update(HttpThread *http_thread, const juce::String &url,
 	http_send_request(&http);
 	http_deinit(&http);
 }
+#else // Use JUCE web APIs
+static UpdateCheck check_for_update() {
+    UpdateCheck check = {};
+    juce::URL url = juce::URL(versions_url);
+    DBG("Checking update at " << versions_url);
+    auto stream = juce::WebInputStream(url, false);
+    if (stream.connect(nullptr)) {
+        int status = stream.getStatusCode();
+        if (status == 200) {
+            juce::String body = stream.readEntireStreamAsString();
+            parse_update_json(juce::JSON::parse(body), &check);
+        } else {
+            DBG("Connection to " << versions_url << " failed with ERROR " << status);
+            check.result = UpdateCheckResult::ConnectionFailed;
+        }
+    } else {
+        check.result = UpdateCheckResult::ConnectionFailed;
+    }
+
+#if !PRODUCTION_BUILD
+    check.result = UpdateCheckResult::NewUpdate;
+#endif
+
+    return check;
+}
+
+static LicenseCheckResult check_license(const juce::String &license) {
+    LicenseCheckResult result = LicenseCheckResult::None;
+
+    if (license.isEmpty()) {
+        return LicenseCheckResult::EmptyLicense;
+    }
+
+    if (!validate_license_string(license)) {
+        return LicenseCheckResult::InvalidLicense;
+    }
+
+    DBG("Checking license at " << LICENSE_URL_BASE);
+    juce::URL url = juce::URL(juce::String(LICENSE_URL_BASE) + license)
+        .withParameter("x-api-key", AWS_API_KEY);
+    auto stream = juce::WebInputStream(url, true);
+    if (stream.connect(nullptr)) {
+        int status = stream.getStatusCode();
+        if (status == 200) {
+            juce::String body = stream.readEntireStreamAsString();
+            juce::var json = juce::JSON::parse(body);
+            if (json["success"]) {
+                result = LicenseCheckResult::CheckSucceeded;
+            } else {
+                result = LicenseCheckResult::LicenseNotFound;
+            }
+        } else {
+            DBG("Connection to " << LICENSE_URL_BASE << " failed with ERROR " << status);
+            result = LicenseCheckResult::ConnectionFailed;
+        }
+    } else {
+        DBG("Connection to " << LICENSE_URL_BASE << " failed");
+        result = LicenseCheckResult::ConnectionFailed;
+    }
+
+    return result;
+}
+
+static void download_update(HttpThread *ctx, const juce::String &bin_url, const juce::String &file_path,
+		DownloadProgressCb progress_cb) {
+	juce::URL url = juce::URL(bin_url);
+	auto stream = juce::WebInputStream(url, false);
+	if (stream.connect(nullptr)) {
+		auto writer = juce::FileOutputStream(juce::File(file_path));
+		int64 chunk_size = 16 << 10;
+		int64 total_size = stream.getTotalLength();
+		int64 n_read;
+		if (writer.openedOk()) {
+		    do {
+				n_read = writer.writeFromInputStream(stream, chunk_size);
+				DBG("Wrote " << n_read << " bytes from stream.");
+				progress_cb(ctx, n_read, total_size);
+			} while (n_read > 0);
+		} else {
+		    DBG("Failed to open " << file_path << " for writing.");
+		}
+	} else {
+	    DBG("Connection to " << bin_url << " failed.");
+	}
+}
 #endif // USE_HTTP_BACKEND
 
 
@@ -348,7 +433,7 @@ struct ActivationComponent : Component {
 		: trial_remaining(_trialRemaining), http_thread(_http_thread)
 	{
 		addAndMakeVisible(text_edit);
-		text_edit.setFont(Font(18.f));
+		text_edit.setFont(FontOptions(18.f));
 		text_edit.onReturnKey = [&] { request_check(); };
 		text_edit.setTextToShowWhenEmpty("License", Colours::lightgrey);
 
@@ -481,4 +566,3 @@ struct DownloadComponent : Component {
 		close.setBounds(bot_third.reduced(10));
 	}
 };
-
