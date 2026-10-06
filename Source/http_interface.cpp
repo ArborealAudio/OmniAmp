@@ -240,7 +240,7 @@ static void parse_update_json(juce::var json, UpdateCheck *check) {
 static UpdateCheck check_for_update() {
 	Http ctx = {};
 	HttpOpt http_opt = {};
-	http_opt.url = (http_String){.data = versions_url.text, .len = versions_url.len};
+	http_opt.url = (http_String){.data = versions_url.toRawUTF8(), .len = versions_url.length()};
 
 	UpdateCheck check = {};
 	http_String response;
@@ -349,7 +349,7 @@ static UpdateCheck check_for_update() {
         check.result = UpdateCheckResult::ConnectionFailed;
     }
 
-#if !PRODUCTION_BUILD
+#if !defined(PRODUCTION_BUILD)
     check.result = UpdateCheckResult::NewUpdate;
 #endif
 

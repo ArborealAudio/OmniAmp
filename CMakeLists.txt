@@ -160,7 +160,7 @@ if (USE_HTTP_BACKEND)
             -DCURL_BROTLI=OFF
             -DCURL_ZSTD=OFF
             -DCURL_USE_LIBPSL=OFF
-            -DCURL_USE_LIBIDN2=OFF
+            -DUSE_LIBIDN2=OFF
             -DCURL_USE_LIBSSH=OFF
             -DCURL_USE_LIBSSH2=OFF
             -DCURL_USE_GSSAPI=OFF

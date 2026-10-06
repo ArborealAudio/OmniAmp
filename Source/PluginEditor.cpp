@@ -101,8 +101,7 @@ static void update_download_finished(HttpThread *ctx, size_t total_size, bool va
 	GammaAudioProcessorEditor &editor = static_cast<GammaAudioProcessorEditor&>(ctx->editor);
 	DownloadComponent &dl = editor.dl;
 	dl.state = valid_file ? DownloadComponent::State::Finished : DownloadComponent::State::BadChecksum;
-	if (!valid_file)
-		dl.download.setVisible(false);
+	dl.download.setVisible(false);
 	if (dl.total_size != total_size)
 		dl.total_size = total_size;
 	dl.repaint();
